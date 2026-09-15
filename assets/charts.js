@@ -1,5 +1,5 @@
-/* 結果画面のグラフ（家族の年表・収入と支出・貯蓄残高）と数字タイル
- * - 3つのグラフは横軸（年齢）を共有し、選んだ年が全グラフで連動する
+/* 結果画面のグラフ（収入と支出・貯蓄残高）
+ * - 2つのグラフは横軸（年齢）を共有し、選んだ年が両方のグラフで連動する
  * - 吹き出しは補助。すべての値は「年ごとの数字（表）」でも読める
  * - 文字は textContent で入れる（innerHTML に値を連結しない）
  * 配色はデータ可視化の基準パレット（カテゴリ1〜3番・状態色）を使用
@@ -97,40 +97,6 @@
       line.setAttribute("x1", x); line.setAttribute("x2", x);
       band.setAttribute("visibility", "visible"); line.setAttribute("visibility", "visible");
     };
-  }
-
-  // ① 家族の年表
-  function lanesChart(r, W) {
-    const pts = r.sim0.points, n = pts.length, fr = frame(n, W);
-    const rowH = 48, T = 4, B = 34;
-    const H = T + rowH * r.lanes.length + B;
-    const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "家族の年表。家族ごとの入学・独立・定年などの時期。一覧は下の「出来事の一覧」でも確認できます。" });
-    const cross = addCrosshair(svg, fr, T, H - B);
-    r.lanes.forEach((lane, li) => {
-      const y0 = T + li * rowH, ly = y0 + 24;
-      svgText({ x: 4, y: y0 + 12, "font-size": 12, fill: COLOR.ink2 }, lane.ageNow == null ? lane.label : `${lane.label}（いま${lane.ageNow}歳）`, svg);
-      const endI = Math.min(n - 1, lane.end);
-      if (lane.track === false) svgEl("line", { x1: fr.cx(0), x2: fr.cx(n - 1), y1: ly, y2: ly, stroke: COLOR.grid, "stroke-width": 1 }, svg);
-      else if (endI > 0) svgEl("line", { x1: fr.cx(0), x2: fr.cx(endI), y1: ly, y2: ly, stroke: COLOR.track, "stroke-width": 6, "stroke-linecap": "round" }, svg);
-      else svgText({ x: fr.cx(0), y: ly + 4, "font-size": 11, fill: COLOR.muted }, "独立済み", svg);
-      const shown = lane.events.filter((ev) => ev.offset >= 0 && ev.offset < n);
-      const KIND_COLOR = { car: COLOR.car, repair: COLOR.housing, home: COLOR.housing, care: COLOR.other, spend: COLOR.other, work: COLOR.ink2 };
-      shown.forEach((ev) => {
-        svgEl("circle", { cx: fr.cx(ev.offset), cy: ly, r: 5, fill: KIND_COLOR[ev.kind] || COLOR.living, stroke: COLOR.surface, "stroke-width": 2 }, svg);
-      });
-      // ラベルは大事な出来事から置き、重なるものは省く（省いた分は吹き出しと一覧で読める）
-      const PRIORITY = ["大学", "専門", "定年", "購入", "建替", "介護", "転職", "車", "塗装", "独立", "年金", "完済", "水回り", "出費", "高校", "中学", "小学校"];
-      const placed = [];
-      shown.slice().sort((a, b) => PRIORITY.indexOf(a.short) - PRIORITY.indexOf(b.short)).forEach((ev) => {
-        const x = fr.cx(ev.offset);
-        const half = ev.short.length * 6 + 3;
-        if (placed.some((p) => Math.abs(p.x - x) < p.half + half)) return;
-        placed.push({ x, half });
-        svgText({ x, y: ly + 19, "font-size": 11, "text-anchor": "middle", fill: COLOR.ink2 }, ev.short, svg);
-      });
-    });
-    drawXAxis(svg, fr, pts, H - B);
-    return { svg, fr, cross };
   }
 
   // ② 収入と支出の推移
@@ -273,38 +239,11 @@
     return d;
   }
 
-  function tiles(r) {
-    const s0 = r.sim0.points;
-    const at = r.age < 65 ? s0.find((p) => p.age === 65) : s0[s0.length - 1];
-    const list = [
-      { label: `${at.age}歳時点の貯蓄`, value: man(at.balance), note: at.balance < 0 ? "マイナス（不足）・運用しない場合" : "運用しない場合" },
-      r.sim0.shortageAge !== null
-        ? { label: "貯蓄が底をつく時期", value: `${r.sim0.shortageAge}歳ごろ`, note: `${s0.find((p) => p.age === r.sim0.shortageAge).year}年・運用しない場合`, status: "critical", icon: "⚠" }
-        : { label: "貯蓄の見通し", value: "90歳までプラス", note: "運用しない場合の見込み", status: "good", icon: "✓" },
-    ];
-    if (r.retire) list.push({ label: "老後の不足額（65歳時点）", value: man(r.retire.gap0), note: r.retire.gap0 > 0 ? `毎月約${man(r.retire.monthly0)}の積立で埋まる計算` : "不足しない見込み" });
-    if (r.death) list.push({ label: "万一のときの保障額の目安", value: `${man(r.death.low)}〜${man(r.death.high)}`, note: "公的保障・収入・貯蓄を差し引いた不足" });
-    const wrap = h("div", "tiles");
-    list.forEach((t) => {
-      const c = h("div", "tile" + (t.status ? " " + t.status : ""));
-      c.appendChild(h("div", "tile-label", t.label));
-      const v = h("div", "tile-value");
-      if (t.icon) v.appendChild(h("span", "tile-icon", t.icon + " "));
-      v.appendChild(document.createTextNode(t.value));
-      c.appendChild(v);
-      c.appendChild(h("div", "tile-note", t.note));
-      wrap.appendChild(c);
-    });
-    return wrap;
-  }
-
   // 結果画面に組み込む（操作つき）
   function mount(root, r) {
     root.replaceChildren();
-    root.appendChild(tiles(r));
 
     const defs = [
-      { title: "家族の年表", sub: "家族ごとに、入学・独立・定年などの時期", build: lanesChart, legend: null },
       {
         title: "収入と支出の推移", sub: "1年あたり（万円）。棒＝支出の内訳、線＝収入", build: flowChart,
         legend: [{ type: "line", color: COLOR.income, label: "収入（手取り）" }, { type: "rect", color: COLOR.living, label: "生活費" }, { type: "rect", color: COLOR.housing, label: "住居費（修繕含む）" }, { type: "rect", color: COLOR.edu, label: "教育費" }, { type: "rect", color: COLOR.car, label: "車" }, { type: "rect", color: COLOR.other, label: "その他の予定出費" }],
@@ -402,7 +341,7 @@
   // PDF（印刷）用：操作なしのグラフ
   function staticHTML(r, W) {
     const wrap = document.createElement("div");
-    [["家族の年表", lanesChart, null], ["収入と支出の推移（1年あたり・万円）　線＝収入（手取り）／棒＝支出（下から生活費・住居費・教育費・車・その他）", flowChart], ["貯蓄残高の推移（万円）" + (r.simR ? `　実線＝運用しない場合／点線＝年${r.ret}%（保証されません）` : ""), balanceChart]].forEach(([title, build]) => {
+    [["収入と支出の推移（1年あたり・万円）　線＝収入（手取り）／棒＝支出（下から生活費・住居費・教育費・車・その他）", flowChart], ["貯蓄残高の推移（万円）" + (r.simR ? `　実線＝運用しない場合／点線＝年${r.ret}%（保証されません）` : ""), balanceChart]].forEach(([title, build]) => {
       wrap.appendChild(h("p", "memo-chart-title", title));
       wrap.appendChild(build(r, W).svg);
     });

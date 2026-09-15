@@ -56,6 +56,12 @@
   const age = Number(A.age);
   const owns = A.home === "loan" || A.home === "own";
   const openState = new Set();
+  let jumpTo = null;
+  try {
+    jumpTo = sessionStorage.getItem("ks-open-section");
+    sessionStorage.removeItem("ks-open-section");
+  } catch (e) { /* 使えない環境では全項目を閉じたまま表示 */ }
+  if (jumpTo) openState.add(jumpTo);
 
   // ── 小さな部品 ──
   const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -97,13 +103,18 @@
     d.detail = D;
     KS.save(d);
     preview();
+    if (section === "living") {
+      const sum = KSC.LIVING_ITEMS.reduce((t, it) => t + Number(D.living[it.key] || 0), 0);
+      const el = document.getElementById("living-sum");
+      if (el) el.textContent = `合計 月${(Math.round(sum * 10) / 10).toLocaleString("ja-JP")}万円`;
+    }
     if (rerender) renderSections();
     else document.querySelectorAll(`[data-status="${section}"]`).forEach((b) => { b.textContent = "設定済み"; b.className = "badge set"; });
   }
 
   function resetSection(section) {
     const def = KSC.detailDefaults(A);
-    const keys = { edu: ["kids"], car: ["cars"], home: ["loan", "rent", "house", "mansion", "purchase", "rebuild"], care: ["care"], spend: ["spend"], work: ["work"] }[section];
+    const keys = { living: ["living"], edu: ["kids"], car: ["cars"], home: ["loan", "rent", "house", "mansion", "purchase", "rebuild"], care: ["care"], spend: ["spend"], work: ["work"] }[section];
     keys.forEach((k) => { D[k] = def[k]; });
     delete D.set[section];
     d.detail = D;
@@ -114,6 +125,23 @@
 
   // ── 各セクション ──
   const SECTIONS = [
+    {
+      key: "living", title: "🧾 毎月の生活費の内訳", show: () => true,
+      body: () => {
+        const box = h("div");
+        box.appendChild(note("家計簿やカードの明細を見ながら、実際の金額に合わせてください。住居費・教育費・車は、下の別の項目で設定します。"));
+        if (!D.set.living) box.appendChild(h("p", "muted small", "いまは「かんたん」の回答から、一般的な割合で分けた目安が入っています。"));
+        const amounts = [];
+        for (let v = 0; v <= 30; v += 0.5) amounts.push({ v, label: `月${v.toLocaleString("ja-JP")}万円` });
+        KSC.LIVING_ITEMS.forEach((it) => box.appendChild(select(it.label, D.living, it.key, amounts, "living")));
+        const sum = KSC.LIVING_ITEMS.reduce((t, it) => t + Number(D.living[it.key] || 0), 0);
+        const total = h("p", "living-sum", `合計 月${(Math.round(sum * 10) / 10).toLocaleString("ja-JP")}万円`);
+        total.id = "living-sum";
+        total.setAttribute("aria-live", "polite");
+        box.appendChild(total);
+        return box;
+      },
+    },
     {
       key: "edu", title: "🎓 お子さんの進学", show: () => A.kids === "yes",
       body: () => {
@@ -188,11 +216,13 @@
         if (owns && A.homeType === "house") {
           box.appendChild(sub("戸建ての修繕"));
           box.appendChild(select("築年数", D.house, "built", range(0, 60, 1, (v) => `築${v}年`), "home"));
+          box.appendChild(select("固定資産税（年額）", D.house, "tax", [0, 5, 8, 10, 12, 15, 20, 25, 30].map((v) => ({ v, label: `年${man(v)}` })), "home", { note: "毎年春ごろに届く納税通知書で確認できます" }));
           houseRepair();
         }
         if (owns && A.homeType === "mansion") {
           box.appendChild(sub("マンションの修繕積立金・管理費"));
           mansionFee();
+          box.appendChild(select("固定資産税（年額）", D.mansion, "tax", [0, 5, 8, 10, 12, 15, 20, 25].map((v) => ({ v, label: `年${man(v)}` })), "home", { note: "毎年春ごろに届く納税通知書で確認できます" }));
         }
         if (owns) {
           box.appendChild(sub("建て替え・大規模リフォーム"));
@@ -284,6 +314,7 @@
     root.replaceChildren();
     SECTIONS.filter((s) => s.show()).forEach((s) => {
       const det = h("details", "fold");
+      det.dataset.key = s.key;
       det.open = openState.has(s.key);
       det.addEventListener("toggle", () => { det.open ? openState.add(s.key) : openState.delete(s.key); });
       const sum = h("summary");
@@ -304,6 +335,15 @@
       root.appendChild(det);
     });
     if (focusId) document.getElementById(focusId)?.focus();
+    if (jumpTo) {
+      const target = [...root.querySelectorAll("details.fold")].find((det) => det.dataset.key === jumpTo);
+      jumpTo = null;
+      if (target) requestAnimationFrame(() => {
+        target.scrollIntoView({ block: "start" });
+        window.scrollBy(0, -150);
+        target.querySelector("select, input")?.focus({ preventScroll: true });
+      });
+    }
   }
 
   function preview() {

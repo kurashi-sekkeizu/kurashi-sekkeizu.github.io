@@ -29,6 +29,29 @@
     },
   };
 
+  // 生活費（住居費・教育費・車を除く）の内訳の目安。⚠ ダミーの割合（本番は総務省「家計調査」を出典にする）
+  const LIVING_ITEMS = [
+    { key: "food", label: "食費", ratio: 0.30 },
+    { key: "utility", label: "水道・光熱費", ratio: 0.09 },
+    { key: "comm", label: "通信費（スマホ・ネット）", ratio: 0.05 },
+    { key: "daily", label: "日用品・家具・家電", ratio: 0.05 },
+    { key: "clothes", label: "被服・美容", ratio: 0.05 },
+    { key: "medical", label: "医療・健康", ratio: 0.05 },
+    { key: "transport", label: "交通費（車以外）", ratio: 0.04 },
+    { key: "insurance", label: "保険料（生命保険など）", ratio: 0.07 },
+    { key: "leisure", label: "趣味・娯楽", ratio: 0.10 },
+    { key: "allowance", label: "おこづかい・交際費", ratio: 0.12 },
+    { key: "other", label: "その他", ratio: 0.08 },
+  ];
+
+  // 生活費を内訳に分ける。0.5万円単位で丸め、端数は「その他」で調整して合計を元の金額と一致させる
+  function splitLiving(total) {
+    const base = Math.round(total * 2) / 2;
+    const out = Object.fromEntries(LIVING_ITEMS.map((it) => [it.key, Math.round(base * it.ratio * 2) / 2]));
+    out.other = Math.max(0, base - LIVING_ITEMS.filter((it) => it.key !== "other").reduce((t, it) => t + out[it.key], 0));
+    return out;
+  }
+
   const EDU_PLAN = {
     public: { elem: "public", junior: "public", high: "public", univ: "national" },
     univPrivate: { elem: "public", junior: "public", high: "public", univ: "privArts" },
@@ -44,14 +67,16 @@
     const plan = EDU_PLAN[a.eduPlan] || EDU_PLAN.unknown;
     const nKids = a.kids === "yes" ? Number(a.kidsCount) || 0 : 0;
     const nCars = Number(a.cars) || 0;
+    const livingMid = Q.mid("living", a);
     return {
       set: {},
+      living: splitLiving(livingMid == null ? 25 : livingMid),
       kids: Array.from({ length: nKids }, () => Object.assign({ away: "home" }, plan)),
       cars: Array.from({ length: nCars }, (_, i) => ({ nextIn: i === 0 ? 5 : 8, budget: 250, interval: 10, upkeep: 35, until: 75 })),
       loan: { monthly: 10, endAge: 65 },
       rent: { monthly: 8 },
-      house: { built: 10, paintEvery: 12, paintCost: 120, waterEvery: 15, waterCost: 60 },
-      mansion: { built: 10, monthly: 3, raise: 20 },
+      house: { built: 10, paintEvery: 12, paintCost: 120, waterEvery: 15, waterCost: 60, tax: 12 },
+      mansion: { built: 10, monthly: 3, raise: 20, tax: 10 },
       purchase: { on: "no", age: Math.max(30, Number(a.age) + 3), type: "house", price: 4000, down: 400, years: 35, rate: 1 },
       rebuild: { on: "no", age: Math.max(55, Number(a.age) + 15), budget: 1000 },
       care: { on: "no", startAge: Math.max(50, Number(a.age) + 10), years: 5, monthly: 5 },
@@ -97,7 +122,9 @@
     const kids = a.kids === "yes" ? (a.kidsAges || []).map(Number) : [];
     const household = 1 + (spouse ? 1 : 0) + kids.length;
     let living = Q.mid("living", a);
-    if (living === null) { living = Math.min(40, 10 + household * 3.5); provisional.push("毎月の生活費"); }
+    let livingSource = "answer";
+    if (D.set.living) { living = LIVING_ITEMS.reduce((t, it) => t + Number(D.living[it.key] || 0), 0); livingSource = "detail"; }
+    else if (living === null) { living = Math.min(40, 10 + household * 3.5); provisional.push("毎月の生活費"); livingSource = "provisional"; }
     let savings = Q.mid("savings", a);
     if (savings === null) { savings = 300; provisional.push("貯蓄"); }
     const home = a.home;
@@ -110,8 +137,8 @@
     if (!D.set.home) {
       if (home === "loan") provisional.push("住宅ローン返済額（月10万円・65歳完済で仮置き）");
       if (renting) provisional.push("家賃（月8万円で仮置き）");
-      if (owns && homeType === "house") provisional.push("修繕費（築10年・塗装12年ごと120万円などで仮置き）");
-      if (owns && homeType === "mansion") provisional.push("修繕積立金・管理費（月3万円で仮置き）");
+      if (owns && homeType === "house") provisional.push("修繕費・固定資産税（築10年・塗装12年ごと120万円、税 年12万円などで仮置き）");
+      if (owns && homeType === "mansion") provisional.push("修繕積立金・管理費・固定資産税（月3万円、税 年10万円で仮置き）");
     }
 
     const inf = as.inflation / 100;
@@ -224,6 +251,9 @@
       if (home === "loan" && cur < Number(D.loan.endAge)) c += Number(D.loan.monthly) * 12;
       if (renting && (purchaseOff === null || y < purchaseOff)) c += Number(D.rent.monthly) * 12;
       if (purchaseOff !== null && y >= purchaseOff && y < purchaseOff + purchaseLoanYears) c += purchaseLoan;
+      const ownFrom = owns ? 0 : purchaseOff;
+      const ownType = owns ? homeType : P.type;
+      if (ownFrom !== null && y >= ownFrom) c += Number(ownType === "mansion" ? D.mansion.tax : D.house.tax);
       const mansionFrom = owns && homeType === "mansion" ? 0 : purchaseOff !== null && P.type === "mansion" ? purchaseOff : null;
       if (mansionFrom !== null && y >= mansionFrom) {
         fee = Number(D.mansion.monthly) * 12 * Math.pow(1 + Number(D.mansion.raise) / 100, Math.floor((y - mansionFrom) / 10));
@@ -441,18 +471,117 @@
     });
     if (lifeEvents.length) lanes.push({ label: "くらし（車・住まい・出費）", ageNow: null, end: span, track: false, events: lifeEvents.sort((x, y) => x.offset - y.offset) });
 
+    // ── 計算に使っている「いま」の毎月の支出 ──
+    const p0 = sim0.points[0];
+    const split = D.set.living ? D.living : splitLiving(living);
+    const livingItems = LIVING_ITEMS.map((it) => ({ key: it.key, label: it.label, monthly: Number(split[it.key] || 0) }));
+    const hc0 = housingCost(0);
+    const current = {
+      living: { monthly: living, source: livingSource, items: livingItems },
+      housing: {
+        monthly: hc0.base / 12, source: D.set.home ? "detail" : home === "family" ? "answer" : "provisional",
+        note: (home === "loan" ? "住宅ローンの返済＋" : renting ? "家賃" : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
+      },
+      edu: { monthly: p0.exp.edu / 12, source: kids.length ? (D.set.edu ? "detail" : a.eduPlan === "unknown" ? "provisional" : "answer") : "none", note: kids.length ? "今年の学年と進学の方針から" : "お子さんなし" },
+      car: { monthly: D.cars.reduce((t, c) => t + (age < Number(c.until) ? Number(c.upkeep) : 0), 0) / 12, source: D.cars.length ? (D.set.car ? "detail" : "provisional") : "none", note: D.cars.length ? "維持費（税金・保険・車検・ガソリンなど）。買い替えは年表の時期にまとめて計上" : "車なし" },
+      other: { monthly: (Number(D.spend.travel) > 0 ? Number(D.spend.travel) : 0) / 12 + (D.care.on === "yes" && Number(D.care.startAge) <= age ? Number(D.care.monthly) : 0), source: D.set.spend || D.set.care ? "detail" : "none", note: "旅行・介護など（くわしく入力で設定）" },
+      incomeMonthly: p0.income / 12,
+    };
+    current.total = ["living", "housing", "edu", "car", "other"].reduce((t, k) => t + current[k].monthly, 0);
+
+    // ── 見通しの天気（5項目） ──
+    const SUN = "sun", CLOUD = "cloud", RAIN = "rain";
+    const yearLiving = living * 12;
+    const pre = sim0.points.filter((p) => p.age < DUMMY.pensionAge);
+    const post = sim0.points.filter((p) => p.age >= DUMMY.pensionAge);
+    const forecast = [];
+    if (pre.length) {
+      const min = pre.reduce((m, p) => (p.balance < m.balance ? p : m), pre[0]);
+      forecast.push({
+        key: "working", title: "現役のあいだの家計", q: "65歳までに貯蓄が底をつかないか",
+        weather: min.balance < 0 ? RAIN : min.balance < yearLiving / 2 ? CLOUD : SUN,
+        reason: min.balance < 0
+          ? `${pre.find((p) => p.balance < 0).age}歳ごろに貯蓄がマイナスになる見込みです（いちばん少ないのは${min.age}歳で${KS.man(min.balance)}）。`
+          : `貯蓄がいちばん少なくなるのは${min.age}歳ごろで、約${KS.man(min.balance)}の見込みです${min.balance < yearLiving / 2 ? "（生活費の半年分を下回ります）" : ""}。`,
+        target: "cash",
+      });
+    }
+    {
+      const endP = sim0.points[sim0.points.length - 1];
+      const outAge = post.find((p) => p.balance < 0)?.age ?? null;
+      forecast.push({
+        key: "retire", title: "老後のお金", q: "90歳まで貯蓄がもつか",
+        weather: outAge !== null ? RAIN : endP.balance < yearLiving * 0.85 * 2 ? CLOUD : SUN,
+        reason: outAge !== null
+          ? (post[0] && post[0].balance < 0
+            ? `65歳の時点で、すでに貯蓄がマイナス（約${KS.man(post[0].balance)}）の見込みです。まず現役のあいだの家計の見直しが必要です。`
+            : `${outAge}歳ごろに貯蓄がなくなる見込みです（運用しない場合）。`)
+          : `90歳時点で約${KS.man(endP.balance)}残る見込みです${endP.balance < yearLiving * 0.85 * 2 ? "（老後の生活費の2年分を下回り、余裕は少なめです）" : ""}。`,
+        target: "cash",
+      });
+    }
+    forecast.push(!death
+      ? { key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は", weather: SUN, reason: "扶養しているご家族がいないため、大きな備えの必要性は低めです。", target: "estimate" }
+      : {
+        key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は",
+        weather: death.high <= 0 ? SUN : death.high <= 500 ? CLOUD : RAIN,
+        reason: death.high <= 0
+          ? "遺族年金・配偶者の収入・貯蓄で、ご家族の支出をまかなえる見込みです。"
+          : `遺族年金・配偶者の収入・貯蓄だけでは、約${KS.man(death.low)}〜${KS.man(death.high)}不足する見込みです。`,
+        note: "加入中の保険は含めていません" + (home === "loan" ? "（住宅ローンは団信で完済される前提）" : ""),
+        target: "estimate",
+      });
+    {
+      const need18 = disability.first * 18;
+      forecast.push({
+        key: "sick", title: "働けなくなったとき", q: "休業中の収入減を、貯蓄で1年半しのげるか",
+        weather: disability.first <= 0 ? SUN : need18 <= savings ? CLOUD : RAIN,
+        reason: disability.first <= 0
+          ? "休業中の手当などで、毎月の支出をまかなえる見込みです。"
+          : `毎月約${KS.man(disability.first)}足りなくなり、1年半で約${KS.man(need18)}。${need18 <= savings ? "今の貯蓄でしのげる見込みですが、貯蓄は減ります。" : "今の貯蓄では足りない見込みです。"}`,
+        note: "加入中の保険は含めていません",
+        target: "estimate",
+      });
+    }
+    {
+      const m = savings / Math.max(1, living + hc0.base / 12);
+      forecast.push({
+        key: "emergency", title: "急な出費への備え", q: "貯蓄が毎月の支出の何か月分あるか",
+        weather: m >= 6 ? SUN : m >= 3 ? CLOUD : RAIN,
+        reason: `貯蓄は毎月の支出（生活費＋住居費）の約${m >= 24 ? "24か月分以上" : Math.floor(m) + "か月分"}です。一般に、半年分ほどを目安にする考え方があります。`,
+        target: "costs",
+      });
+    }
+
     // 年表（一覧）
     const events = [{ year: year0, age, text: "いま" }];
     lanes.forEach((lane) => lane.events.forEach((e) => events.push({ year: year0 + e.offset, age: age + e.offset, text: e.text })));
     if (sim0.shortageAge !== null) events.push({ year: year0 + sim0.shortageAge - age, age: sim0.shortageAge, text: "貯蓄が底をつく見込み（運用しない場合）" });
     events.sort((x, y) => x.year - y.year);
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, living, savings, income, ret: as.ret, age, detail: D };
+    // 年表（行ごと）：年・家族の年齢・出来事（アイコン・金額）
+    const ICON = { car: "🚗", repair: "🔧", home: "🏠", care: "👵", spend: "✈️", work: "💼" };
+    const SHORT_ICON = { 小学校: "🎒", 中学: "🏫", 高校: "🏫", 大学: "🎓", 専門: "🎓", 独立: "🌱", 定年: "👔", 年金: "💴", 完済: "🏠" };
+    const rowsByOff = {};
+    const addRow = (off, item) => { (rowsByOff[off] = rowsByOff[off] || []).push(item); };
+    lanes.forEach((lane) => lane.events.forEach((e) => {
+      const pt = sim0.points[e.offset];
+      addRow(e.offset, { icon: ICON[e.kind] || SHORT_ICON[e.short] || "●", text: e.text.replace(/（約[^）]*）/, ""), amount: e.amount || (e.short === "大学" || e.short === "専門" ? Math.round(pt ? pt.exp.edu : 0) : 0), kind: e.kind || (["小学校", "中学", "高校", "大学", "専門", "独立"].includes(e.short) ? "edu" : "life") });
+    }));
+    if (sim0.shortageAge !== null) addRow(sim0.shortageAge - age, { icon: "⚠️", text: "貯蓄が底をつく見込み（運用しない場合）", amount: 0, kind: "alert" });
+    const timeline = Object.keys(rowsByOff).map(Number).sort((x, y) => x - y).map((off) => ({
+      year: year0 + off, offset: off,
+      ages: [{ who: "あなた", age: age + off }].concat(spouse ? [{ who: "配偶者", age: spouseAge + off }] : [], kids.map((k, i) => ({ who: `子${kids.length > 1 ? i + 1 : ""}`, age: k + off, gone: k + off > independAge(i) })).filter((x) => !x.gone)),
+      items: rowsByOff[off],
+      balance: sim0.points[off] ? sim0.points[off].balance : null,
+    }));
+
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, living, savings, income, ret: as.ret, age, detail: D };
   }
 
   function round100(n) {
     return Math.round(n / 100) * 100;
   }
 
-  window.KSC = { compute, detailOf, detailDefaults, DUMMY };
+  window.KSC = { compute, detailOf, detailDefaults, DUMMY, LIVING_ITEMS };
 })();

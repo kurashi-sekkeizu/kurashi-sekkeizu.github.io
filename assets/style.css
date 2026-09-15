@@ -296,7 +296,83 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .memo-chart-title { font-size: 12px; font-weight: 700; margin: 10px 0 2px; }
 .memo svg { width: 100%; height: auto; }
 
+/* 見通しの天気 */
+.fc-head { display: flex; gap: 14px; align-items: center; border-radius: var(--radius); padding: 14px 16px; border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
+.fc-head-icon { font-size: 2.6rem; line-height: 1; }
+.fc-head-sub { font-size: .82rem; color: var(--muted); }
+.fc-head-main { font-size: 1.15rem; font-weight: 700; line-height: 1.5; }
+.fc-head-note { font-size: .78rem; color: var(--muted); line-height: 1.5; }
+.fc-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 330px), 1fr)); }
+.fc { display: flex; gap: 12px; background: var(--card); border: 1px solid var(--line); border-left-width: 6px; border-radius: var(--radius); padding: 12px 14px; }
+.fc-icon { font-size: 1.9rem; line-height: 1.2; flex: none; width: 2.2rem; text-align: center; }
+.fc-body { min-width: 0; }
+.fc-title { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; font-size: 1.02rem; }
+.fc-label { font-size: .8rem; font-weight: 700; padding: 1px 8px; border-radius: 999px; }
+.fc-q { font-size: .8rem; color: var(--muted); }
+.fc-reason { margin: 4px 0 0; font-size: .92rem; line-height: 1.7; }
+.fc-note { margin: 2px 0 0; font-size: .78rem; color: var(--muted); }
+.fc-jump { padding: 4px 0; min-height: 36px; font-size: .85rem; }
+.fc-sun { border-left-color: #0ca30c; } .fc-sun .fc-label { background: #e6f4e6; color: #0b5c0b; }
+.fc-cloud { border-left-color: #fab219; } .fc-cloud .fc-label { background: #fff3d6; color: #6b4700; }
+.fc-rain { border-left-color: #d03b3b; } .fc-rain .fc-label { background: #fbe7e7; color: #8f1f1f; }
+.fc-head.fc-sun { border-top: 5px solid #0ca30c; } .fc-head.fc-cloud { border-top: 5px solid #fab219; } .fc-head.fc-rain { border-top: 5px solid #d03b3b; }
+
+/* 計算に使っている毎月の支出 */
+.costs { padding: 6px 12px; container-type: inline-size; }
+.costs-table { width: 100%; border-collapse: collapse; }
+.costs-table th, .costs-table td { border-bottom: 1px solid var(--line); padding: 10px 6px; vertical-align: top; text-align: left; }
+.costs-label { font-weight: 700; white-space: nowrap; }
+.costs-sub { font-size: .72rem; color: var(--muted); font-weight: 400; line-height: 1.4; max-width: 9rem; }
+.costs-value { font-weight: 700; white-space: nowrap; text-align: right !important; font-size: 1.05rem; }
+.costs-src { font-size: .8rem; min-width: 8rem; }
+.costs-note { font-size: .74rem; color: var(--muted); line-height: 1.5; margin-top: 2px; }
+.costs-fix { text-align: right !important; }
+.costs-fixbtn { min-height: 40px; padding: 4px 12px; font-size: .85rem; white-space: nowrap; }
+.costs-breakdown td { padding-top: 0; }
+.costs-total th, .costs-total td { border-bottom: none; background: #f7f6f2; }
+.src { display: inline-block; font-weight: 700; font-size: .74rem; padding: 1px 8px; border-radius: 999px; white-space: nowrap; }
+.src-answer { background: var(--accent-weak); color: var(--accent); }
+.src-detail { background: #e8f0f7; color: #1d4b73; }
+.src-prov { background: var(--warn-bg); color: var(--warn-ink); border: 1px solid #e2c27a; }
+.src-none { color: var(--muted); }
+.breakdown-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 2px 18px; }
+.breakdown-list li { display: flex; justify-content: space-between; border-bottom: 1px dotted var(--line); padding: 3px 0; font-size: .88rem; }
+@container (max-width: 520px) {
+  .costs .table-wrap { overflow: visible; }
+  .costs-table, .costs-table tbody { display: block; }
+  .costs-table tr:not(.costs-breakdown) { display: grid; grid-template-columns: 1fr auto; }
+  .costs-sub { max-width: none; }
+  .costs-src { min-width: 0; }
+  .costs-table tr:not(.costs-breakdown) > * { border-bottom: none; }
+  .costs-table tr:not(.costs-breakdown) { border-bottom: 1px solid var(--line); padding: 6px 0; }
+  .costs-src { grid-column: 1 / 2; padding-top: 0 !important; }
+  .costs-fix { grid-column: 2 / 3; padding-top: 0 !important; }
+  .costs-breakdown td { display: block; }
+}
+
+/* これからの出来事 */
+.tl { list-style: none; margin: 0; padding: 0; }
+.tl-row { display: grid; grid-template-columns: 5.2rem 1fr; gap: 10px; position: relative; padding: 0 0 14px; }
+.tl-row::before { content: ""; position: absolute; left: 5.9rem; top: 10px; bottom: -4px; width: 2px; background: var(--line); }
+.tl-row:last-child::before { display: none; }
+.tl-when { text-align: right; line-height: 1.35; padding-top: 2px; }
+.tl-when b { display: block; font-size: 1rem; }
+.tl-when span { font-size: .75rem; color: var(--muted); }
+.tl-main { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; margin-left: 14px; position: relative; }
+.tl-main::before { content: ""; position: absolute; left: -19px; top: 10px; width: 10px; height: 10px; border-radius: 50%; background: var(--card); border: 3px solid var(--accent); }
+.tl-ages { font-size: .75rem; color: var(--muted); margin-bottom: 2px; }
+.tl-items { list-style: none; margin: 0; padding: 0; }
+.tl-item { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: .92rem; line-height: 1.6; }
+.tl-icon { flex: none; width: 1.4rem; text-align: center; }
+.tl-text { flex: 1 1 10rem; }
+.tl-amt { font-size: .85rem; white-space: nowrap; padding: 0 8px; border-radius: 999px; background: #f1efe8; }
+.tl-amt.big { background: #fde9dd; color: #7a3b00; }
+.tl-now .tl-main::before { background: var(--accent); }
+.tl-alert .tl-main { border-color: #d03b3b; background: #fdf1f1; }
+.tl-alert .tl-main::before { border-color: #d03b3b; }
+
 /* くわしく入力 */
+.living-sum { font-weight: 700; font-size: 1.05rem; text-align: right; margin: 12px 0 4px; }
 .detail-preview { position: sticky; top: 60px; z-index: 5; margin-top: 12px; }
 .detail-preview-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
 .detail-preview-item b { display: block; font-size: 1rem; line-height: 1.4; }

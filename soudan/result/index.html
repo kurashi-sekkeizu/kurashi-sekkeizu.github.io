@@ -31,6 +31,7 @@
 <script src="/assets/questions.js"></script>
 <script src="/assets/calc.js"></script>
 <script src="/assets/charts.js"></script>
+<script src="/assets/summary.js"></script>
 <script>
 (function () {
   const d = KS.load().data;
@@ -101,7 +102,6 @@
       <p class="small" style="margin-top:8px">特定の商品をすすめるものではありません。 → <a href="/guide/">保障の考え方を読む</a></p>`;
 
     const sections = [
-      { id: "timeline", title: "出来事の一覧", html: `<ol class="timeline">${r.events.map((e) => `<li><span class="y">${e.year}年（${e.age}歳）</span><br>${esc(e.text)}</li>`).join("")}</ol>` },
       { id: "cash", title: "年ごとの数字（表）", html: `
           <p class="small">グラフと同じ数字です（万円）。</p>
           <div class="table-wrap table-scroll"><table class="data"><thead><tr><th>年齢</th><th>収入</th><th>生活費</th><th>住居費</th><th>教育費</th><th>車</th><th>その他</th><th>支出計</th><th>残高（0%）</th>${r.simR ? `<th>残高（${r.ret}%）</th>` : ""}</tr></thead><tbody>${tableRows}</tbody></table></div>` },
@@ -121,16 +121,32 @@
       <p class="muted" style="margin-bottom:6px">${dateStr}時点の目安</p>
       ${r.provisional.length ? `<p class="note warn">⚠ 仮の値を含みます：${esc(r.provisional.join("、"))}</p>` : ""}
 
-      <section class="section" id="viz-block">
-        <h2 class="section-title">ひと目でわかる将来の見通し</h2>
-        <p class="small muted" style="margin-bottom:8px">グラフを触る（またはキーボードの矢印キー）と、その年の内訳が出ます。</p>
-        <div id="viz"></div>
-        <p class="small" style="margin-top:8px">前提：物価上昇 年${d.assumptions.inflation}% ／ 運用 年${d.assumptions.ret}%　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button></p>
+      <section class="section" id="forecast-block">
+        <h2 class="section-title">① 見通し</h2>
+        <div id="forecast"></div>
+      </section>
+
+      <section class="section" id="costs-block">
+        <h2 class="section-title">② 計算に使っている毎月の支出（いま）</h2>
+        <p class="small">実際の家計と見比べてください。<b>月2万円以上違う項目があれば、「直す」からくわしく入力で合わせる</b>と、見通しが正確になります。</p>
+        <div id="costs"></div>
       </section>
 
       <section class="section">
-        <h2 class="section-title">まずやること 3つ</h2>
+        <h2 class="section-title">③ まずやること 3つ</h2>
         ${top3.length ? top3.map(todoCard).join("") : '<p class="card">いま特に急ぐことは見つかりませんでした。</p>'}
+      </section>
+
+      <section class="section" id="timeline-block">
+        <h2 class="section-title">④ これからの出来事</h2>
+        <div id="timeline"></div>
+      </section>
+
+      <section class="section" id="viz-block">
+        <h2 class="section-title">⑤ お金の流れ</h2>
+        <p class="small muted" style="margin-bottom:8px">グラフを触る（またはキーボードの矢印キー）と、その年の内訳が出ます。</p>
+        <div id="viz"></div>
+        <p class="small" style="margin-top:8px">前提：物価上昇 年${d.assumptions.inflation}% ／ 運用 年${d.assumptions.ret}%　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button></p>
       </section>
 
       <div class="section"><a class="btn" href="/soudan/pdf/">📄 PDFで保存・印刷する</a></div>
@@ -152,6 +168,21 @@
       <p class="disclaimer">この結果は一般的な計算による目安で、特定の商品をすすめるものではありません。運用成果を保証するものでもありません。運営者は保険代理店・金融機関ではありません。<a href="/about/">このサイトについて</a></p>`;
 
     KSV.mount(document.getElementById("viz"), r);
+    document.getElementById("forecast").appendChild(KSR.forecast(r, (target) => {
+      if (target === "estimate") {
+        const det = document.querySelector('[data-sec="estimate"]');
+        det.open = true;
+        openState.add("estimate");
+        det.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        document.getElementById(target === "costs" ? "costs-block" : "viz-block").scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }));
+    document.getElementById("costs").appendChild(KSR.costs(r, A, (section) => {
+      try { sessionStorage.setItem("ks-open-section", section); } catch (e) { /* 保存できなくても画面は開く */ }
+      location.href = "/soudan/detail/";
+    }));
+    document.getElementById("timeline").appendChild(KSR.timeline(r));
     app.querySelectorAll("details.fold").forEach((el) => el.addEventListener("toggle", () => {
       el.open ? openState.add(el.dataset.sec) : openState.delete(el.dataset.sec);
     }));
