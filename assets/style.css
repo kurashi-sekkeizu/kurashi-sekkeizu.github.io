@@ -367,6 +367,7 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .lt-icons { display: block; font-size: .95rem; line-height: 1.1; }
 .lt-amt { display: block; font-size: .64rem; font-weight: 700; color: #7a3b00; line-height: 1.1; }
 .lt .st-elem { background: #eef6fd; } .lt .st-junior { background: #e3effb; } .lt .st-high { background: #d8e8f8; } .lt .st-univ { background: #e6f5ee; }
+.lt .st-unborn { background: #fbfbf8; }
 .lt .lt-empty { background: repeating-linear-gradient(135deg, #fafaf7 0 4px, #f1f0ea 4px 5px); cursor: pointer; }
 .lt-life td.lt-has { background: #fff6ec; }
 .lt-balance td { font-size: .68rem; font-weight: 700; }

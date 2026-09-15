@@ -61,6 +61,7 @@
     { th: "お子さん", td: A.kids === "yes" ? `${A.kidsCount}人（${show("kidsAges")}）・${show("eduPlan")}` : show("kids"), edit: A.kids === "yes" ? "kidsCount" : "kids", warn: A.kids === "yes" && unk("eduPlan") },
     { th: "住まい", td: [show("home"), show("homeType")].filter(Boolean).join("・"), edit: "home" },
     { th: "車", td: show("cars"), edit: "cars" },
+    { th: "保険", td: show("insured"), edit: "insured" },
     { th: "毎月の生活費", td: show("living"), edit: "living", warn: unk("living") },
     { th: "貯蓄", td: show("savings"), edit: "savings", warn: unk("savings") },
     { th: "気になること", td: show("worries") || "特になし", edit: "worries" },

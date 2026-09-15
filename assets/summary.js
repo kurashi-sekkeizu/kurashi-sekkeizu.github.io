@@ -125,13 +125,14 @@
 
   // ── ライフプラン表（縦＝人、横＝年） ──
   const ICON = { car: "🚗", repair: "🔧", home: "🏠", care: "👵", spend: "✈️", work: "💼" };
-  const SHORT_ICON = { 小学校: "🎒", 中学: "🏫", 高校: "🏫", 大学: "🎓", 専門: "🎓", 独立: "🌱", 定年: "👔", 年金: "💴", 完済: "🏠" };
+  const SHORT_ICON = { 誕生: "👶", 小学校: "🎒", 中学: "🏫", 高校: "🏫", 大学: "🎓", 専門: "🎓", 独立: "🌱", 定年: "👔", 年金: "💴", 完済: "🏠" };
   const iconOf = (e) => ICON[e.kind] || SHORT_ICON[e.short] || "●";
 
   function stageOf(kid, kidAge) {
     const p = kid.plan;
     const pri = (v) => (v === "private" ? "私" : "");
     if (kidAge > kid.independ) return null;
+    if (kidAge < 0) return { text: "", cls: "st-unborn", hideAge: true };
     if (kidAge === kid.independ && kidAge >= 18) return { text: "", cls: "st-pre" };
     if (kidAge < 6) return { text: "", cls: "st-pre" };
     if (kidAge <= 11) return { text: `小${kidAge - 5}${pri(p.elem)}`, cls: "st-elem" };
@@ -147,13 +148,13 @@
     const box = h("div", "lt-box");
 
     const legend = h("div", "lt-legend");
-    [["🎒🏫🎓", "入学"], ["🌱", "独立"], ["👔", "定年"], ["💴", "年金"], ["🚗", "車"], ["🔧", "修繕"], ["🏠", "住まい"], ["👵", "介護"], ["✈️", "出費"]].forEach(([i, t]) => legend.appendChild(h("span", null, `${i} ${t}`)));
+    [["👶", "誕生"], ["🎒🏫🎓", "入学"], ["🌱", "独立"], ["👔", "定年"], ["💴", "年金"], ["💼", "働き方"], ["🚗", "車"], ["🔧", "修繕"], ["🏠", "住まい"], ["👵", "介護"], ["✈️", "出費"]].forEach(([i, t]) => legend.appendChild(h("span", null, `${i} ${t}`)));
     box.appendChild(legend);
 
     // 行の定義：レーン（あなた・配偶者・子…・くらし）＋貯蓄残高
     const laneRows = r.lanes.map((lane, li) => {
       const isLife = lane.ageNow == null;
-      const kidIdx = lane.label.endsWith("人目の子") ? parseInt(lane.label, 10) - 1 : -1;
+      const kidIdx = lane.kidIdx != null ? lane.kidIdx : -1;
       const byOff = {};
       lane.events.forEach((e) => { (byOff[e.offset] = byOff[e.offset] || []).push(e); });
       return { lane, isLife, kidIdx, byOff };
@@ -180,7 +181,7 @@
     const tbody = h("tbody");
     laneRows.forEach((row) => {
       const tr = h("tr", row.isLife ? "lt-life" : "");
-      const name = h("th", "lt-name", row.isLife ? "くらし" : row.lane.label.replace("人目の子", "人目の子"));
+      const name = h("th", "lt-name", row.isLife ? "くらし" : row.lane.label);
       name.scope = "row";
       tr.appendChild(name);
       for (let i = 0; i < n; i++) {
@@ -192,7 +193,7 @@
             const st = stageOf(r.kidInfo[row.kidIdx], a);
             if (st === null) { td.classList.add("lt-empty"); tr.appendChild(td); continue; }
             td.classList.add(st.cls);
-            td.appendChild(h("span", "lt-age", String(a)));
+            if (!st.hideAge) td.appendChild(h("span", "lt-age", String(a)));
             if (st.text) td.appendChild(h("span", "lt-stage", st.text));
           } else {
             td.appendChild(h("span", "lt-age", String(a)));
@@ -243,7 +244,7 @@
       head.appendChild(h("b", null, `${p.year}年`));
       const ages = [`あなた ${r.age + i}歳`];
       if (r.spouse) ages.push(`配偶者 ${r.spouseAge + i}歳`);
-      r.kidInfo.forEach((k, ki) => { const a = k.ageNow + i; if (a <= k.independ) ages.push(`${r.kidInfo.length > 1 ? `子${ki + 1}` : "子"} ${a}歳`); });
+      r.kidInfo.forEach((k, ki) => { const a = k.ageNow + i; if (a >= 0 && a <= k.independ) ages.push(`${r.kidInfo.length > 1 ? `子${ki + 1}` : "子"} ${a}歳`); });
       head.appendChild(h("span", "lt-panel-ages", ages.join("・")));
       panel.appendChild(head);
       const evs = [];
