@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>くわしく入力｜くらしの設計図（プロトタイプ）</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="has-lock">
+<div class="proto-banner">🧪 画面確認用のプロトタイプです。数字・会社名はダミーで、正しい計算ではありません。</div>
+<header class="app-header">
+  <div class="wrap">
+    <a class="linkbtn" href="/soudan/result/">← 結果に戻る</a>
+    <span class="title">くわしく入力</span>
+    <button type="button" class="linkbtn danger" data-delete>🗑 削除</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <noscript><p class="note warn">相談機能はJavaScriptを有効にするとお使いいただけます。</p></noscript>
+  <div id="incomplete" hidden>
+    <p class="note warn">まだ答えていない質問があります。先に「かんたん」の質問に答えてください。</p>
+    <a class="btn" href="/soudan/step/">続きから答える</a>
+  </div>
+
+  <div id="app" hidden>
+    <h1>くわしく入力</h1>
+    <p class="muted">設定したところだけ結果に反映されます。わからない項目は、そのままで大丈夫です（一般的な目安で計算します）。</p>
+
+    <div class="card detail-preview" aria-live="polite">
+      <div class="small muted">いまの設定での見通し（運用しない場合）</div>
+      <div id="preview" class="detail-preview-row"></div>
+    </div>
+
+    <div id="sections" class="section"></div>
+
+    <div class="section"><a class="btn" href="/soudan/result/">結果に反映して見る</a></div>
+  </div>
+</main>
+<div class="lock-bar">🔒 入力内容は送信されません</div>
+
+<script src="/assets/common.js"></script>
+<script src="/assets/questions.js"></script>
+<script src="/assets/calc.js"></script>
+<script>
+(function () {
+  const d = KS.load().data;
+  const A = d.answers;
+  if (KSQ.visible(A).some((q) => q.required && !KSQ.isAnswered(q, A))) {
+    document.getElementById("incomplete").hidden = false;
+    return;
+  }
+  document.getElementById("app").hidden = false;
+  let D = KSC.detailOf(d);
+  const age = Number(A.age);
+  const owns = A.home === "loan" || A.home === "own";
+  const openState = new Set();
+
+  // ── 小さな部品 ──
+  const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+  let uid = 0;
+  const range = (from, to, step, fmt) => { const o = []; for (let v = from; v <= to + 1e-9; v += step) o.push({ v: Math.round(v * 10) / 10, label: fmt(Math.round(v * 10) / 10) }); return o; };
+  const man = (v) => KS.man(v);
+
+  function select(label, obj, key, options, section, opt = {}) {
+    const row = h("div", "field-row");
+    const id = "f" + ++uid;
+    const l = h("label", null, label); l.htmlFor = id;
+    const s = h("select", "select"); s.id = id;
+    options.forEach((o) => { const op = h("option", null, o.label); op.value = o.v; if (String(obj[key]) === String(o.v)) op.selected = true; s.appendChild(op); });
+    s.addEventListener("change", () => { obj[key] = opt.text ? s.value : Number(s.value); changed(section, opt.rerender); });
+    row.append(l, s);
+    if (opt.note) row.appendChild(h("p", "muted small", opt.note));
+    return row;
+  }
+  function radios(label, obj, key, options, section, opt = {}) {
+    const fs = h("fieldset", "field-row");
+    fs.appendChild(h("legend", "detail-legend", label));
+    const wrap = h("div", "radio-row");
+    const name = "r" + ++uid;
+    options.forEach((o) => {
+      const lab = h("label");
+      const i = h("input"); i.type = "radio"; i.name = name; i.value = o.v; i.checked = String(obj[key]) === String(o.v);
+      i.addEventListener("change", () => { obj[key] = o.v; changed(section, opt.rerender !== false); });
+      lab.append(i, document.createTextNode(o.label));
+      wrap.appendChild(lab);
+    });
+    fs.appendChild(wrap);
+    return fs;
+  }
+  const note = (text) => h("p", "note info small", text);
+  const sub = (text) => h("h3", "detail-sub", text);
+
+  function changed(section, rerender) {
+    D.set[section] = true;
+    d.detail = D;
+    KS.save(d);
+    preview();
+    if (rerender) renderSections();
+    else document.querySelectorAll(`[data-status="${section}"]`).forEach((b) => { b.textContent = "設定済み"; b.className = "badge set"; });
+  }
+
+  function resetSection(section) {
+    const def = KSC.detailDefaults(A);
+    const keys = { edu: ["kids"], car: ["cars"], home: ["loan", "rent", "house", "mansion", "purchase", "rebuild"], care: ["care"], spend: ["spend"], work: ["work"] }[section];
+    keys.forEach((k) => { D[k] = def[k]; });
+    delete D.set[section];
+    d.detail = D;
+    KS.save(d);
+    preview();
+    renderSections();
+  }
+
+  // ── 各セクション ──
+  const SECTIONS = [
+    {
+      key: "edu", title: "🎓 お子さんの進学", show: () => A.kids === "yes",
+      body: () => {
+        const box = h("div");
+        box.appendChild(note("「かんたん」で選んだ方針から初期値を入れています。お子さんごとに変えられます。"));
+        const kidsAges = (A.kidsAges || []).map(Number);
+        D.kids.forEach((kd, i) => {
+          const k = kidsAges[i];
+          box.appendChild(sub(`${i + 1}人目のお子さん（いま${k}歳）`));
+          const pubPri = [{ v: "public", label: "公立" }, { v: "private", label: "私立" }];
+          if (k <= 11) box.appendChild(radios("小学校", kd, "elem", pubPri, "edu", { rerender: false }));
+          if (k <= 14) box.appendChild(radios("中学校", kd, "junior", pubPri, "edu", { rerender: false }));
+          if (k <= 17) box.appendChild(radios("高校", kd, "high", pubPri, "edu", { rerender: false }));
+          if (k <= 21) {
+            box.appendChild(select("高校のあと", kd, "univ", [
+              { v: "none", label: "進学しない" }, { v: "national", label: "国公立大学" }, { v: "privArts", label: "私立大学（文系）" },
+              { v: "privSci", label: "私立大学（理系）" }, { v: "vocational", label: "専門学校（2年）" }], "edu", { text: true, rerender: true }));
+            if (kd.univ !== "none") box.appendChild(radios("進学したあとの住まい", kd, "away", [{ v: "home", label: "自宅から通う" }, { v: "away", label: "下宿・一人暮らし" }], "edu", { rerender: false }));
+          }
+          if (k > 21) box.appendChild(h("p", "muted small", "すでに独立の年齢のため、教育費は計算していません。"));
+        });
+        return box;
+      },
+    },
+    {
+      key: "car", title: "🚗 車", show: () => true,
+      body: () => {
+        const box = h("div");
+        const count = { n: D.cars.length };
+        box.appendChild(select("車の台数（これから買う予定を含む）", count, "n", [{ v: 0, label: "持たない" }, { v: 1, label: "1台" }, { v: 2, label: "2台" }], "car", { rerender: true }));
+        // 台数の変更は配列の長さに反映
+        box.firstChild.querySelector("select").addEventListener("change", (e) => {
+          const n = Number(e.target.value);
+          while (D.cars.length < n) D.cars.push({ nextIn: 5, budget: 250, interval: 10, upkeep: 35, until: 75 });
+          D.cars.length = n;
+          changed("car", true);
+        }, { capture: true });
+        D.cars.forEach((c, i) => {
+          if (D.cars.length > 1) box.appendChild(sub(`${i + 1}台目`));
+          box.appendChild(select("次に買う（買い替える）時期", c, "nextIn", range(0, 15, 1, (v) => (v === 0 ? "今年" : `${v}年後（${age + v}歳）`)), "car"));
+          box.appendChild(select("買い替えの予算", c, "budget", [100, 150, 200, 250, 300, 400, 500, 700].map((v) => ({ v, label: man(v) })), "car"));
+          box.appendChild(select("買い替えの間隔", c, "interval", [5, 7, 10, 13, 15].map((v) => ({ v, label: `${v}年ごと` })), "car"));
+          box.appendChild(select("1年あたりの維持費", c, "upkeep", [10, 20, 30, 35, 40, 50, 60].map((v) => ({ v, label: `${man(v)}` })), "car", { note: "自動車税・保険・車検・ガソリン・駐車場などの合計" }));
+          box.appendChild(select("何歳まで持つ予定か", c, "until", range(60, 85, 5, (v) => `${v}歳まで`), "car"));
+        });
+        return box;
+      },
+    },
+    {
+      key: "home", title: "🏠 住まい（ローン・修繕・購入）", show: () => A.home !== "family" || true,
+      body: () => {
+        const box = h("div");
+        if (A.home === "loan") {
+          box.appendChild(sub("住宅ローン"));
+          box.appendChild(select("毎月の返済額", D.loan, "monthly", range(3, 25, 1, (v) => `月${man(v)}`), "home"));
+          box.appendChild(select("完済する年齢", D.loan, "endAge", range(Math.max(age + 1, 40), 85, 1, (v) => `${v}歳`), "home"));
+        }
+        if (A.home === "rent" || A.home === "plan") {
+          box.appendChild(sub("家賃"));
+          box.appendChild(select("毎月の家賃（管理費を含む）", D.rent, "monthly", range(3, 25, 1, (v) => `月${man(v)}`), "home"));
+        }
+        const houseRepair = () => {
+          box.appendChild(select("外壁・屋根の塗装：間隔", D.house, "paintEvery", [10, 12, 15, 20].map((v) => ({ v, label: `${v}年ごと` })), "home"));
+          box.appendChild(select("外壁・屋根の塗装：1回の費用", D.house, "paintCost", [60, 80, 100, 120, 150, 200].map((v) => ({ v, label: man(v) })), "home"));
+          box.appendChild(select("水回り・給湯器の交換：間隔", D.house, "waterEvery", [10, 15, 20].map((v) => ({ v, label: `${v}年ごと` })), "home"));
+          box.appendChild(select("水回り・給湯器の交換：1回の費用", D.house, "waterCost", [30, 50, 60, 80, 100, 150].map((v) => ({ v, label: man(v) })), "home"));
+        };
+        const mansionFee = () => {
+          box.appendChild(select("修繕積立金＋管理費", D.mansion, "monthly", range(1, 8, 0.5, (v) => `月${v}万円`), "home"));
+          box.appendChild(select("10年ごとの値上がり", D.mansion, "raise", [0, 10, 20, 30, 50].map((v) => ({ v, label: v ? `${v}%ずつ上がる` : "上がらない" })), "home"));
+        };
+        if (owns && A.homeType === "house") {
+          box.appendChild(sub("戸建ての修繕"));
+          box.appendChild(select("築年数", D.house, "built", range(0, 60, 1, (v) => `築${v}年`), "home"));
+          houseRepair();
+        }
+        if (owns && A.homeType === "mansion") {
+          box.appendChild(sub("マンションの修繕積立金・管理費"));
+          mansionFee();
+        }
+        if (owns) {
+          box.appendChild(sub("建て替え・大規模リフォーム"));
+          box.appendChild(radios("予定", D.rebuild, "on", [{ v: "no", label: "なし" }, { v: "yes", label: "あり" }], "home"));
+          if (D.rebuild.on === "yes") {
+            box.appendChild(select("時期（あなたの年齢）", D.rebuild, "age", range(age, 85, 1, (v) => `${v}歳`), "home"));
+            box.appendChild(select("予算", D.rebuild, "budget", [300, 500, 800, 1000, 1500, 2000, 3000].map((v) => ({ v, label: man(v) })), "home"));
+          }
+        } else {
+          box.appendChild(sub("住宅の購入"));
+          box.appendChild(radios("予定", D.purchase, "on", [{ v: "no", label: "なし" }, { v: "yes", label: "あり" }], "home"));
+          if (D.purchase.on === "yes") {
+            box.appendChild(select("購入する年齢", D.purchase, "age", range(age, 70, 1, (v) => `${v}歳`), "home"));
+            box.appendChild(radios("種類", D.purchase, "type", [{ v: "house", label: "戸建て" }, { v: "mansion", label: "マンション" }], "home"));
+            box.appendChild(select("価格", D.purchase, "price", range(1500, 9000, 500, (v) => man(v)), "home"));
+            box.appendChild(select("頭金", D.purchase, "down", [0, 100, 200, 300, 500, 800, 1000, 1500, 2000].map((v) => ({ v, label: man(v) })), "home"));
+            box.appendChild(select("返済年数", D.purchase, "years", [20, 25, 30, 35].map((v) => ({ v, label: `${v}年` })), "home"));
+            box.appendChild(select("金利（仮定）", D.purchase, "rate", [0.5, 1, 1.5, 2, 3].map((v) => ({ v, label: `年${v}%` })), "home", { note: "計算のための仮定です。特定の金融機関の金利ではありません。" }));
+            if (D.purchase.type === "house") { box.appendChild(h("p", "muted small", "購入後の修繕（新築として計算）")); houseRepair(); }
+            else mansionFee();
+          }
+        }
+        return box;
+      },
+    },
+    {
+      key: "care", title: "👵 親の介護", show: () => true,
+      body: () => {
+        const box = h("div");
+        box.appendChild(radios("介護の費用を見込むか", D.care, "on", [{ v: "no", label: "見込まない" }, { v: "yes", label: "見込む" }], "care"));
+        if (D.care.on === "yes") {
+          box.appendChild(select("始まる時期（あなたの年齢）", D.care, "startAge", range(age, 85, 1, (v) => `${v}歳`), "care"));
+          box.appendChild(select("期間", D.care, "years", [3, 5, 7, 10, 15].map((v) => ({ v, label: `${v}年` })), "care"));
+          box.appendChild(select("あなたの負担（月あたり）", D.care, "monthly", [1, 2, 3, 5, 8, 10, 15].map((v) => ({ v, label: `月${man(v)}` })), "care"));
+          box.appendChild(note("介護の期間や費用は人によって大きく違います。本番では、公的な調査の平均を出典つきで表示します。"));
+        }
+        return box;
+      },
+    },
+    {
+      key: "spend", title: "✈️ 旅行・大きな出費", show: () => true,
+      body: () => {
+        const box = h("div");
+        box.appendChild(select("毎年の旅行・レジャー", D.spend, "travel", [0, 10, 20, 30, 50, 80, 100].map((v) => ({ v, label: v ? `年${man(v)}` : "特に見込まない" })), "spend"));
+        if (Number(D.spend.travel) > 0) box.appendChild(select("何歳まで", D.spend, "travelUntil", range(60, 85, 5, (v) => `${v}歳まで`), "spend"));
+        box.appendChild(sub("一時的な大きな出費（最大3件）"));
+        const LABELS = ["記念の旅行", "趣味", "結婚式の援助", "家電・家具の買い替え", "リフォーム以外の住まいの出費", "その他"];
+        D.spend.items.forEach((it, i) => {
+          const card = h("div", "card detail-item");
+          card.appendChild(select("内容", it, "label", LABELS.map((v) => ({ v, label: v })), "spend", { text: true }));
+          card.appendChild(select("時期（あなたの年齢）", it, "age", range(age, 90, 1, (v) => `${v}歳`), "spend"));
+          card.appendChild(select("金額", it, "amount", [30, 50, 100, 200, 300, 500, 1000].map((v) => ({ v, label: man(v) })), "spend"));
+          const del = h("button", "linkbtn danger", "この出費を消す"); del.type = "button";
+          del.addEventListener("click", () => { D.spend.items.splice(i, 1); changed("spend", true); });
+          card.appendChild(del);
+          box.appendChild(card);
+        });
+        if (D.spend.items.length < 3) {
+          const add = h("button", "btn secondary inline", "＋ 出費を追加"); add.type = "button";
+          add.addEventListener("click", () => { D.spend.items.push({ label: "記念の旅行", age: Math.min(90, age + 5), amount: 100 }); changed("spend", true); });
+          box.appendChild(add);
+        }
+        return box;
+      },
+    },
+    {
+      key: "work", title: "💼 収入の変化（定年・再雇用・転職）", show: () => true,
+      body: () => {
+        const box = h("div");
+        box.appendChild(select("仕事をやめる（定年の）年齢", D.work, "retireAge", [55, 60, 63, 65, 70, 75].map((v) => ({ v, label: `${v}歳` })), "work", { note: "自営業など定年がない場合は、仕事をやめる予定の年齢", rerender: true }));
+        box.appendChild(select("定年後の働き方（再雇用など）", D.work, "rehire", [{ v: 0, label: "働かない" }, { v: 50, label: "定年前の年収の5割" }, { v: 70, label: "定年前の年収の7割" }, { v: 100, label: "定年前と同じ" }], "work", { rerender: true }));
+        if (Number(D.work.rehire) > 0) box.appendChild(select("何歳まで働くか", D.work, "rehireUntil", range(Math.max(60, Number(D.work.retireAge) + 1), 80, 1, (v) => `${v}歳まで`), "work"));
+        box.appendChild(select("退職金の見込み", D.work, "allowance", [0, 300, 500, 800, 1000, 1500, 2000, 3000].map((v) => ({ v, label: v ? man(v) : "なし・わからない" })), "work"));
+        box.appendChild(sub("転職・独立"));
+        box.appendChild(radios("予定", D.work, "change", [{ v: "no", label: "なし" }, { v: "yes", label: "あり" }], "work"));
+        if (D.work.change === "yes") {
+          box.appendChild(select("時期（あなたの年齢）", D.work, "changeAge", range(age, 70, 1, (v) => `${v}歳`), "work"));
+          box.appendChild(select("変わったあとの年収（額面）", D.work, "changeIncome", KSQ.byId.income.options.filter((o) => o.v !== "unknown").map((o) => ({ v: o.v, label: o.label })), "work", { text: true }));
+        }
+        return box;
+      },
+    },
+  ];
+
+  function renderSections() {
+    const root = document.getElementById("sections");
+    const focusId = document.activeElement && document.activeElement.id;
+    uid = 0; // 描き直しても同じ id になるように
+    root.replaceChildren();
+    SECTIONS.filter((s) => s.show()).forEach((s) => {
+      const det = h("details", "fold");
+      det.open = openState.has(s.key);
+      det.addEventListener("toggle", () => { det.open ? openState.add(s.key) : openState.delete(s.key); });
+      const sum = h("summary");
+      const t = h("span", null, s.title + " ");
+      const badge = h("span", D.set[s.key] ? "badge set" : "badge warn", D.set[s.key] ? "設定済み" : "目安で計算中");
+      badge.dataset.status = s.key;
+      t.appendChild(badge);
+      sum.appendChild(t);
+      det.appendChild(sum);
+      const body = h("div", "body");
+      body.appendChild(s.body());
+      if (D.set[s.key]) {
+        const reset = h("button", "linkbtn", "一般的な目安に戻す"); reset.type = "button";
+        reset.addEventListener("click", () => resetSection(s.key));
+        body.appendChild(reset);
+      }
+      det.appendChild(body);
+      root.appendChild(det);
+    });
+    if (focusId) document.getElementById(focusId)?.focus();
+  }
+
+  function preview() {
+    const r = KSC.compute(d);
+    const p = r.sim0.points;
+    const at65 = p.find((x) => x.age === 65) || p[p.length - 1];
+    const items = [
+      [`${at65.age}歳時点の貯蓄`, man(at65.balance)],
+      ["貯蓄が底をつく時期", r.sim0.shortageAge !== null ? `⚠ ${r.sim0.shortageAge}歳ごろ` : "90歳までプラス"],
+      ["支出がいちばん多い年", (() => { const m = p.reduce((a, b) => (b.expense > a.expense ? b : a), p[0]); return `${m.year}年（${man(m.expense)}）`; })()],
+    ];
+    const box = document.getElementById("preview");
+    box.replaceChildren();
+    items.forEach(([l, v]) => { const c = h("div", "detail-preview-item"); c.append(h("div", "small muted", l), h("b", null, v)); box.appendChild(c); });
+  }
+
+  renderSections();
+  preview();
+})();
+</script>
+</body>
+</html>

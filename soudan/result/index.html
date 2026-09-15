@@ -62,7 +62,7 @@
     const tableRows = r.sim0.points.map((p, i) => {
       const pr = r.simR ? r.simR.points[i] : null;
       const n0 = (v) => Math.round(v).toLocaleString();
-      return `<tr><td>${p.age}歳（${p.year}年）</td><td>${n0(p.income)}</td><td>${n0(p.exp.living)}</td><td>${n0(p.exp.housing)}</td><td>${n0(p.exp.edu)}</td><td>${n0(p.expense)}</td><td>${n0(p.balance)}</td>${pr ? `<td>${n0(pr.balance)}</td>` : ""}</tr>`;
+      return `<tr><td>${p.age}歳（${p.year}年）</td><td>${n0(p.income)}</td><td>${n0(p.exp.living)}</td><td>${n0(p.exp.housing)}</td><td>${n0(p.exp.edu)}</td><td>${n0(p.exp.car)}</td><td>${n0(p.exp.other)}</td><td>${n0(p.expense)}</td><td>${n0(p.balance)}</td>${pr ? `<td>${n0(pr.balance)}</td>` : ""}</tr>`;
     }).join("");
 
     const death = r.death ? `
@@ -104,7 +104,7 @@
       { id: "timeline", title: "出来事の一覧", html: `<ol class="timeline">${r.events.map((e) => `<li><span class="y">${e.year}年（${e.age}歳）</span><br>${esc(e.text)}</li>`).join("")}</ol>` },
       { id: "cash", title: "年ごとの数字（表）", html: `
           <p class="small">グラフと同じ数字です（万円）。</p>
-          <div class="table-wrap table-scroll"><table class="data"><thead><tr><th>年齢</th><th>収入</th><th>生活費</th><th>住居費</th><th>教育費</th><th>支出計</th><th>残高（0%）</th>${r.simR ? `<th>残高（${r.ret}%）</th>` : ""}</tr></thead><tbody>${tableRows}</tbody></table></div>` },
+          <div class="table-wrap table-scroll"><table class="data"><thead><tr><th>年齢</th><th>収入</th><th>生活費</th><th>住居費</th><th>教育費</th><th>車</th><th>その他</th><th>支出計</th><th>残高（0%）</th>${r.simR ? `<th>残高（${r.ret}%）</th>` : ""}</tr></thead><tbody>${tableRows}</tbody></table></div>` },
       { id: "todo", title: "やることリスト（すべて）", html: r.todos.length ? r.todos.map(todoCard).join("") : "<p>いま特に急ぐことは見つかりませんでした。</p>" },
       { id: "review", title: "見直せるかもしれない支出", html: `
           <p class="note info">固定費（通信費・電気代など）は「くわしく入力（固定費）」で答えると表示されます。</p>
@@ -144,9 +144,8 @@
         <h2 class="section-title">精度を上げる</h2>
         <div class="stack">
           <button type="button" class="btn secondary" data-open-sheet>前提を変える</button>
-          <button type="button" class="btn secondary" data-detail>くわしく入力する（保険・老後・固定費 など）</button>
+          <a class="btn secondary" href="/soudan/detail/">くわしく入力する（進学・車・住まい・介護・出費・収入の変化）</a>
         </div>
-        <p id="detail-note" class="note info small" hidden style="margin-top:8px">プロトタイプでは「くわしく入力」は未実装です。本番では、分野を選んで追加の質問に答えると結果が更新されます。</p>
         <div id="sheet-slot"></div>
       </section>
 
@@ -157,7 +156,6 @@
       el.open ? openState.add(el.dataset.sec) : openState.delete(el.dataset.sec);
     }));
     app.querySelectorAll("[data-open-sheet]").forEach((b) => b.addEventListener("click", openSheet));
-    app.querySelector("[data-detail]").addEventListener("click", () => { document.getElementById("detail-note").hidden = false; });
   }
 
   function openSheet() {

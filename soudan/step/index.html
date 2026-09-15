@@ -118,11 +118,15 @@
       } else {
         A[q.id] = q.id === "kidsCount" ? Number(t.value) : t.value;
       }
-      if (q.id === "kidsCount") {
-        const keep = document.activeElement;
+      // 回答によって同じ画面の質問が増減する場合（子の人数→年齢欄、持ち家→戸建て/マンション）は描き直す
+      const before = screens[idx].map((x) => x.id).join(",");
+      const nextScreens = KSQ.screens(A);
+      const now = nextScreens.find((sc) => sc.some((x) => x.id === screens[idx][0].id));
+      if (q.id === "kidsCount" || (now && now.map((x) => x.id).join(",") !== before)) {
+        screens = nextScreens;
+        idx = screens.indexOf(now);
         render(false);
-        const again = document.querySelector(`input[name="kidsCount"][value="${t.value}"]`);
-        (again || keep)?.focus();
+        document.querySelector(`input[name="${q.id}"][value="${t.value}"]`)?.focus();
       }
     }
     KS.save(d);

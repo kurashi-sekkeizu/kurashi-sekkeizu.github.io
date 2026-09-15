@@ -11,6 +11,8 @@
     living: "#2a78d6",   // カテゴリ1 青
     housing: "#eb6834",  // カテゴリ2 橙
     edu: "#1baf7a",      // カテゴリ3 青緑
+    car: "#eda100",      // カテゴリ4 黄
+    other: "#e87ba4",    // カテゴリ5 マゼンタ
     income: "#0b0b0b",   // 収入の線（主インク）
     balance: "#2a78d6",
     scenario: "#52514e",
@@ -106,16 +108,18 @@
     const cross = addCrosshair(svg, fr, T, H - B);
     r.lanes.forEach((lane, li) => {
       const y0 = T + li * rowH, ly = y0 + 24;
-      svgText({ x: 4, y: y0 + 12, "font-size": 12, fill: COLOR.ink2 }, `${lane.label}（いま${lane.ageNow}歳）`, svg);
+      svgText({ x: 4, y: y0 + 12, "font-size": 12, fill: COLOR.ink2 }, lane.ageNow == null ? lane.label : `${lane.label}（いま${lane.ageNow}歳）`, svg);
       const endI = Math.min(n - 1, lane.end);
-      if (endI > 0) svgEl("line", { x1: fr.cx(0), x2: fr.cx(endI), y1: ly, y2: ly, stroke: COLOR.track, "stroke-width": 6, "stroke-linecap": "round" }, svg);
+      if (lane.track === false) svgEl("line", { x1: fr.cx(0), x2: fr.cx(n - 1), y1: ly, y2: ly, stroke: COLOR.grid, "stroke-width": 1 }, svg);
+      else if (endI > 0) svgEl("line", { x1: fr.cx(0), x2: fr.cx(endI), y1: ly, y2: ly, stroke: COLOR.track, "stroke-width": 6, "stroke-linecap": "round" }, svg);
       else svgText({ x: fr.cx(0), y: ly + 4, "font-size": 11, fill: COLOR.muted }, "独立済み", svg);
       const shown = lane.events.filter((ev) => ev.offset >= 0 && ev.offset < n);
+      const KIND_COLOR = { car: COLOR.car, repair: COLOR.housing, home: COLOR.housing, care: COLOR.other, spend: COLOR.other, work: COLOR.ink2 };
       shown.forEach((ev) => {
-        svgEl("circle", { cx: fr.cx(ev.offset), cy: ly, r: 5, fill: COLOR.living, stroke: COLOR.surface, "stroke-width": 2 }, svg);
+        svgEl("circle", { cx: fr.cx(ev.offset), cy: ly, r: 5, fill: KIND_COLOR[ev.kind] || COLOR.living, stroke: COLOR.surface, "stroke-width": 2 }, svg);
       });
       // ラベルは大事な出来事から置き、重なるものは省く（省いた分は吹き出しと一覧で読める）
-      const PRIORITY = ["大学", "定年", "独立", "小学校", "高校", "中学"];
+      const PRIORITY = ["大学", "専門", "定年", "購入", "建替", "介護", "転職", "車", "塗装", "独立", "年金", "完済", "水回り", "出費", "高校", "中学", "小学校"];
       const placed = [];
       shown.slice().sort((a, b) => PRIORITY.indexOf(a.short) - PRIORITY.indexOf(b.short)).forEach((ev) => {
         const x = fr.cx(ev.offset);
@@ -133,7 +137,9 @@
   function flowChart(r, W) {
     const pts = r.sim0.points, n = pts.length, fr = frame(n, W);
     const T = 20, B = 34, H = 250;
-    const maxV = Math.max(100, ...pts.map((p) => Math.max(p.income, p.expense)));
+    // 退職金などの一時的な収入は線に含めず、目印で示す（目盛りが引き伸ばされないように）
+    const regular = (p) => p.income - Math.round(p.inc.lump || 0);
+    const maxV = Math.max(100, ...pts.map((p) => Math.max(regular(p), p.expense)));
     const ys = yScale(0, maxV, T, H - B);
     const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "収入と支出の推移のグラフ。支出は生活費・住居費・教育費の積み上げ、収入は線。数字は下の表でも確認できます。" });
     drawYGrid(svg, fr, ys);
@@ -141,7 +147,7 @@
     const bw = Math.max(1, Math.min(24, fr.band - 2));
     const rad = Math.min(4, bw / 2);
     pts.forEach((p, i) => {
-      const segs = [["living", COLOR.living], ["housing", COLOR.housing], ["edu", COLOR.edu]].filter(([k]) => p.exp[k] > 0);
+      const segs = [["living", COLOR.living], ["housing", COLOR.housing], ["edu", COLOR.edu], ["car", COLOR.car], ["other", COLOR.other]].filter(([k]) => p.exp[k] > 0);
       let base = 0;
       segs.forEach(([k, c], si) => {
         const v = p.exp[k];
@@ -159,8 +165,17 @@
         }
       });
     });
-    const d = pts.map((p, i) => (i ? "L" : "M") + fr.cx(i).toFixed(1) + "," + ys.f(p.income).toFixed(1)).join("");
+    const d = pts.map((p, i) => (i ? "L" : "M") + fr.cx(i).toFixed(1) + "," + ys.f(regular(p)).toFixed(1)).join("");
     svgEl("path", { d, fill: "none", stroke: COLOR.income, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    pts.forEach((p, i) => {
+      if (!(p.inc.lump > 0)) return;
+      const x = fr.cx(i), y = ys.f(regular(p));
+      svgEl("path", { d: `M${x},${y - 14}l6,6l-6,6l-6,-6Z`, fill: COLOR.income, stroke: COLOR.surface, "stroke-width": 2 }, svg);
+      const left = x > fr.W * 0.6;
+      const ly = T + 26;
+      svgEl("line", { x1: x, x2: x, y1: y - 14, y2: ly + 4, stroke: COLOR.ink, "stroke-width": 1 }, svg);
+      svgText({ x: x + (left ? -5 : 5), y: ly, "text-anchor": left ? "end" : "start", "font-size": 11, fill: COLOR.ink, stroke: COLOR.surface, "stroke-width": 3, "paint-order": "stroke" }, `＋退職金など ${man(p.inc.lump)}`, svg);
+    });
 
     const ri = pts.findIndex((p) => p.age === 65);
     if (ri > 0) {
@@ -224,13 +239,13 @@
       d.appendChild(h("span", "tip-label", label));
       box.appendChild(d);
     };
-    row({ type: "line", color: COLOR.income }, "収入（手取り）", man(p.income));
-    [["work", "本人の仕事"], ["spouse", "配偶者の仕事"], ["pension", "年金"], ["allowance", "児童手当"]].forEach(([k, l]) => {
+    row({ type: "line", color: COLOR.income }, "収入（手取り・一時金を含む）", man(p.income));
+    [["work", "本人の仕事"], ["spouse", "配偶者の仕事"], ["pension", "年金"], ["allowance", "児童手当"], ["lump", "退職金など"]].forEach(([k, l]) => {
       if (p.inc[k] > 0) row({ type: "none" }, l, man(p.inc[k]), "sub");
     });
     row({ type: "none" }, "支出", man(p.expense));
-    [["living", "生活費"], ["housing", "住居費"], ["edu", "教育費"]].forEach(([k, l]) => {
-      if (p.exp[k] > 0) row({ type: "rect", color: COLOR[k] }, l, man(p.exp[k]), "sub");
+    [["living", "生活費"], ["housing", "住居費"], ["edu", "教育費"], ["car", "車"], ["other", "その他の予定出費"]].forEach(([k, l]) => {
+      if (p.exp[k] > 0) row({ type: "rect", color: COLOR[k] }, l + (k === "housing" && p.exp.repair > 0 ? `（うち修繕 ${man(p.exp.repair)}）` : ""), man(p.exp[k]), "sub");
     });
     row({ type: "line", color: COLOR.balance }, "貯蓄残高（運用しない場合）", man(p.balance));
     if (pr) row({ type: "dash", color: COLOR.scenario }, `貯蓄残高（年${r.ret}%運用・保証なし）`, man(pr.balance));
@@ -292,7 +307,7 @@
       { title: "家族の年表", sub: "家族ごとに、入学・独立・定年などの時期", build: lanesChart, legend: null },
       {
         title: "収入と支出の推移", sub: "1年あたり（万円）。棒＝支出の内訳、線＝収入", build: flowChart,
-        legend: [{ type: "line", color: COLOR.income, label: "収入（手取り）" }, { type: "rect", color: COLOR.living, label: "生活費" }, { type: "rect", color: COLOR.housing, label: "住居費" }, { type: "rect", color: COLOR.edu, label: "教育費" }],
+        legend: [{ type: "line", color: COLOR.income, label: "収入（手取り）" }, { type: "rect", color: COLOR.living, label: "生活費" }, { type: "rect", color: COLOR.housing, label: "住居費（修繕含む）" }, { type: "rect", color: COLOR.edu, label: "教育費" }, { type: "rect", color: COLOR.car, label: "車" }, { type: "rect", color: COLOR.other, label: "その他の予定出費" }],
       },
       {
         title: "貯蓄残高の推移", sub: "各年の終わりの残高（万円）", build: balanceChart,
@@ -387,7 +402,7 @@
   // PDF（印刷）用：操作なしのグラフ
   function staticHTML(r, W) {
     const wrap = document.createElement("div");
-    [["家族の年表", lanesChart, null], ["収入と支出の推移（1年あたり・万円）　線＝収入（手取り）／棒＝支出（下から生活費・住居費・教育費）", flowChart], ["貯蓄残高の推移（万円）" + (r.simR ? `　実線＝運用しない場合／点線＝年${r.ret}%（保証されません）` : ""), balanceChart]].forEach(([title, build]) => {
+    [["家族の年表", lanesChart, null], ["収入と支出の推移（1年あたり・万円）　線＝収入（手取り）／棒＝支出（下から生活費・住居費・教育費・車・その他）", flowChart], ["貯蓄残高の推移（万円）" + (r.simR ? `　実線＝運用しない場合／点線＝年${r.ret}%（保証されません）` : ""), balanceChart]].forEach(([title, build]) => {
       wrap.appendChild(h("p", "memo-chart-title", title));
       wrap.appendChild(build(r, W).svg);
     });

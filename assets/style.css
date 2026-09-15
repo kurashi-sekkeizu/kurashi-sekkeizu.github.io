@@ -296,6 +296,16 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .memo-chart-title { font-size: 12px; font-weight: 700; margin: 10px 0 2px; }
 .memo svg { width: 100%; height: auto; }
 
+/* くわしく入力 */
+.detail-preview { position: sticky; top: 60px; z-index: 5; margin-top: 12px; }
+.detail-preview-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
+.detail-preview-item b { display: block; font-size: 1rem; line-height: 1.4; }
+.detail-sub { font-size: 1rem; margin: 18px 0 2px; padding-top: 10px; border-top: 1px solid var(--line); }
+.detail-legend { font-size: .95rem; font-weight: 700; margin-bottom: 0; }
+.detail-item { margin-top: 10px; }
+.badge.set { background: var(--accent-weak); color: var(--accent); border: 1px solid #9fbdb3; }
+details.fold > summary .badge { margin-left: 6px; }
+
 /* シート */
 .sheet { background: var(--card); border: 2px solid var(--accent); border-radius: var(--radius); padding: 16px; margin-top: 12px; }
 .radio-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 14px; }
