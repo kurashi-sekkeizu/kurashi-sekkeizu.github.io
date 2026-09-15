@@ -72,16 +72,29 @@
       let shortageAge = null;
       for (let y = 0; age + y <= DUMMY.endAge; y++) {
         const cur = age + y;
-        let inc = cur < DUMMY.retireAge ? income * DUMMY.takeHomeRate : pensionSelf;
+        const incWork = cur < DUMMY.retireAge ? income * DUMMY.takeHomeRate : 0;
+        let incPension = cur < DUMMY.retireAge ? 0 : pensionSelf;
+        let incSpouse = 0;
         if (spouse) {
-          const sAge = spouseAge + y;
-          inc += sAge < DUMMY.retireAge ? spouseIncome * DUMMY.takeHomeRate : pensionSpouse;
+          if (spouseAge + y < DUMMY.retireAge) incSpouse = spouseIncome * DUMMY.takeHomeRate;
+          else incPension += pensionSpouse;
         }
-        kids.forEach((k) => { if (k + y < 18) inc += DUMMY.childAllowance; });
-        let exp = living * 12 * Math.pow(1 + inf, y) * (cur >= DUMMY.retireAge ? 0.85 : 1) + housing(cur);
-        kids.forEach((k) => { exp += eduCost(k + y); });
+        let incAllowance = 0;
+        kids.forEach((k) => { if (k + y < 18) incAllowance += DUMMY.childAllowance; });
+        const inc = incWork + incPension + incSpouse + incAllowance;
+
+        const expLiving = living * 12 * Math.pow(1 + inf, y) * (cur >= DUMMY.retireAge ? 0.85 : 1);
+        const expHousing = housing(cur);
+        let expEdu = 0;
+        kids.forEach((k) => { expEdu += eduCost(k + y); });
+        const exp = expLiving + expHousing + expEdu;
+
         if (y > 0) balance = balance * (balance > 0 ? 1 + r : 1) + inc - exp;
-        points.push({ age: cur, year: year0 + y, balance: Math.round(balance), income: Math.round(inc), expense: Math.round(exp) });
+        points.push({
+          age: cur, year: year0 + y, balance: Math.round(balance), income: Math.round(inc), expense: Math.round(exp),
+          inc: { work: incWork, spouse: incSpouse, pension: incPension, allowance: incAllowance },
+          exp: { living: expLiving, housing: expHousing, edu: expEdu },
+        });
         if (shortageAge === null && balance < 0) shortageAge = cur;
       }
       return { points, shortageAge };
@@ -216,7 +229,30 @@
     if (sim0.shortageAge !== null) events.push({ year: year0 + sim0.shortageAge - age, age: sim0.shortageAge, text: "貯蓄が底をつく見込み（運用しない場合）" });
     events.sort((x, y) => x.year - y.year);
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, living, savings, income, ret: as.ret };
+    // 家族の年表（グラフ用）。offset = いまから何年後か
+    const span = DUMMY.endAge - age;
+    const lanes = [{
+      label: "あなた", ageNow: age, end: span,
+      events: age < DUMMY.retireAge
+        ? [{ offset: DUMMY.retireAge - age, short: "定年", text: "定年・年金受給開始" + (home === "loan" ? "・住宅ローン完済（仮置き）" : "") }]
+        : [],
+    }];
+    if (spouse) {
+      const off = DUMMY.retireAge - spouseAge;
+      lanes.push({
+        label: "配偶者", ageNow: spouseAge, end: span,
+        events: off >= 0 && off <= span ? [{ offset: off, short: "定年", text: "配偶者 定年・年金受給開始" }] : [],
+      });
+    }
+    const MILESTONES = [[7, "小学校", "小学校入学"], [13, "中学", "中学校入学"], [16, "高校", "高校入学"], [18, "大学", "大学入学（教育費のピーク）"], [22, "独立", "独立"]];
+    kids.forEach((k, i) => {
+      lanes.push({
+        label: `${i + 1}人目の子`, ageNow: k, end: Math.max(0, Math.min(span, 22 - k)),
+        events: MILESTONES.filter(([m]) => m > k && m - k <= span).map(([m, short, text]) => ({ offset: m - k, short, text: `${i + 1}人目の子 ${text}` })),
+      });
+    });
+
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, living, savings, income, ret: as.ret, age };
   }
 
   function round100(n) {

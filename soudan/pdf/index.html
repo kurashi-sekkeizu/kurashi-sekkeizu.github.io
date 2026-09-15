@@ -61,6 +61,7 @@
 <script src="/assets/common.js"></script>
 <script src="/assets/questions.js"></script>
 <script src="/assets/calc.js"></script>
+<script src="/assets/charts.js"></script>
 <script>
 (function () {
   const d = KS.load().data;
@@ -106,8 +107,6 @@
       ["住まい", KSQ.display(KSQ.byId.home, A)],
       ["生活費・貯蓄", KSQ.display(KSQ.byId.living, A) + "／" + KSQ.display(KSQ.byId.savings, A)],
     ];
-    const series = [{ label: "運用しない場合（0%）", points: r.sim0.points }];
-    if (r.simR) series.push({ label: `年${r.ret}%（保証されません）`, dashed: true, points: r.simR.points });
     const foot = `<p class="foot">くらしの設計図／一般的な計算による目安であり、商品の推奨ではありません／画面確認用プロトタイプ（数字はダミー）</p>`;
 
     let html = `
@@ -124,7 +123,7 @@
     }
     if (has("plan")) {
       html += `<h2 class="page-break">年表</h2><table><tbody>${r.events.map((e) => `<tr><td style="width:30%">${e.year}年（${e.age}歳）</td><td>${esc(e.text)}</td></tr>`).join("")}</tbody></table>` +
-        `<h2>家計の見通し（貯蓄残高）</h2>${KS.chartSVG(series, [])}<p>前提：物価上昇 年${d.assumptions.inflation}%／運用 年${d.assumptions.ret}%</p>`;
+        `<h2>将来の見通し</h2>${KSV.staticHTML(r, 680)}<p>前提：物価上昇 年${d.assumptions.inflation}%／運用 年${d.assumptions.ret}%</p>`;
     }
     if (has("estimate")) {
       html += `<h2 class="page-break">分野別の目安</h2><table><tbody>` +

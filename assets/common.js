@@ -91,12 +91,14 @@
   function man(n) {
     if (n == null || !isFinite(n)) return "—";
     const v = Math.round(n);
-    if (Math.abs(v) >= 10000) {
-      const oku = Math.trunc(v / 10000);
-      const rest = Math.abs(v % 10000);
-      return oku + "億" + (rest ? rest.toLocaleString("ja-JP") + "万円" : "円");
+    const sign = v < 0 ? "−" : "";
+    const a = Math.abs(v);
+    if (a >= 10000) {
+      const oku = Math.trunc(a / 10000);
+      const rest = a % 10000;
+      return sign + oku + "億" + (rest ? rest.toLocaleString("ja-JP") + "万円" : "円");
     }
-    return v.toLocaleString("ja-JP") + "万円";
+    return sign + a.toLocaleString("ja-JP") + "万円";
   }
 
   // 削除ボタン（ページ内の確認パネル。ブラウザのダイアログは使わない）
@@ -129,45 +131,6 @@
     });
   }
 
-  // 貯蓄残高の推移グラフ（SVG）。series: [{label, dashed, points:[{age, balance}]}]
-  function chartSVG(series, marks) {
-    const W = 640, H = 300, L = 64, R = 16, T = 16, B = 40;
-    const all = series.flatMap((s) => s.points);
-    if (!all.length) return "";
-    const minAge = all[0].age, maxAge = all[all.length - 1].age;
-    let minV = Math.min(0, ...all.map((p) => p.balance));
-    let maxV = Math.max(100, ...all.map((p) => p.balance));
-    const pad = (maxV - minV) * 0.08;
-    maxV += pad; minV -= minV < 0 ? pad : 0;
-    const x = (a) => L + ((a - minAge) / Math.max(1, maxAge - minAge)) * (W - L - R);
-    const y = (v) => T + (1 - (v - minV) / (maxV - minV)) * (H - T - B);
-    const step = niceStep((maxV - minV) / 4);
-    let g = "";
-    for (let v = Math.ceil(minV / step) * step; v <= maxV; v += step) {
-      g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${v === 0 ? "#555" : "#e2e2dc"}" stroke-width="${v === 0 ? 1.5 : 1}"/>`;
-      g += `<text x="${L - 8}" y="${y(v) + 4}" text-anchor="end" font-size="12" fill="#56666a">${Math.round(v).toLocaleString("ja-JP")}</text>`;
-    }
-    for (let a = Math.ceil(minAge / 10) * 10; a <= maxAge; a += 10) {
-      g += `<text x="${x(a)}" y="${H - 16}" text-anchor="middle" font-size="12" fill="#56666a">${a}歳</text>`;
-    }
-    (marks || []).forEach((m) => {
-      if (m.age < minAge || m.age > maxAge) return;
-      g += `<line x1="${x(m.age)}" x2="${x(m.age)}" y1="${T}" y2="${H - B}" stroke="#a33a2a" stroke-dasharray="3 3"/>`;
-      g += `<text x="${x(m.age) + 4}" y="${T + 14}" font-size="12" fill="#a33a2a">${esc(m.label)}</text>`;
-    });
-    series.forEach((s) => {
-      const d = s.points.map((p, i) => (i ? "L" : "M") + x(p.age).toFixed(1) + " " + y(p.balance).toFixed(1)).join(" ");
-      g += `<path d="${d}" fill="none" stroke="${s.dashed ? "#7a8a8e" : "#2e6b5b"}" stroke-width="3" ${s.dashed ? 'stroke-dasharray="8 6"' : ""}/>`;
-    });
-    const legend = series.map((s) => `<span style="margin-right:14px;white-space:nowrap"><svg width="28" height="10" aria-hidden="true"><line x1="0" x2="28" y1="5" y2="5" stroke="${s.dashed ? "#7a8a8e" : "#2e6b5b"}" stroke-width="3" ${s.dashed ? 'stroke-dasharray="6 4"' : ""}/></svg> ${esc(s.label)}</span>`).join("");
-    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="貯蓄残高の推移のグラフ。同じ数字を下の表でも確認できます。" style="width:100%;height:auto">${g}<text x="${L}" y="${T - 4}" font-size="11" fill="#56666a">万円</text></svg><div class="small">${legend}</div>`;
-  }
-  function niceStep(raw) {
-    const p = Math.pow(10, Math.floor(Math.log10(Math.max(1, raw))));
-    const n = raw / p;
-    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
-  }
-
-  window.KS = { load, save, clearAll, hasSavedLocal, hasLocal, hasSession, empty, esc, man, initDelete, chartSVG };
+  window.KS = { load, save, clearAll, hasSavedLocal, hasLocal, hasSession, empty, esc, man, initDelete };
   document.addEventListener("DOMContentLoaded", initDelete);
 })();
