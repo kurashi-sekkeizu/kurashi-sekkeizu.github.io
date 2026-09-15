@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>回答の確認｜くらしの設計図（プロトタイプ）</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="has-lock">
+<div class="proto-banner">🧪 画面確認用のプロトタイプです。数字・会社名はダミーで、正しい計算ではありません。</div>
+<header class="app-header">
+  <div class="wrap">
+    <button type="button" class="linkbtn" id="back">← 戻る</button>
+    <span class="title">回答の確認</span>
+    <button type="button" class="linkbtn danger" data-delete>🗑 削除</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <noscript><p class="note warn">相談機能はJavaScriptを有効にするとお使いいただけます。</p></noscript>
+  <div id="incomplete" hidden>
+    <p class="note warn">まだ答えていない質問があります。</p>
+    <a class="btn" href="/soudan/step/">続きから答える</a>
+  </div>
+  <div id="ok" hidden>
+    <h1>この内容で計算します</h1>
+    <div class="card"><table class="summary"><tbody id="rows"></tbody></table></div>
+    <p id="prov" class="note warn" style="margin-top:12px" hidden>⚠「わからない」の項目は、一般的な値で仮に計算します。</p>
+    <div class="section"><a class="btn" href="/soudan/result/">結果を見る</a></div>
+  </div>
+</main>
+<div class="lock-bar">🔒 入力内容は送信されません</div>
+
+<script src="/assets/common.js"></script>
+<script src="/assets/questions.js"></script>
+<script>
+(function () {
+  const d = KS.load().data;
+  const A = d.answers;
+  const vis = KSQ.visible(A);
+  const missing = vis.find((q) => q.required && !KSQ.isAnswered(q, A));
+
+  document.getElementById("back").addEventListener("click", () => {
+    location.href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";
+  });
+
+  if (missing) {
+    d.meta.pos = missing.id;
+    KS.save(d);
+    document.getElementById("incomplete").hidden = false;
+    return;
+  }
+
+  const show = (id) => (vis.some((q) => q.id === id) ? KSQ.display(KSQ.byId[id], A) : null);
+  const unk = (id) => A[id] === "unknown";
+  const rows = [
+    { th: "考えたいこと", td: show("fields"), edit: "fields" },
+    { th: "あなた", td: [show("age"), show("work"), show("income")].join("・"), edit: "age", warn: unk("income") },
+    { th: "配偶者・パートナー", td: A.spouse === "yes" ? [show("spouseAge"), show("spouseWork"), show("spouseIncome")].join("・") : "いない", edit: A.spouse === "yes" ? "spouseAge" : "spouse", warn: A.spouse === "yes" && unk("spouseIncome") },
+    { th: "お子さん", td: A.kids === "yes" ? `${A.kidsCount}人（${show("kidsAges")}）` : show("kids"), edit: A.kids === "yes" ? "kidsCount" : "kids" },
+    { th: "住まい", td: show("home"), edit: "home" },
+    { th: "毎月の生活費", td: show("living"), edit: "living", warn: unk("living") },
+    { th: "貯蓄", td: show("savings"), edit: "savings", warn: unk("savings") },
+    { th: "気になること", td: show("worries") || "特になし", edit: "worries" },
+  ];
+  document.getElementById("rows").innerHTML = rows.map((r) =>
+    `<tr><th scope="row">${KS.esc(r.th)}</th><td>${KS.esc(r.td)} ${r.warn ? '<span class="badge warn">⚠ 仮の値</span>' : ""}` +
+    `<button type="button" class="linkbtn" data-edit="${r.edit}" aria-label="${KS.esc(r.th)}を修正">修正</button></td></tr>`).join("");
+  document.getElementById("prov").hidden = !rows.some((r) => r.warn);
+  document.getElementById("ok").hidden = false;
+
+  document.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => {
+    d.meta.pos = b.dataset.edit;
+    d.meta.mode = "step";
+    KS.save(d);
+    location.href = "/soudan/step/";
+  }));
+})();
+</script>
+</body>
+</html>

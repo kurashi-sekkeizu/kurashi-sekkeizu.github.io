@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>チャットで相談｜くらしの設計図（プロトタイプ）</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="has-lock">
+<div class="proto-banner">🧪 画面確認用のプロトタイプです。数字・会社名はダミーで、正しい計算ではありません。</div>
+<header class="app-header">
+  <div class="wrap">
+    <button type="button" class="linkbtn" id="undo">← 1つ戻す</button>
+    <span class="title" id="count"></span>
+    <button type="button" class="linkbtn danger" data-delete>🗑 削除</button>
+  </div>
+  <div class="progress" aria-hidden="true"><div id="bar" style="width:0"></div></div>
+</header>
+
+<main class="wrap">
+  <noscript><p class="note warn">相談機能はJavaScriptを有効にするとお使いいただけます。</p></noscript>
+  <div id="log" class="chat-log" style="padding-top:16px"></div>
+  <p id="live" class="visually-hidden" aria-live="polite"></p>
+  <div class="chat-panel" id="panel"></div>
+</main>
+<div class="lock-bar">🔒 入力内容は送信されません</div>
+
+<script src="/assets/common.js"></script>
+<script src="/assets/questions.js"></script>
+<script>
+(function () {
+  const d = KS.load().data;
+  d.meta.mode = "chat";
+  const A = d.answers;
+  const esc = KS.esc;
+
+  function answeredList() {
+    return KSQ.visible(A).filter((q) => d.meta.done.includes(q.id) && (KSQ.isAnswered(q, A) || !q.required));
+  }
+  function current() {
+    return KSQ.visible(A).find((q) => !(d.meta.done.includes(q.id) && (KSQ.isAnswered(q, A) || !q.required)));
+  }
+
+  function botText(q, prev) {
+    const react = prev && prev.react ? prev.react(A[prev.id], A) : null;
+    return (react ? react + "\n\n" : "") + (q.groupTitle ? q.groupTitle + "\n" : "") + q.label + (q.hint ? "\n（" + q.hint + "）" : "");
+  }
+
+  function render(announce) {
+    const done = answeredList();
+    const cur = current();
+    let html = "";
+    let prev = null;
+    done.forEach((q) => {
+      html += `<div class="bubble bot">${esc(botText(q, prev))}</div>`;
+      html += `<div class="bubble me">${esc(KSQ.display(q, A))}</div>`;
+      prev = q;
+    });
+    let lastBot;
+    if (cur) {
+      lastBot = botText(cur, prev);
+      html += `<div class="bubble bot">${esc(lastBot)}</div>`;
+    } else {
+      const react = prev && prev.react ? prev.react(A[prev.id], A) : null;
+      lastBot = (react ? react + "\n\n" : "") + "ありがとうございました。回答の確認に進みましょう。";
+      html += `<div class="bubble bot">${esc(lastBot)}</div>`;
+    }
+    document.getElementById("log").innerHTML = html;
+
+    const total = KSQ.visible(A).length;
+    document.getElementById("count").textContent = `${Math.min(done.length + 1, total)} / ${total}`;
+    document.getElementById("bar").style.width = `${Math.round((done.length / total) * 100)}%`;
+    document.getElementById("undo").disabled = done.length === 0;
+    panel(cur);
+    if (announce) document.getElementById("live").textContent = lastBot;
+    KS.save(d);
+    window.scrollTo(0, document.body.scrollHeight);
+  }
+
+  function commit(q, value) {
+    A[q.id] = value;
+    if (!d.meta.done.includes(q.id)) d.meta.done.push(q.id);
+    render(true);
+    const first = document.querySelector("#panel button, #panel select");
+    first?.focus();
+  }
+
+  function panel(q) {
+    const p = document.getElementById("panel");
+    const switcher = `<p style="margin:10px 0 0"><button type="button" class="linkbtn" id="to-step">📋 1問ずつの形式に切り替える</button></p>`;
+    if (!q) {
+      p.innerHTML = `<a class="btn" href="/soudan/confirm/">回答の確認へ</a>` + switcher;
+      bindSwitch();
+      return;
+    }
+    const why = q.why || q.help ? `<button type="button" class="opt" id="why-btn" aria-expanded="false">なぜ聞くの？</button>` : "";
+    const whyBody = `<div class="why" id="why" hidden>${esc(q.why || "")}${q.help ? "<br><b>" + esc(q.help.title) + "</b>：" + esc(q.help.body) : ""}</div>`;
+    let body = "";
+
+    if (q.type === "single") {
+      body = `<div class="chat-options" role="group" aria-label="${esc(q.label)}">` +
+        q.options.map((o) => `<button type="button" class="opt${o.v === "unknown" ? " unknown" : ""}" data-v="${esc(o.v)}">${esc(o.label)}</button>`).join("") + why + `</div>`;
+    } else if (q.type === "multi") {
+      const sel = new Set(Array.isArray(A[q.id]) ? A[q.id] : []);
+      body = `<div class="chat-options" role="group" aria-label="${esc(q.label)}">` +
+        q.options.map((o) => `<button type="button" class="opt" data-m="${esc(o.v)}" aria-pressed="${sel.has(o.v)}">${esc(o.label)}</button>`).join("") + why + `</div>` +
+        `<button type="button" class="btn" id="ok" style="margin-top:10px">${q.required ? "決定" : "決定（選ばずに進む場合もこちら）"}</button>`;
+    } else if (q.type === "select") {
+      body = `<label class="visually-hidden" for="sel">${esc(q.label)}</label><select class="select" id="sel"><option value="">選んでください</option>` +
+        q.options.map((o) => `<option value="${o.v}" ${String(A[q.id]) === String(o.v) ? "selected" : ""}>${esc(o.label)}</option>`).join("") +
+        `</select><div class="chat-options" style="margin-top:8px"><button type="button" class="btn inline" id="ok">決定</button>${why}</div>`;
+    } else if (q.type === "ages") {
+      const n = Number(A.kidsCount) || 0;
+      let rows = "";
+      for (let i = 0; i < n; i++) {
+        rows += `<div class="field-row"><label for="age-${i}">${i + 1}人目</label><select class="select" id="age-${i}">` +
+          `<option value="">選んでください</option>` + Array.from({ length: 26 }, (_, a) => `<option value="${a}">${a}歳</option>`).join("") + `</select></div>`;
+      }
+      body = rows + `<button type="button" class="btn" id="ok" style="margin-top:10px">決定</button>`;
+    }
+    p.innerHTML = body + `<p id="chat-err" class="error" role="alert" hidden></p>` + whyBody + switcher;
+    bindSwitch();
+
+    const wb = document.getElementById("why-btn");
+    if (wb) wb.addEventListener("click", () => {
+      const w = document.getElementById("why");
+      w.hidden = !w.hidden;
+      wb.setAttribute("aria-expanded", String(!w.hidden));
+    });
+    const err = (msg) => { const e = document.getElementById("chat-err"); e.textContent = msg; e.hidden = false; };
+
+    p.querySelectorAll("[data-v]").forEach((b) => b.addEventListener("click", () => {
+      const raw = b.dataset.v;
+      commit(q, q.id === "kidsCount" ? Number(raw) : raw);
+    }));
+    p.querySelectorAll("[data-m]").forEach((b) => b.addEventListener("click", () => {
+      b.setAttribute("aria-pressed", String(b.getAttribute("aria-pressed") !== "true"));
+    }));
+    const ok = document.getElementById("ok");
+    if (ok) ok.addEventListener("click", () => {
+      if (q.type === "multi") {
+        const v = [...p.querySelectorAll('[data-m][aria-pressed="true"]')].map((b) => b.dataset.m);
+        if (q.required && !v.length) return err("1つ以上選んでください。");
+        commit(q, v);
+      } else if (q.type === "select") {
+        const v = document.getElementById("sel").value;
+        if (v === "") return err("選んでください。");
+        commit(q, Number(v));
+      } else if (q.type === "ages") {
+        const n = Number(A.kidsCount) || 0;
+        const v = Array.from({ length: n }, (_, i) => document.getElementById("age-" + i).value);
+        if (v.some((x) => x === "")) return err("お子さん全員の年齢を選んでください。");
+        commit(q, v.map(Number));
+      }
+    });
+  }
+
+  function bindSwitch() {
+    document.getElementById("to-step").addEventListener("click", () => {
+      d.meta.mode = "step";
+      const cur = current();
+      d.meta.pos = cur ? cur.id : null;
+      KS.save(d);
+      location.href = cur ? "/soudan/step/" : "/soudan/confirm/";
+    });
+  }
+
+  document.getElementById("undo").addEventListener("click", () => {
+    const done = answeredList();
+    const last = done[done.length - 1];
+    if (!last) return;
+    d.meta.done = d.meta.done.filter((id) => id !== last.id);
+    delete A[last.id];
+    render(true);
+  });
+
+  render(false);
+})();
+</script>
+</body>
+</html>

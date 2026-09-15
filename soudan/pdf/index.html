@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>PDFで保存｜くらしの設計図（プロトタイプ）</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body class="has-lock">
+<div class="proto-banner">🧪 画面確認用のプロトタイプです。数字・会社名はダミーで、正しい計算ではありません。</div>
+<header class="app-header">
+  <div class="wrap">
+    <a class="linkbtn" href="/soudan/result/">← 結果に戻る</a>
+    <span class="title">PDFで保存</span>
+    <button type="button" class="linkbtn danger" data-delete>🗑 削除</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <noscript><p class="note warn">相談機能はJavaScriptを有効にするとお使いいただけます。</p></noscript>
+  <div id="incomplete" hidden>
+    <p class="note warn">まだ答えていない質問があるため、PDFを作れません。</p>
+    <a class="btn" href="/soudan/step/">続きから答える</a>
+  </div>
+
+  <div id="app" hidden>
+    <div class="no-print">
+      <form id="opts">
+        <fieldset>
+          <legend>PDFに入れる内容</legend>
+          <div class="options" id="secs"></div>
+        </fieldset>
+
+        <div class="section">
+          <label for="note" style="display:block;font-size:1.25rem;font-weight:700">専門家に聞きたいこと（任意）</label>
+          <p class="q-hint">自動で入る項目に加えて、自由に書き足せます。</p>
+          <div class="card" style="margin-bottom:8px"><b class="small">自動で入る項目</b><ul id="auto-ask" class="small" style="margin:4px 0 0"></ul></div>
+          <textarea id="note" class="select" maxlength="400"></textarea>
+          <p class="note warn small" style="margin-top:8px">⚠ 名前や連絡先は書かないでください（相談の場で伝えれば十分です）。</p>
+        </div>
+      </form>
+
+      <div class="section stack">
+        <button type="button" class="btn" id="dl">📄 PDFをダウンロード</button>
+        <button type="button" class="btn secondary" id="print">🖨 印刷する</button>
+        <p class="muted small">初回は準備に数秒かかります。</p>
+      </div>
+      <div id="fail" class="note warn section" hidden role="alert">
+        <p><b>⚠ PDFを作れませんでした</b><br>「印刷する」を押し、印刷先で「PDFに保存」を選ぶと保存できます。</p>
+        <p class="small" style="margin:0">（プロトタイプでは、PDFファイルを直接作る機能は未実装です。この表示は失敗時の案内の見本です。）</p>
+      </div>
+
+      <h2 class="section-title section">印刷イメージ</h2>
+    </div>
+    <div id="memo" class="memo"></div>
+  </div>
+</main>
+<div class="lock-bar">🔒 入力内容は送信されません</div>
+
+<script src="/assets/common.js"></script>
+<script src="/assets/questions.js"></script>
+<script src="/assets/calc.js"></script>
+<script>
+(function () {
+  const d = KS.load().data;
+  const A = d.answers;
+  const esc = KS.esc, man = KS.man;
+  if (KSQ.visible(A).some((q) => q.required && !KSQ.isAnswered(q, A))) {
+    document.getElementById("incomplete").hidden = false;
+    return;
+  }
+  document.getElementById("app").hidden = false;
+  const r = KSC.compute(d);
+
+  const SECS = [
+    { id: "todo", label: "まずやること・やることリスト" },
+    { id: "plan", label: "年表・家計の見通し" },
+    { id: "estimate", label: "分野別の目安" },
+    { id: "review", label: "見直せるかもしれない支出" },
+    { id: "ask", label: "専門家に聞くこと" },
+  ];
+  document.getElementById("secs").innerHTML = SECS.map((s) =>
+    `<label class="option"><input type="checkbox" value="${s.id}" ${d.pdf.sections.includes(s.id) ? "checked" : ""}><span>${esc(s.label)}</span></label>`).join("");
+  document.getElementById("auto-ask").innerHTML = r.ask.map((x) => `<li>${esc(x.q)}</li>`).join("");
+  const note = document.getElementById("note");
+  note.value = d.pdf.note || "";
+
+  document.getElementById("opts").addEventListener("change", update);
+  note.addEventListener("input", update);
+
+  function update() {
+    d.pdf.sections = [...document.querySelectorAll("#secs input:checked")].map((i) => i.value);
+    d.pdf.note = note.value;
+    KS.save(d);
+    renderMemo();
+  }
+
+  function renderMemo() {
+    const has = (id) => d.pdf.sections.includes(id);
+    const today = new Date();
+    const summary = [
+      ["本人", [KSQ.display(KSQ.byId.age, A), KSQ.display(KSQ.byId.work, A), KSQ.display(KSQ.byId.income, A)].join("・")],
+      ["配偶者", A.spouse === "yes" ? [KSQ.display(KSQ.byId.spouseAge, A), KSQ.display(KSQ.byId.spouseWork, A), KSQ.display(KSQ.byId.spouseIncome, A)].join("・") : "いない"],
+      ["子ども", A.kids === "yes" ? `${A.kidsCount}人（${KSQ.display(KSQ.byId.kidsAges, A)}）` : KSQ.display(KSQ.byId.kids, A)],
+      ["住まい", KSQ.display(KSQ.byId.home, A)],
+      ["生活費・貯蓄", KSQ.display(KSQ.byId.living, A) + "／" + KSQ.display(KSQ.byId.savings, A)],
+    ];
+    const series = [{ label: "運用しない場合（0%）", points: r.sim0.points }];
+    if (r.simR) series.push({ label: `年${r.ret}%（保証されません）`, dashed: true, points: r.simR.points });
+    const foot = `<p class="foot">くらしの設計図／一般的な計算による目安であり、商品の推奨ではありません／画面確認用プロトタイプ（数字はダミー）</p>`;
+
+    let html = `
+      <h1>くらしの設計図 ライフプランメモ</h1>
+      <p>作成日 ${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}</p>
+      <div class="memo-box">このメモは一般的な計算による目安です。商品をすすめるものではなく、運用成果を保証するものでもありません。運営者は保険代理店・金融機関ではありません。</div>
+      <h2>回答の要約</h2>
+      <table><tbody>${summary.map((s) => `<tr><th style="width:25%">${esc(s[0])}</th><td>${esc(s[1])}</td></tr>`).join("")}</tbody></table>
+      ${r.provisional.length ? `<p>※仮の値：${esc(r.provisional.join("、"))}</p>` : ""}`;
+    if (has("todo")) {
+      html += `<h2>まずやること・やることリスト</h2><table><thead><tr><th>#</th><th>やること</th><th>時期</th><th>理由</th></tr></thead><tbody>` +
+        r.todos.map((t, i) => `<tr><td>${i + 1}${i < 3 ? "★" : ""}</td><td>${esc(t.title)}</td><td>${esc(t.when)}</td><td>${esc(t.reason)}</td></tr>`).join("") +
+        `</tbody></table><p>★＝まずやること</p>`;
+    }
+    if (has("plan")) {
+      html += `<h2 class="page-break">年表</h2><table><tbody>${r.events.map((e) => `<tr><td style="width:30%">${e.year}年（${e.age}歳）</td><td>${esc(e.text)}</td></tr>`).join("")}</tbody></table>` +
+        `<h2>家計の見通し（貯蓄残高）</h2>${KS.chartSVG(series, [])}<p>前提：物価上昇 年${d.assumptions.inflation}%／運用 年${d.assumptions.ret}%</p>`;
+    }
+    if (has("estimate")) {
+      html += `<h2 class="page-break">分野別の目安</h2><table><tbody>` +
+        (r.death ? `<tr><th>万一のときの保障額</th><td>${man(r.death.low)}〜${man(r.death.high)}（遺族の生活費 ${d.assumptions.ratioLow}〜${d.assumptions.ratioHigh}%）</td></tr>` : "") +
+        `<tr><th>働けなくなったとき</th><td>月 ${man(r.disability.first)}（1年6か月まで）／月 ${man(r.disability.after)}（それ以降）</td></tr>` +
+        (r.retire ? `<tr><th>老後の不足（65歳）</th><td>運用しない場合 ${man(r.retire.gap0)}${r.retire.gapR !== null ? `／年${r.ret}% ${man(r.retire.gapR)}（保証されません）` : ""}</td></tr>` : "") +
+        `</tbody></table><h2>保険の種類ごとの優先度</h2><table><tbody>` +
+        r.insurance.map((x) => `<tr><th style="width:30%">${esc(x.name)}</th><td><b>${esc(x.level.text)}</b><br>${esc(x.reason)}</td></tr>`).join("") + `</tbody></table>`;
+    }
+    if (has("review")) {
+      html += `<h2>見直せるかもしれない支出</h2><p>固定費は「くわしく入力」で答えると表示されます。保険料はこの一覧に含めません。</p>`;
+    }
+    if (has("ask")) {
+      html += `<h2 class="page-break">専門家に聞くこと</h2>` +
+        r.ask.map((x) => `<p class="check" style="margin:2px 0">${esc(x.q)}（${esc(x.who)}）</p>`).join("") +
+        (d.pdf.note.trim() ? `<p class="check" style="margin:2px 0">${esc(d.pdf.note.trim())}</p>` : "") +
+        `<h2>相談メモ</h2><p>相談日 ＿＿＿＿＿＿　相談先 ＿＿＿＿＿＿＿＿＿＿</p>` +
+        `<div class="write-line"></div><div class="write-line"></div><div class="write-line"></div><div class="write-line"></div>`;
+    }
+    html += `<h2>出典・確認日</h2><p>（本番では、公的制度データごとに出典と確認日を記載します。プロトタイプの数字はダミーです。）</p>` + foot;
+    document.getElementById("memo").innerHTML = html;
+  }
+
+  document.getElementById("print").addEventListener("click", () => window.print());
+  document.getElementById("dl").addEventListener("click", () => {
+    const f = document.getElementById("fail");
+    f.hidden = false;
+    f.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+
+  renderMemo();
+})();
+</script>
+</body>
+</html>
