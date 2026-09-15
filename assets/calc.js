@@ -500,6 +500,8 @@
       forecast.push({
         key: "working", title: "現役のあいだの家計", q: "65歳までに貯蓄が底をつかないか",
         weather: min.balance < 0 ? RAIN : min.balance < yearLiving / 2 ? CLOUD : SUN,
+        short: min.balance < 0 ? `${pre.find((p) => p.balance < 0).age}歳でマイナス` : `いちばん少ない時 ${KS.man(min.balance)}`,
+        criteria: "晴れ：いちばん少ない時でも生活費の半年分以上／くもり：半年分を下回る時期がある／雨：マイナスになる時期がある",
         reason: min.balance < 0
           ? `${pre.find((p) => p.balance < 0).age}歳ごろに貯蓄がマイナスになる見込みです（いちばん少ないのは${min.age}歳で${KS.man(min.balance)}）。`
           : `貯蓄がいちばん少なくなるのは${min.age}歳ごろで、約${KS.man(min.balance)}の見込みです${min.balance < yearLiving / 2 ? "（生活費の半年分を下回ります）" : ""}。`,
@@ -512,6 +514,8 @@
       forecast.push({
         key: "retire", title: "老後のお金", q: "90歳まで貯蓄がもつか",
         weather: outAge !== null ? RAIN : endP.balance < yearLiving * 0.85 * 2 ? CLOUD : SUN,
+        short: outAge !== null ? (post[0] && post[0].balance < 0 ? "65歳でマイナス" : `${outAge}歳で底をつく`) : `90歳で${KS.man(endP.balance)}残る`,
+        criteria: "晴れ：90歳で老後の生活費2年分以上残る／くもり：もつが余裕が少ない／雨：途中でなくなる",
         reason: outAge !== null
           ? (post[0] && post[0].balance < 0
             ? `65歳の時点で、すでに貯蓄がマイナス（約${KS.man(post[0].balance)}）の見込みです。まず現役のあいだの家計の見直しが必要です。`
@@ -521,10 +525,12 @@
       });
     }
     forecast.push(!death
-      ? { key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は", weather: SUN, reason: "扶養しているご家族がいないため、大きな備えの必要性は低めです。", target: "estimate" }
+      ? { key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は", weather: SUN, short: "扶養家族なし", criteria: "晴れ：不足なし／くもり：不足500万円以内／雨：不足500万円超", reason: "扶養しているご家族がいないため、大きな備えの必要性は低めです。", target: "estimate" }
       : {
         key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は",
         weather: death.high <= 0 ? SUN : death.high <= 500 ? CLOUD : RAIN,
+        short: death.high <= 0 ? "不足なし" : `不足 ${KS.man(death.low)}〜${KS.man(death.high)}`,
+        criteria: "晴れ：不足なし／くもり：不足500万円以内／雨：不足500万円超",
         reason: death.high <= 0
           ? "遺族年金・配偶者の収入・貯蓄で、ご家族の支出をまかなえる見込みです。"
           : `遺族年金・配偶者の収入・貯蓄だけでは、約${KS.man(death.low)}〜${KS.man(death.high)}不足する見込みです。`,
@@ -536,6 +542,8 @@
       forecast.push({
         key: "sick", title: "働けなくなったとき", q: "休業中の収入減を、貯蓄で1年半しのげるか",
         weather: disability.first <= 0 ? SUN : need18 <= savings ? CLOUD : RAIN,
+        short: disability.first <= 0 ? "不足なし" : `毎月 ${KS.man(disability.first)} 不足`,
+        criteria: "晴れ：不足なし／くもり：1年半分の不足を貯蓄でしのげる／雨：貯蓄では足りない",
         reason: disability.first <= 0
           ? "休業中の手当などで、毎月の支出をまかなえる見込みです。"
           : `毎月約${KS.man(disability.first)}足りなくなり、1年半で約${KS.man(need18)}。${need18 <= savings ? "今の貯蓄でしのげる見込みですが、貯蓄は減ります。" : "今の貯蓄では足りない見込みです。"}`,
@@ -548,6 +556,8 @@
       forecast.push({
         key: "emergency", title: "急な出費への備え", q: "貯蓄が毎月の支出の何か月分あるか",
         weather: m >= 6 ? SUN : m >= 3 ? CLOUD : RAIN,
+        short: `貯蓄 ${m >= 24 ? "24か月分以上" : Math.floor(m) + "か月分"}`,
+        criteria: "晴れ：毎月の支出の6か月分以上／くもり：3〜6か月分／雨：3か月分未満",
         reason: `貯蓄は毎月の支出（生活費＋住居費）の約${m >= 24 ? "24か月分以上" : Math.floor(m) + "か月分"}です。一般に、半年分ほどを目安にする考え方があります。`,
         target: "costs",
       });
@@ -576,7 +586,9 @@
       balance: sim0.points[off] ? sim0.points[off].balance : null,
     }));
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, living, savings, income, ret: as.ret, age, detail: D };
+    const kidInfo = kids.map((k, i) => ({ ageNow: k, plan: eduPlanOf(i), independ: independAge(i) }));
+
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D };
   }
 
   function round100(n) {

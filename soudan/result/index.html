@@ -52,13 +52,13 @@
     const top3 = r.todos.slice(0, 3);
 
     const todoCard = (t, i) => `
-      <div class="card todo">
-        <h3><span class="num" aria-hidden="true">${i + 1}</span><span><span class="visually-hidden">${i + 1}つ目：</span>${esc(t.title)}</span></h3>
-        <p class="when">目安の時期：${esc(t.when)}</p>
-        <p>${esc(t.reason)}</p>
-        <details class="help"><summary>計算の中身</summary><div>回答の範囲の中央の値と、下の「前提」で計算しています。内訳は「分野別の目安」で確認できます。</div></details>
-        <p style="margin:0">→ <a href="${t.link.href}">${esc(t.link.text)}</a></p>
-      </div>`;
+      <details class="todo2">
+        <summary><span class="num" aria-hidden="true">${i + 1}</span><span class="todo2-title"><span class="visually-hidden">${i + 1}つ目：</span>${esc(t.title)}</span><span class="todo2-when">${esc(t.when)}</span></summary>
+        <div class="todo2-body">
+          <p>${esc(t.reason)}</p>
+          <p style="margin:0">→ <a href="${t.link.href}">${esc(t.link.text)}</a></p>
+        </div>
+      </details>`;
 
     const tableRows = r.sim0.points.map((p, i) => {
       const pr = r.simR ? r.simR.points[i] : null;
@@ -128,7 +128,7 @@
 
       <section class="section" id="costs-block">
         <h2 class="section-title">② 計算に使っている毎月の支出（いま）</h2>
-        <p class="small">実際の家計と見比べてください。<b>月2万円以上違う項目があれば、「直す」からくわしく入力で合わせる</b>と、見通しが正確になります。</p>
+        <p class="small">実際と<b>月2万円以上違う項目</b>は、押して「くわしく入力で直す」へ。</p>
         <div id="costs"></div>
       </section>
 
@@ -138,7 +138,7 @@
       </section>
 
       <section class="section" id="timeline-block">
-        <h2 class="section-title">④ これからの出来事</h2>
+        <h2 class="section-title">④ ライフプラン表</h2>
         <div id="timeline"></div>
       </section>
 
@@ -182,7 +182,7 @@
       try { sessionStorage.setItem("ks-open-section", section); } catch (e) { /* 保存できなくても画面は開く */ }
       location.href = "/soudan/detail/";
     }));
-    document.getElementById("timeline").appendChild(KSR.timeline(r));
+    document.getElementById("timeline").appendChild(KSR.lifeTable(r));
     app.querySelectorAll("details.fold").forEach((el) => el.addEventListener("toggle", () => {
       el.open ? openState.add(el.dataset.sec) : openState.delete(el.dataset.sec);
     }));
