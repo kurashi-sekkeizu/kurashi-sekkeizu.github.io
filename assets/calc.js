@@ -89,6 +89,18 @@
     return wageAt(s, toAge) / from;
   }
 
+  // いまの年収が、同じ年齢の平均からどれくらい離れているか。
+  // 「年齢に応じて」は平均の増え方をそのまま掛けるため、平均から大きく離れた人ほど、実際とずれやすい。
+  const FAR_HIGH = 1.8, FAR_LOW = 0.55;
+  function incomeVsAverage(workKind, ageNow, incomeMan) {
+    const s = wageSeries(workKind);
+    if (!s || !incomeMan) return null;
+    const avgMan = wageAt(s, ageNow) / 10;  // 千円/年 → 万円/年
+    if (!avgMan) return null;
+    const ratio = incomeMan / avgMan;
+    return { avg: Math.round(avgMan), ratio: Math.round(ratio * 100) / 100, far: ratio > FAR_HIGH || ratio < FAR_LOW };
+  }
+
   function takeHome(income) {
     const y = Number(income) || 0;
     if (y < 200) return 0.84;
@@ -774,7 +786,9 @@
 
     const kidInfo = kids.map((k, i) => ({ ageNow: k, plan: eduPlanOf(i), independ: independAge(i) }));
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
+    const incomeCheck = W.growth === "stat" ? incomeVsAverage(work, age, income) : null;
+
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, incomeCheck, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
   }
 
   function round100(n) {

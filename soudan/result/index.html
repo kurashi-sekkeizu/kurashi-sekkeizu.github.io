@@ -162,6 +162,7 @@
         <p class="small muted" style="margin-bottom:8px">グラフを触る（またはキーボードの矢印キー）と、その年の内訳が出ます。</p>
         <div id="viz"></div>
         <p class="small" style="margin-top:8px">前提：物価上昇 年${d.assumptions.inflation}% ／ 運用 年${d.assumptions.ret}% ／ 収入 ${esc(incomeAssumption(r))}　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button>　<button type="button" class="linkbtn" data-fix-work>収入の見込みを変える</button></p>
+        ${r.incomeCheck && r.incomeCheck.far ? `<p class="note warn small">⚠ いまの年収は、同じ年齢の平均（約${r.incomeCheck.avg}万円）の<b>${r.incomeCheck.ratio}倍</b>です。「年齢に応じて」は<b>平均と同じ増え方の割合</b>を、いまの年収に掛けています（平均の金額に置きかえてはいません）。平均から離れているほど、実際とずれやすくなります。<button type="button" class="linkbtn" data-fix-work>「いまのまま」に変える</button></p>` : ""}
       </section>
 
       <section class="section" id="notinc-block">
