@@ -255,14 +255,30 @@
 
   // ── 家計調査の平均と見比べる ──
   // 「多い＝悪い」とは書かない。差があることと、比べられない費目があることを示すだけ（CLAUDE.md §4）
+  function householdSize(r) {
+    return 1 + (r.spouse ? 1 : 0) + (r.kidInfo ? r.kidInfo.length : 0);
+  }
+
   function pickGroup(r, a, groups) {
-    const persons = 1 + (r.spouse ? 1 : 0) + (r.kidInfo ? r.kidInfo.length : 0);
+    const persons = householdSize(r);
     if (persons === 2 && Number(r.age) >= 65 && a.work === "none" && groups.elderly_couple) return "elderly_couple";
     if (persons <= 1) return "single";
     if (persons === 2) return "two_person";
     if (persons === 3) return "three_person";
     if (persons === 4) return "four_person";
     return "five_person";
+  }
+
+  // 年齢の軸では、世帯人数に合う系列（単身／二人以上）の中から、年齢の合う区分を選ぶ
+  function ageGroupsFor(r, byAge) {
+    const kind = householdSize(r) <= 1 ? "single" : "two_plus";
+    return Object.fromEntries(Object.entries(byAge || {}).filter(([, g]) => g.household === kind));
+  }
+
+  function pickAgeGroup(r, groups) {
+    const age = Number(r.age);
+    const hit = Object.entries(groups).find(([, g]) => age >= g.ageMin && age <= g.ageMax);
+    return hit ? hit[0] : Object.keys(groups)[0];
   }
 
   function compare(r, a) {
@@ -278,17 +294,39 @@
     const SPECIAL = { car: c.car.monthly, education: c.edu.monthly, housing: c.housing.monthly, loan: c.loan.monthly };
     const mine = (key) => (L[key] != null ? L[key] : SPECIAL[key] != null ? SPECIAL[key] : 0);
 
-    // 世帯区分を選ぶ（自動で選んだうえで、利用者が変えられるようにする）
+    // 比べる相手を選ぶ。人数の軸と年齢の軸があり、どちらか一方でしか比べられない
+    // （家計調査に「年齢×世帯人員」のクロス集計がないため）
+    const ageGroups = ageGroupsFor(r, K.groupsByAge);
+    const hasAge = Object.keys(ageGroups).length > 0;
+    // 単身は、平均が高齢者に強く引きずられるため、年齢の軸を既定にする
+    let axis = hasAge && householdSize(r) <= 1 ? "age" : "persons";
     let gkey = pickGroup(r, a, K.groups);
-    const pick = h("label", "compare-pick");
-    pick.appendChild(h("span", null, "比べる相手："));
+    let akey = hasAge ? pickAgeGroup(r, ageGroups) : null;
+    const groupsOf = () => (axis === "age" ? ageGroups : K.groups);
+    const keyOf = () => (axis === "age" ? akey : gkey);
+
+    const pick = h("div", "compare-pick");
+    const axisSel = h("select");
+    if (hasAge) {
+      [["persons", (K.axes && K.axes.persons) || "世帯の人数で比べる"], ["age", (K.axes && K.axes.age) || "年齢で比べる"]].forEach(([v, label]) => {
+        const o = h("option", null, label);
+        o.value = v;
+        if (v === axis) o.selected = true;
+        axisSel.appendChild(o);
+      });
+      pick.appendChild(axisSel);
+    }
     const sel = h("select");
-    Object.entries(K.groups).forEach(([k, g]) => {
-      const o = h("option", null, g.label);
-      o.value = k;
-      if (k === gkey) o.selected = true;
-      sel.appendChild(o);
-    });
+    function fillGroups() {
+      sel.textContent = "";
+      Object.entries(groupsOf()).forEach(([k, g]) => {
+        const o = h("option", null, g.label);
+        o.value = k;
+        if (k === keyOf()) o.selected = true;
+        sel.appendChild(o);
+      });
+    }
+    fillGroups();
     pick.appendChild(sel);
     box.appendChild(pick);
 
@@ -297,9 +335,19 @@
 
     function render() {
       body.textContent = "";
-      const g = K.groups[gkey];
+      const g = groupsOf()[keyOf()];
+      const shape = [
+        g.persons ? `平均 ${g.persons}人` : null,
+        g.headAge ? `世帯主の平均 ${g.headAge}歳` : null,
+      ].filter(Boolean).join("・");
       body.appendChild(h("p", "small muted",
-        `${src.publisher || ""}「${K.survey.name}」${K.survey.year}／${g.label}（世帯主の平均 ${g.headAge}歳）の1か月あたりの平均と並べています。`));
+        `${src.publisher || ""}「${K.survey.name}」${K.survey.year}／${g.label}（${shape}）の1か月あたりの平均と並べています。`));
+      if (K.smallSampleUnder && g.n && g.n < K.smallSampleUnder) {
+        body.appendChild(h("p", "note warn small", `⚠ この区分は集計した世帯数が少ないため（${g.n}世帯）、数字が振れやすくなっています。`));
+      }
+      if (axis === "age") {
+        body.appendChild(h("p", "small muted", "年齢でそろえると、世帯の人数はそろいません。食費や光熱費は人数で動くので、人数の軸もあわせて見てください。"));
+      }
 
       const rows = [];
       const skipped = [];
@@ -307,7 +355,15 @@
         if (!m.kakei) { skipped.push(m); return; }
         const you = (m.parts || [m.key]).reduce((t, k) => t + mine(k), 0);
         const avg = (g.items[m.kakei] || 0) / 10000; // 円 → 万円
-        rows.push({ label: m.label, you, avg, note: m.note });
+        // どちらもほぼ0の費目は、比べても何もわからない（表示上は「0万円」でも数円残ることがある）
+        if (you < 0.05 && avg < 0.05) return;
+        let note = m.note;
+        if (m.key === "education" && you < 0.05 && r.kidInfo && r.kidInfo.length) {
+          note = "お子さんがまだ小さいため、いまは0円です。これから増える費目なので、少ないこと自体は心配の材料になりません。";
+        } else if (m.key === "education" && you < 0.05) {
+          note = "いま教育費のかかるお子さんがいないため0円です。";
+        }
+        rows.push({ label: m.label, you, avg, note });
       });
       const max = Math.max(...rows.map((x) => Math.max(x.you, x.avg)), 1);
 
@@ -360,7 +416,8 @@
       body.appendChild(det2);
     }
 
-    sel.addEventListener("change", () => { gkey = sel.value; render(); });
+    sel.addEventListener("change", () => { if (axis === "age") akey = sel.value; else gkey = sel.value; render(); });
+    axisSel.addEventListener("change", () => { axis = axisSel.value; fillGroups(); render(); });
     render();
     return box;
   }
@@ -376,8 +433,13 @@
     if (hasLoan || willBuy) list.push({ dir: "worse", text: "変動金利の上昇。返済額は、いま入力した額のままで計算しています" });
     if (hasLoan && D.loan.prepayOn === "yes") list.push({ dir: "better", text: "繰り上げ返済で利息が減る分。期間が短くなる効果だけを見ています" });
     list.push({ dir: "both", text: "税金・社会保険料の細かい計算。手取りは、年収に応じたおおよその割合で出しています" });
-    if (D.work && D.work.growth === "stat") {
+    // 「年齢に応じて」を選んでいても、統計の対象外の働き方（自営業など）では横ばいになる。
+    // 実際に使われたかどうかで言い分けないと、画面の中で食い違う
+    const wageUsed = Boolean(r.wageApplied);
+    if (wageUsed) {
       list.push({ dir: "both", text: "あなた個人の昇給や役職の変化。収入は、統計の年齢別の賃金の形にならって増減させているだけです" });
+    } else if (D.work && D.work.growth === "stat") {
+      list.push({ dir: "both", text: "年齢による収入の変化。この働き方は賃金の統計の対象外のため、いまの収入がそのまま続く前提で計算しています" });
     } else {
       list.push({ dir: "both", text: "年齢による収入の変化。いまの収入がそのまま続く前提で計算しています（くわしく入力で変えられます）" });
     }

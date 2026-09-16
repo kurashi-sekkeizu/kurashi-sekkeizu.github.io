@@ -50,10 +50,9 @@
   function incomeAssumption(r) {
     const mode = (r.detail.work && r.detail.work.growth) || "flat";
     if (mode !== "stat") return { flat: "いまのまま", up: "年1%ずつ上がる", down: "年1%ずつ下がる" }[mode] || "いまのまま";
-    const W = window.KSDATA && window.KSDATA.wage;
-    const mapped = W && W.map && W.map[A.work];
-    if (!mapped) return "いまのまま（この働き方は賃金の統計の対象外です）";
-    return "年齢に応じて（統計の年齢別の賃金の形／60歳以降は定年・再雇用の設定）";
+    if (!r.wageApplied) return "いまのまま（この働き方は賃金の統計の対象外です）";
+    if (r.wageCapped) return "いまのまま（統計で増減させるのは57歳まで。以降は定年・再雇用の設定で計算）";
+    return "年齢に応じて（統計の年齢別の賃金の形／57歳より先は定年・再雇用の設定）";
   }
 
   function render() {
@@ -148,7 +147,7 @@
       </section>
 
       <section class="section">
-        <h2 class="section-title">④ まずやること 3つ</h2>
+        <h2 class="section-title">④ まずやること${top3.length ? `　${top3.length}つ` : ""}</h2>
         ${top3.length ? top3.map(todoCard).join("") : '<p class="card">いま特に急ぐことは見つかりませんでした。</p>'}
       </section>
 
@@ -161,6 +160,19 @@
         <h2 class="section-title">⑥ お金の流れ</h2>
         <p class="small muted" style="margin-bottom:8px">グラフを触る（またはキーボードの矢印キー）と、その年の内訳が出ます。</p>
         <div id="viz"></div>
+        <details class="fold" style="margin-top:8px">
+          <summary>収入をどう計算しているか</summary>
+          <div class="body">
+            <ol>
+              <li><b>額面の年収</b>…あなたが答えた帯の真ん中の金額から始めます（${esc(KSQ.display(KSQ.byId.income, A))}）。</li>
+              <li><b>年齢に応じた増減</b>…${esc(incomeAssumption(r))}。統計の年齢別の賃金を、<b>いまの年齢の水準を1とした倍率</b>にして掛けています。<b>平均の金額に置きかえてはいません。</b></li>
+              <li><b>額面から手取りへ</b>…税金と社会保険料を、年収に応じたおおよその割合で差し引きます（年収が高いほど手取りの割合は下がります）。⚠ この試作版では<b>ダミーの割合</b>を使っています。</li>
+              <li><b>定年より先</b>…${r.detail.work.retireAge}歳で定年とし、そのあとは再雇用の設定（${Number(r.detail.work.rehire) > 0 ? `定年前の${r.detail.work.rehire}%・${r.detail.work.rehireUntil}歳まで` : "働かない"}）で計算します。</li>
+              <li><b>年金</b>…受け取り開始の年齢から、働き方と収入に応じた見込み額を足します。</li>
+            </ol>
+            <p class="small muted">この積み上げの結果なので、前提が少し違うだけで先の金額は大きく変わります。<b>遠い将来の金額は、額そのものより「増えるのか・減るのか」を見てください。</b></p>
+          </div>
+        </details>
         <p class="small" style="margin-top:8px">前提：物価上昇 年${d.assumptions.inflation}% ／ 運用 年${d.assumptions.ret}% ／ 収入 ${esc(incomeAssumption(r))}　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button>　<button type="button" class="linkbtn" data-fix-work>収入の見込みを変える</button></p>
         ${r.incomeCheck && r.incomeCheck.far ? `<p class="note warn small">⚠ いまの年収は、同じ年齢の平均（約${r.incomeCheck.avg}万円）の<b>${r.incomeCheck.ratio}倍</b>です。「年齢に応じて」は<b>平均と同じ増え方の割合</b>を、いまの年収に掛けています（平均の金額に置きかえてはいません）。平均から離れているほど、実際とずれやすくなります。<button type="button" class="linkbtn" data-fix-work>「いまのまま」に変える</button></p>` : ""}
       </section>

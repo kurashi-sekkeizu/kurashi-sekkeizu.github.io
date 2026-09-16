@@ -863,7 +863,8 @@ window.KSDATA = {
           "education": 34,
           "leisure": 20250,
           "other": 34611
-        }
+        },
+        "n": 646
       },
       "two_person": {
         "label": "2人の世帯",
@@ -881,7 +882,8 @@ window.KSDATA = {
           "education": 417,
           "leisure": 28411,
           "other": 54799
-        }
+        },
+        "n": null
       },
       "three_person": {
         "label": "3人の世帯",
@@ -899,7 +901,8 @@ window.KSDATA = {
           "education": 10887,
           "leisure": 29433,
           "other": 58525
-        }
+        },
+        "n": null
       },
       "four_person": {
         "label": "4人の世帯",
@@ -917,7 +920,8 @@ window.KSDATA = {
           "education": 33198,
           "leisure": 36710,
           "other": 51025
-        }
+        },
+        "n": null
       },
       "five_person": {
         "label": "5人以上の世帯",
@@ -935,7 +939,8 @@ window.KSDATA = {
           "education": 36470,
           "leisure": 35859,
           "other": 45298
-        }
+        },
+        "n": 406
       },
       "elderly_couple": {
         "label": "65歳以上の夫婦のみ・無職の世帯",
@@ -953,7 +958,8 @@ window.KSDATA = {
           "education": 0,
           "leisure": 26538,
           "other": 51341
-        }
+        },
+        "n": null
       }
     },
     "map": [
@@ -1056,8 +1062,222 @@ window.KSDATA = {
       {
         "text": "自動車税・自動車重量税・固定資産税は消費支出ではなく「非消費支出」です。この比較には入っていません。",
         "url": "https://www.stat.go.jp/data/kakei/9.html"
+      },
+      {
+        "text": "集計した世帯数が少ない区分（二人以上の29歳以下、単身の34歳以下など）は、数字が振れやすくなります。",
+        "url": "https://www.stat.go.jp/data/kakei/2025np/index.html"
+      },
+      {
+        "text": "年齢で比べると、世帯の人数がそろいません（二人以上の世帯は40代が平均3.73人、70歳以上が2.34人）。食費や光熱費は人数で動くため、人数の軸も見てください。",
+        "url": "https://www.stat.go.jp/data/kakei/2025np/index.html"
       }
-    ]
+    ],
+    "groupsByAge": {
+      "two_plus_u29": {
+        "label": "二人以上の世帯・世帯主29歳以下",
+        "persons": 2.91,
+        "headAge": 27.2,
+        "n": 99,
+        "total": 264285,
+        "items": {
+          "food": 61673,
+          "housing": 47007,
+          "utility": 17643,
+          "furniture": 16454,
+          "clothes": 8708,
+          "medical": 10886,
+          "transport_comm": 37105,
+          "education": 2943,
+          "leisure": 25283,
+          "other": 36583
+        },
+        "ageMin": 0,
+        "ageMax": 29,
+        "household": "two_plus"
+      },
+      "two_plus_30s": {
+        "label": "二人以上の世帯・世帯主30〜39歳",
+        "persons": 3.58,
+        "headAge": 35.3,
+        "n": 647,
+        "total": 303962,
+        "items": {
+          "food": 84082,
+          "housing": 22989,
+          "utility": 21182,
+          "furniture": 14341,
+          "clothes": 12506,
+          "medical": 15016,
+          "transport_comm": 51296,
+          "education": 8605,
+          "leisure": 32810,
+          "other": 41136
+        },
+        "ageMin": 30,
+        "ageMax": 39,
+        "household": "two_plus"
+      },
+      "two_plus_40s": {
+        "label": "二人以上の世帯・世帯主40〜49歳",
+        "persons": 3.73,
+        "headAge": 44.7,
+        "n": 1179,
+        "total": 348607,
+        "items": {
+          "food": 99922,
+          "housing": 18240,
+          "utility": 24070,
+          "furniture": 13657,
+          "clothes": 13890,
+          "medical": 12897,
+          "transport_comm": 50557,
+          "education": 26635,
+          "leisure": 37152,
+          "other": 51587
+        },
+        "ageMin": 40,
+        "ageMax": 49,
+        "household": "two_plus"
+      },
+      "two_plus_50s": {
+        "label": "二人以上の世帯・世帯主50〜59歳",
+        "persons": 3.12,
+        "headAge": 54.2,
+        "n": 1361,
+        "total": 367643,
+        "items": {
+          "food": 95209,
+          "housing": 17608,
+          "utility": 25241,
+          "furniture": 13445,
+          "clothes": 12307,
+          "medical": 14663,
+          "transport_comm": 59435,
+          "education": 30385,
+          "leisure": 32503,
+          "other": 66846
+        },
+        "ageMin": 50,
+        "ageMax": 59,
+        "household": "two_plus"
+      },
+      "two_plus_60s": {
+        "label": "二人以上の世帯・世帯主60〜69歳",
+        "persons": 2.52,
+        "headAge": 64.5,
+        "n": 1416,
+        "total": 327405,
+        "items": {
+          "food": 92209,
+          "housing": 19630,
+          "utility": 25635,
+          "furniture": 13389,
+          "clothes": 9154,
+          "medical": 17240,
+          "transport_comm": 51224,
+          "education": 3788,
+          "leisure": 35308,
+          "other": 59828
+        },
+        "ageMin": 60,
+        "ageMax": 69,
+        "household": "two_plus"
+      },
+      "two_plus_70up": {
+        "label": "二人以上の世帯・世帯主70歳以上",
+        "persons": 2.34,
+        "headAge": 77.7,
+        "n": 2559,
+        "total": 264332,
+        "items": {
+          "food": 83000,
+          "housing": 16803,
+          "utility": 24905,
+          "furniture": 11355,
+          "clothes": 5850,
+          "medical": 17330,
+          "transport_comm": 30939,
+          "education": 336,
+          "leisure": 24026,
+          "other": 49789
+        },
+        "ageMin": 70,
+        "ageMax": 200,
+        "household": "two_plus"
+      },
+      "single_u34": {
+        "label": "単身世帯・34歳以下",
+        "persons": 1.0,
+        "headAge": 27.4,
+        "n": 67,
+        "total": 177542,
+        "items": {
+          "food": 41992,
+          "housing": 35060,
+          "utility": 8291,
+          "furniture": 5895,
+          "clothes": 6013,
+          "medical": 6735,
+          "transport_comm": 20640,
+          "education": 161,
+          "leisure": 24242,
+          "other": 28513
+        },
+        "ageMin": 0,
+        "ageMax": 34,
+        "household": "single"
+      },
+      "single_35_59": {
+        "label": "単身世帯・35〜59歳",
+        "persons": 1.0,
+        "headAge": 50.9,
+        "n": 111,
+        "total": 198488,
+        "items": {
+          "food": 47405,
+          "housing": 28041,
+          "utility": 13299,
+          "furniture": 5823,
+          "clothes": 5496,
+          "medical": 8084,
+          "transport_comm": 23773,
+          "education": 0,
+          "leisure": 23453,
+          "other": 43114
+        },
+        "ageMin": 35,
+        "ageMax": 59,
+        "household": "single"
+      },
+      "single_60up": {
+        "label": "単身世帯・60歳以上",
+        "persons": 1.0,
+        "headAge": 75.0,
+        "n": 469,
+        "total": 158546,
+        "items": {
+          "food": 44364,
+          "housing": 13103,
+          "utility": 15380,
+          "furniture": 6026,
+          "clothes": 3708,
+          "medical": 9780,
+          "transport_comm": 16317,
+          "education": 0,
+          "leisure": 17041,
+          "other": 32826
+        },
+        "ageMin": 60,
+        "ageMax": 200,
+        "household": "single"
+      }
+    },
+    "axes": {
+      "persons": "世帯の人数で比べる",
+      "age": "年齢で比べる"
+    },
+    "smallSampleUnder": 250,
+    "_axes_note": "既定は世帯の人数。ただし単身は、平均年齢58.6歳・有業者比率0.56に強く引きずられるため、年齢で比べるほうが実態に近い。家計調査には『年齢×世帯人員』のクロス集計がないため、どちらか一方の軸でしか比べられない。"
   },
   "wage": {
     "_readme": "年齢によって収入がどう変わるかの形。金額そのものではなく、比（いまの年齢を1としたときの倍率）だけを使う。60歳以降は定年・再雇用の設定で計算するため、点は57歳（55〜59歳階級）までしか持たない（二重に下げないため）。",
@@ -1177,6 +1397,13 @@ window.KSDATA = {
         "65-69": 67.8,
         "70-": 60.5
       }
-    }
+    },
+    "capAge": 57,
+    "_capAge_note": "この年齢で指数を止める（55〜59歳階級の代表年齢）。60歳以降は定年・再雇用の設定で計算するため",
+    "levelCompare": [
+      "employee",
+      "civil"
+    ],
+    "_levelCompare_note": "いまの年収が平均からどれくらい離れているかを示してよい働き方。パート・時短・育休は労働時間が違うため水準の比較はしない"
   }
 };

@@ -222,7 +222,22 @@
       hint: "奨学金・自動車ローン・教育ローン・カードローンなど",
       why: "毎月の返済は家計に長く効くため、見通しに入れる必要があるからです。",
       options: [{ v: "yes", label: "ある" }, { v: "no", label: "ない" }, { v: "unknown", label: "わからない" }],
-      react: (v) => (v === "yes" ? "ありがとうございます。種類・残高・毎月の返済額は、結果画面の「くわしく入力」で設定できます。" : null),
+      react: (v) => (v === "yes" ? "ありがとうございます。だいたいの残高だけ、次でうかがいます。" : null),
+    },
+    {
+      id: "otherLoanLeft", type: "single", required: true,
+      label: "その借入れは、いまだいたいいくら残っていますか？",
+      hint: "だいたいで大丈夫です。正確な額と毎月の返済額は、あとで「くわしく入力」から直せます。",
+      why: "残高がわからないと0円で計算してしまい、万一のときの見通しがずれるからです。",
+      when: (a) => a.otherLoan === "yes",
+      options: [
+        { v: "d1", label: "50万円未満", mid: 25 },
+        { v: "d2", label: "50〜150万円", mid: 100 },
+        { v: "d3", label: "150〜300万円", mid: 225 },
+        { v: "d4", label: "300〜500万円", mid: 400 },
+        { v: "d5", label: "500万円以上", mid: 700 },
+        { v: "unknown", label: "わからない", mid: null },
+      ],
     },
     {
       id: "insured", type: "single", required: true,
@@ -230,7 +245,22 @@
       hint: "会社名や商品名は聞きません。保障額は、結果画面の「くわしく入力」で設定できます。",
       why: "万一のときや働けなくなったときの見通しに、加入中の保険を反映するためです。",
       options: [{ v: "yes", label: "入っている" }, { v: "no", label: "入っていない" }, { v: "unknown", label: "わからない" }],
-      react: (v) => (v === "yes" ? "ありがとうございます。保障額を入れると、万一のときの見通しに反映できます（くわしく入力で設定）。" : null),
+      react: (v) => (v === "yes" ? "ありがとうございます。亡くなったときに出る額を、次でうかがいます。" : null),
+    },
+    {
+      id: "insuredDeathBand", type: "single", required: true,
+      label: "亡くなったときに出る保険金は、だいたいいくらですか？",
+      hint: "証券が手元になくても大丈夫です。わからなければ「わからない」を選んでください。",
+      why: "この額がわからないと、万一のときに足りるかどうかを出せないからです。",
+      when: (a) => a.insured === "yes",
+      options: [
+        { v: "b0", label: "死亡保障はない（医療保険などだけ）", mid: 0 },
+        { v: "b1", label: "500万円くらい", mid: 500 },
+        { v: "b2", label: "1,000万円くらい", mid: 1000 },
+        { v: "b3", label: "2,000万円くらい", mid: 2000 },
+        { v: "b4", label: "3,000万円以上", mid: 3500 },
+        { v: "unknown", label: "わからない", mid: null },
+      ],
     },
     {
       id: "living", type: "single", required: true,
@@ -318,7 +348,9 @@
     const v = answers[q.id];
     if (q.type === "multi") {
       if (!Array.isArray(v) || !v.length) return "特になし";
-      return v.map((x) => option(q, x)?.label ?? x).join("、");
+      // 選択肢にない値（古い保存データなど）は、そのまま出さずに捨てる
+      const labels = v.map((x) => option(q, x)?.label).filter(Boolean);
+      return labels.length ? labels.join("、") : "特になし";
     }
     if (q.type === "ages") return (v || []).map((x) => x + "歳").join("・");
     return option(q, v)?.label ?? "";

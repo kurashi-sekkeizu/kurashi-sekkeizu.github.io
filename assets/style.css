@@ -404,6 +404,7 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 
 /* 家計調査の平均と見比べる */
 .compare-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: .95rem; }
+.compare-pick select { flex: 1 1 auto; min-width: 0; }
 .compare-pick select { padding: 6px 8px; font: inherit; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: inherit; }
 .compare-legend { display: flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--muted); margin: 4px 0 8px; }
 .compare-legend .lg-you { color: #2a78d6; }

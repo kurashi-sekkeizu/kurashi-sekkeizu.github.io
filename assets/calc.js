@@ -58,7 +58,11 @@
   // 年齢によって収入がどう変わるかの指数。
   // 公的統計（賃金構造基本統計調査の年齢階級別の賃金）から作る。**データが無ければ null を返し、横ばいで計算する**（推測しない）。
   // 60歳以降は、定年・再雇用の設定で計算するため、この指数は59歳で頭打ちにする（二重に下げないため）。
-  const WAGE_CAP_AGE = 57;  // 55〜59歳階級の代表年齢。データもここまでしか持たない
+  // 指数を止める年齢（55〜59歳階級の代表年齢）。データ側で指定があればそれに従う
+  function wageCapAge() {
+    const W = window.KSDATA && window.KSDATA.wage;
+    return (W && Number(W.capAge)) || 57;
+  }
 
   function wageSeries(workKind) {
     const W = window.KSDATA && window.KSDATA.wage;
@@ -70,7 +74,7 @@
   // 年齢階級の代表年齢のあいだを、まっすぐ結んで読む
   function wageAt(series, ageAt) {
     const pts = series.points;
-    const x = Math.min(Math.max(ageAt, pts[0].age), Math.min(pts[pts.length - 1].age, WAGE_CAP_AGE));
+    const x = Math.min(Math.max(ageAt, pts[0].age), Math.min(pts[pts.length - 1].age, wageCapAge()));
     for (let i = 0; i < pts.length - 1; i++) {
       if (x >= pts[i].age && x <= pts[i + 1].age) {
         const t = (x - pts[i].age) / (pts[i + 1].age - pts[i].age);
@@ -93,6 +97,9 @@
   // 「年齢に応じて」は平均の増え方をそのまま掛けるため、平均から大きく離れた人ほど、実際とずれやすい。
   const FAR_HIGH = 1.8, FAR_LOW = 0.55;
   function incomeVsAverage(workKind, ageNow, incomeMan) {
+    const W = window.KSDATA && window.KSDATA.wage;
+    // パート・時短・育休は、フルタイムの平均と「水準」を比べても意味がない（労働時間が違う）
+    if (!W || !(W.levelCompare || []).includes(workKind)) return null;
     const s = wageSeries(workKind);
     if (!s || !incomeMan) return null;
     const avgMan = wageAt(s, ageNow) / 10;  // 千円/年 → 万円/年
@@ -139,7 +146,8 @@
       move: { on: "no", age: Number(a.age) + 5, cost: 100, monthly: 10 },
       assets: { cash: null, invest: null, monthly: 0 },
       loans: [],
-      insurance: { death: 0, medical: "unknown", disability: 0 },
+      // かんたん入力で答えた死亡保障の帯を、くわしく入力の初期値にする（答えていなければ0）
+      insurance: { death: Number(Q.mid("insuredDeathBand", a) || 0), medical: "unknown", disability: 0 },
       house: { built: 10, paintEvery: 12, paintCost: 120, waterEvery: 15, waterCost: 60, tax: 12 },
       mansion: { built: 10, monthly: 3, raise: 20, tax: 10 },
       purchase: { on: "no", age: Math.max(30, Number(a.age) + 3), type: "house", price: 4000, down: 400, years: 35, rate: 1, cost: 280 },
@@ -205,8 +213,18 @@
     const renting = home === "rent" || home === "plan";
 
     if (kidsNow.length && a.eduPlan === "unknown" && !D.set.edu) provisional.push("進学（高校まで公立・大学は私立で仮置き）");
-    if (a.insured === "yes" && !D.set.insurance) provisional.push("加入中の保険の保障額（未入力のため含めていません）");
-    if (a.otherLoan === "yes" && !D.loans.length) provisional.push("住宅ローン以外の借入れ（未入力のため0円で計算）");
+    if (a.insured === "yes" && !D.set.insurance) {
+      const band = Q.mid("insuredDeathBand", a);
+      provisional.push(band === null || band === undefined
+        ? "加入中の保険の保障額（未入力のため含めていません）"
+        : `加入中の保険の死亡保障（だいたい${KS.man(band)}で計算。医療・就業不能の保障は未入力）`);
+    }
+    const loanBand = a.otherLoan === "yes" ? Q.mid("otherLoanLeft", a) : null;
+    if (a.otherLoan === "yes" && !D.loans.length) {
+      provisional.push(loanBand === null || loanBand === undefined
+        ? "住宅ローン以外の借入れ（未入力のため0円で計算）"
+        : `住宅ローン以外の借入れ（残高 約${KS.man(loanBand)}・毎月の返済額は未入力）`);
+    }
     if (D.cars.length && !D.set.car) provisional.push("車（10年ごと・250万円で買い替え、維持費 年35万円で仮置き）");
     if (!D.set.home) {
       if (home === "loan") provisional.push("住宅ローン（返済 月10万円・65歳完済・団信ありで仮置き）");
@@ -316,7 +334,8 @@
     }
     // 残高・返済額・完済年齢の食い違い（利息があるため、ゆるめに判定）
     let loanMismatch = null;
-    if (home === "loan" && loanYearly > 0) {
+    // 仮の値どうしの食い違いで警告を出さない。本人が入力したときだけ見る
+    if (home === "loan" && loanYearly > 0 && D.set.loan) {
       const years = Math.max(0, Number(D.loan.endAge) - age);
       const total = loanYearly * years;
       if (total > 0) {
@@ -473,14 +492,20 @@
     // 万一のとき（死亡）
     const youngest = kidsNow.length ? Math.min(...kidsNow) : null;
     const years = kidsNow.length ? Math.max(0, Math.max(...kidsNow.map((k, i) => independAge(i) - k))) : spouse ? 5 : 0;
-    const insuredDeath = a.insured === "yes" && D.set.insurance ? Number(D.insurance.death) : 0;
+    const bandDeath = a.insured === "yes" ? Q.mid("insuredDeathBand", a) : null;
+    const insuredDeath = a.insured === "yes"
+      ? (D.set.insurance ? Number(D.insurance.death) : (bandDeath === null || bandDeath === undefined ? 0 : Number(bandDeath)))
+      : 0;
     const insuredDisability = a.insured === "yes" && D.set.insurance ? Number(D.insurance.disability) : 0;
     let death = null;
     if (spouse || kidsNow.length) {
       const eduRemain = kidsNow.reduce((s, k, i) => { let t = 0; for (let x = k; x <= 21; x++) t += eduCost(i, x); return s + t; }, 0);
       const loanLeft = home === "loan" && D.loan.dansin !== "yes" ? Math.min(Number(D.loan.balance), loanYearly * Math.max(0, loanEndAge - age)) : 0;
       // 奨学金は、本人が亡くなったときに返還が免除される制度があるため、ここでは残さない（要確認）
-      const otherLoanLeft = D.loans.filter((l) => l.kind !== "shougakukin").reduce((t, l) => t + Number(l.balance || 0), 0);
+      const bandLoanLeft = a.otherLoan === "yes" ? Q.mid("otherLoanLeft", a) : null;
+      const otherLoanLeft = D.loans.length
+        ? D.loans.filter((l) => l.kind !== "shougakukin").reduce((t, l) => t + Number(l.balance || 0), 0)
+        : (bandLoanLeft === null || bandLoanLeft === undefined ? 0 : Number(bandLoanLeft));
       const rent = renting ? Number(D.rent.monthly) * 12 * years : 0;
       const pensionYears = kidsNow.length ? Math.max(0, 18 - youngest) : 0;
       const survivorPension = pensionYears * (DUMMY.survivorBase + (employeeLike ? income * DUMMY.survivorEmployeeRate : 0));
@@ -674,14 +699,19 @@
     };
     current.total = ["living", "housing", "edu", "car", "loan", "other"].reduce((t, k) => t + current[k].monthly, 0);
 
-    const insurancePending = a.insured === "yes" && !D.set.insurance;
+    const insurancePending = a.insured === "yes" && !D.set.insurance && (bandDeath === null || bandDeath === undefined);
 
     function insuranceNote(kind) {
       if (a.insured === "no") return "保険に入っていない前提です";
       if (a.insured === "yes" && D.set.insurance) {
         return kind === "death" ? `加入中の死亡保障 ${KS.man(D.insurance.death)}を差し引いています` : `加入中の働けなくなったときの保障 月${KS.man(D.insurance.disability)}を差し引いています`;
       }
-      if (a.insured === "yes") return "加入中の保険の保障額が未入力のため、含めていません（くわしく入力で設定できます）";
+      if (a.insured === "yes") {
+        const band = Q.mid("insuredDeathBand", a);
+        return band === null || band === undefined
+          ? "加入中の保険の保障額が未入力のため、含めていません（くわしく入力で設定できます）"
+          : `かんたん入力で答えた死亡保障（だいたい${KS.man(band)}）で計算しています。正確な額はくわしく入力で設定できます`;
+      }
       return "加入中の保険は含めていません";
     }
 
@@ -787,8 +817,10 @@
     const kidInfo = kids.map((k, i) => ({ ageNow: k, plan: eduPlanOf(i), independ: independAge(i) }));
 
     const incomeCheck = W.growth === "stat" ? incomeVsAverage(work, age, income) : null;
+    const wageApplied = W.growth === "stat" && wageFactor(work, age, age + 1) !== null;
+    const wageCapped = wageApplied && age >= wageCapAge();
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, incomeCheck, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, incomeCheck, wageApplied, wageCapped, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
   }
 
   function round100(n) {
