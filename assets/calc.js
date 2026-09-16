@@ -55,6 +55,40 @@
   }
 
   // 額面から手取りへのおおよその割合。収入が低いほど手取りの割合は高い（⚠ ダミーの値）
+  // 年齢によって収入がどう変わるかの指数。
+  // 公的統計（賃金構造基本統計調査の年齢階級別の賃金）から作る。**データが無ければ null を返し、横ばいで計算する**（推測しない）。
+  // 60歳以降は、定年・再雇用の設定で計算するため、この指数は59歳で頭打ちにする（二重に下げないため）。
+  const WAGE_CAP_AGE = 57;  // 55〜59歳階級の代表年齢。データもここまでしか持たない
+
+  function wageSeries(workKind) {
+    const W = window.KSDATA && window.KSDATA.wage;
+    if (!W || !W.series || !W.map) return null;
+    const key = W.map[workKind];
+    return key ? W.series[key] || null : null;
+  }
+
+  // 年齢階級の代表年齢のあいだを、まっすぐ結んで読む
+  function wageAt(series, ageAt) {
+    const pts = series.points;
+    const x = Math.min(Math.max(ageAt, pts[0].age), Math.min(pts[pts.length - 1].age, WAGE_CAP_AGE));
+    for (let i = 0; i < pts.length - 1; i++) {
+      if (x >= pts[i].age && x <= pts[i + 1].age) {
+        const t = (x - pts[i].age) / (pts[i + 1].age - pts[i].age);
+        return pts[i].value + (pts[i + 1].value - pts[i].value) * t;
+      }
+    }
+    return pts[pts.length - 1].value;
+  }
+
+  // fromAge の収入を1としたときの、toAge の収入の倍率
+  function wageFactor(workKind, fromAge, toAge) {
+    const s = wageSeries(workKind);
+    if (!s) return null;
+    const from = wageAt(s, fromAge);
+    if (!from) return null;
+    return wageAt(s, toAge) / from;
+  }
+
   function takeHome(income) {
     const y = Number(income) || 0;
     if (y < 200) return 0.84;
@@ -100,8 +134,8 @@
       rebuild: { on: "no", age: Math.max(55, Number(a.age) + 15), budget: 1000 },
       care: { on: "no", startAge: Math.max(50, Number(a.age) + 10), years: 5, monthly: 5 },
       spend: { travel: 0, travelUntil: 75, items: [] },
-      work: { retireAge: 65, rehire: 0, rehireUntil: 65, allowance: 0, change: "no", changeAge: Number(a.age) + 5, changeIncome: "i3", growth: "flat", pension: 0, side: 0, sideUntil: 65 },
-      spouseWork: { growth: "flat", plan: "same", planFrom: 1, planYears: 2, planRate: 50, returnIncome: "i2", retireAge: 65, pension: 0 },
+      work: { retireAge: 65, rehire: 0, rehireUntil: 65, allowance: 0, change: "no", changeAge: Number(a.age) + 5, changeIncome: "i3", growth: "stat", pension: 0, side: 0, sideUntil: 65 },
+      spouseWork: { growth: "stat", plan: "same", planFrom: 1, planYears: 2, planRate: 50, returnIncome: "i2", retireAge: 65, pension: 0 },
     };
   }
 
@@ -183,6 +217,17 @@
     const spouseEmployee = EMPLOYEE_LIKE.includes(a.spouseWork);
     const pensionSpouse = !spouse ? 0 : Number(SW.pension) > 0 ? Number(SW.pension) : DUMMY.pensionBase + (spouseEmployee ? Math.min(spouseIncome, 1000) * DUMMY.pensionEmployeeRate : 0);
     const GROWTH = { flat: 0, up: 0.01, down: -0.01 };
+    // 収入の変わり方。"stat"＝公的統計の年齢別の賃金から。読めなければ横ばいに落とす
+    let wageFallback = false;
+    function incomeFactor(mode, workKind, refAge, atAge, years) {
+      if (mode === "stat") {
+        const f = wageFactor(workKind, refAge, atAge);
+        if (f !== null) return f;
+        wageFallback = true;
+        return 1;
+      }
+      return Math.pow(1 + GROWTH[mode || "flat"], years);
+    }
 
     // ── 年ごとの出来事（一時的な支出・収入）を先に並べる ──
     const oneTime = {};  // offset -> {housing, car, other, income, repair}
@@ -354,7 +399,11 @@
       for (let y = 0; y <= span; y++) {
         const cur = age + y;
         const ev = oneTime[y] || { housing: 0, repair: 0, car: 0, other: 0, income: 0 };
-        const baseIncome = (changeOff !== null && y >= changeOff ? changedIncome : income) * Math.pow(1 + GROWTH[W.growth || "flat"], Math.min(y, Math.max(0, retireAge - age)));
+        const afterChange = changeOff !== null && y >= changeOff;
+        const rawIncome = afterChange ? changedIncome : income;
+        const refAge = afterChange ? Number(W.changeAge) : age;
+        const workYears = Math.min(y, Math.max(0, retireAge - age));
+        const baseIncome = rawIncome * incomeFactor(W.growth, work, refAge, Math.min(cur, retireAge), workYears);
         const leaveFactor = (w, yy) => (w === "leave" && yy < DUMMY.leaveYears ? DUMMY.leaveRate : 1);
         let incWork = 0;
         if (cur < retireAge) incWork = baseIncome * leaveFactor(work, y) * takeHome(baseIncome);
@@ -364,7 +413,8 @@
         let incSpouse = 0;
         if (spouse) {
           const sAge = spouseAge + y;
-          const sBase = (SW.plan === "return" && y >= Number(SW.planFrom) ? returnIncome : spouseIncome) * Math.pow(1 + GROWTH[SW.growth || "flat"], y);
+          const sBase = (SW.plan === "return" && y >= Number(SW.planFrom) ? returnIncome : spouseIncome)
+            * incomeFactor(SW.growth, a.spouseWork, spouseAge, Math.min(sAge, Number(SW.retireAge)), y);
           if (sAge < Number(SW.retireAge)) incSpouse = sBase * spouseFactor(y) * leaveFactor(a.spouseWork, y) * takeHome(sBase);
           if (sAge >= DUMMY.pensionAge) incPension += pensionSpouse;
         }

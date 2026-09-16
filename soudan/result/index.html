@@ -46,6 +46,16 @@
   app.hidden = false;
   const openState = new Set();
 
+  // 収入をどう見込んでいるかを、1行で言う
+  function incomeAssumption(r) {
+    const mode = (r.detail.work && r.detail.work.growth) || "flat";
+    if (mode !== "stat") return { flat: "いまのまま", up: "年1%ずつ上がる", down: "年1%ずつ下がる" }[mode] || "いまのまま";
+    const W = window.KSDATA && window.KSDATA.wage;
+    const mapped = W && W.map && W.map[A.work];
+    if (!mapped) return "いまのまま（この働き方は賃金の統計の対象外です）";
+    return "年齢に応じて（統計の年齢別の賃金の形／60歳以降は定年・再雇用の設定）";
+  }
+
   function render() {
     const r = KSC.compute(d);
     const today = new Date();
@@ -151,7 +161,7 @@
         <h2 class="section-title">⑥ お金の流れ</h2>
         <p class="small muted" style="margin-bottom:8px">グラフを触る（またはキーボードの矢印キー）と、その年の内訳が出ます。</p>
         <div id="viz"></div>
-        <p class="small" style="margin-top:8px">前提：物価上昇 年${d.assumptions.inflation}% ／ 運用 年${d.assumptions.ret}%　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button></p>
+        <p class="small" style="margin-top:8px">前提：物価上昇 年${d.assumptions.inflation}% ／ 運用 年${d.assumptions.ret}% ／ 収入 ${esc(incomeAssumption(r))}　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button>　<button type="button" class="linkbtn" data-fix-work>収入の見込みを変える</button></p>
       </section>
 
       <section class="section" id="notinc-block">
@@ -212,6 +222,10 @@
       el.open ? openState.add(el.dataset.sec) : openState.delete(el.dataset.sec);
     }));
     app.querySelectorAll("[data-open-sheet]").forEach((b) => b.addEventListener("click", openSheet));
+    app.querySelectorAll("[data-fix-work]").forEach((b) => b.addEventListener("click", () => {
+      try { sessionStorage.setItem("ks-open-section", "work"); } catch (e) { /* 保存できなくても画面は開く */ }
+      location.href = "/soudan/detail/";
+    }));
   }
 
   function openSheet() {

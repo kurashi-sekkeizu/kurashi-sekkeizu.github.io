@@ -376,6 +376,11 @@
     if (hasLoan || willBuy) list.push({ dir: "worse", text: "変動金利の上昇。返済額は、いま入力した額のままで計算しています" });
     if (hasLoan && D.loan.prepayOn === "yes") list.push({ dir: "better", text: "繰り上げ返済で利息が減る分。期間が短くなる効果だけを見ています" });
     list.push({ dir: "both", text: "税金・社会保険料の細かい計算。手取りは、年収に応じたおおよその割合で出しています" });
+    if (D.work && D.work.growth === "stat") {
+      list.push({ dir: "both", text: "あなた個人の昇給や役職の変化。収入は、統計の年齢別の賃金の形にならって増減させているだけです" });
+    } else {
+      list.push({ dir: "both", text: "年齢による収入の変化。いまの収入がそのまま続く前提で計算しています（くわしく入力で変えられます）" });
+    }
     list.push({ dir: "worse", text: "物価の上昇は生活費だけに掛けています。教育費・修繕費・車の価格は、いまの水準のままです" });
     list.push({ dir: "both", text: "投資の値動き。利回りは毎年一定として計算し、元本割れは見ていません" });
     list.push({ dir: "worse", text: "突然の医療費・介護費・失業や休職による収入の減少（くわしく入力で設定した分を除く）" });
