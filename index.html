@@ -37,18 +37,11 @@
       <li><b>④</b>相談で聞くことを、PDFにまとめて持ち帰る</li>
     </ul>
     <div class="pdf-sample">
-      <div class="pdf-thumb" aria-hidden="true">
-        <div class="pdf-title">くらしの設計図 ライフプランメモ</div>
-        <div class="pdf-box">この内容は目安です。商品をすすめるものではありません。</div>
-        <div class="pdf-h">まずやること 3つ</div>
-        <div class="pdf-line"></div><div class="pdf-line short"></div>
-        <div class="pdf-h">年表・家計の見通し</div>
-        <div class="pdf-chart"><span></span><span></span><span></span><span></span><span></span></div>
-        <div class="pdf-h">専門家に聞くこと</div>
-        <div class="pdf-check">□ 団信と死亡保障の重なり</div>
-        <div class="pdf-check">□ 教育費の準備方法</div>
-      </div>
-      <p class="small muted">こんなPDFができあがります（A4・2〜4ページ。印刷して相談に持っていけます）</p>
+      <div class="pdf-frame"><div class="memo" id="pdf-preview" aria-hidden="true">
+        <p class="small muted" style="margin:0">見本を読み込んでいます…</p>
+      </div></div>
+      <p class="small muted">こんなPDFができあがります（A4・2〜4ページ。印刷して相談に持っていけます）。<br>
+        上の見本は、<b>38歳・会社員・配偶者と子ども2人・住宅ローンあり</b>という例で<b>実際に計算した結果</b>です（金額はダミー）。</p>
     </div>
   </section>
 
@@ -94,5 +87,38 @@
     <p><a href="/about/">このサイトについて</a>　<a href="/about/">プライバシーポリシー</a></p>
   </div>
 </footer>
+<script src="/assets/data.js"></script>
+<script src="/assets/common.js"></script>
+<script src="/assets/questions.js"></script>
+<script src="/assets/calc.js"></script>
+<script src="/assets/summary.js"></script>
+<script src="/assets/charts.js"></script>
+<script src="/assets/memo.js"></script>
+<script>
+(function () {
+  "use strict";
+  // PDFの見本は、作り物ではなく「ある例で実際に計算した結果」を出す。
+  // 失敗しても、トップページ自体は壊さない
+  const box = document.getElementById("pdf-preview");
+  if (!box) return;
+  try {
+    const d = KS.empty();
+    Object.assign(d.answers, {
+      fields: ["death", "edu", "retire", "home"],
+      age: 38, work: "employee", income: "i3",
+      spouse: "yes", spouseAge: 36, spouseWork: "part", spouseIncome: "i1",
+      kids: "yes", kidsCount: "2", kidsAges: ["8", "5"], eduPlan: "public",
+      home: "loan", homeType: "house", cars: "1", otherLoan: "no",
+      insured: "yes", insuredDeathBand: "b2",
+      living: "l7", savings: "s3", worries: ["edu", "retire"],
+    });
+    d.pdf.sections = ["todo"];
+    const r = KSC.compute(d);
+    box.innerHTML = KSM.memoHTML(r, d, d.answers);
+  } catch (e) {
+    box.innerHTML = '<p class="small muted" style="margin:0">見本を表示できませんでした。</p>';
+  }
+})();
+</script>
 </body>
 </html>
