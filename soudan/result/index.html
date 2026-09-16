@@ -147,6 +147,11 @@
         <p class="small" style="margin-top:8px">前提：物価上昇 年${d.assumptions.inflation}% ／ 運用 年${d.assumptions.ret}%　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button></p>
       </section>
 
+      <section class="section" id="notinc-block">
+        <h2 class="section-title">⑥ この計算に入れていないこと</h2>
+        <div id="notinc"></div>
+      </section>
+
       <div class="section"><a class="btn" href="/soudan/pdf/">📄 PDFで保存・印刷する</a></div>
 
       <section class="section">
@@ -181,6 +186,7 @@
       location.href = "/soudan/detail/";
     }));
     document.getElementById("timeline").appendChild(KSR.lifeTable(r));
+    document.getElementById("notinc").appendChild(KSR.notIncluded(r, A));
     const ctFold = document.getElementById("cost-table-fold");
     let ctBuilt = false;
     const buildCostTable = () => {

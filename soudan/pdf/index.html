@@ -149,6 +149,10 @@
         `<h2>相談メモ</h2><p>相談日 ＿＿＿＿＿＿　相談先 ＿＿＿＿＿＿＿＿＿＿</p>` +
         `<div class="write-line"></div><div class="write-line"></div><div class="write-line"></div><div class="write-line"></div>`;
     }
+    html += `<h2 class="page-break">この計算に入れていないこと</h2>` +
+      `<p>この計算は、次のものを含んでいません。相談のときに確認してください。</p>` +
+      `<table><tbody>${KSR.notIncludedItems(r, A).map((it) => `<tr><th style="width:8%;text-align:center">${{ better: "＋", worse: "−", both: "±" }[it.dir]}</th><td>${esc(it.text)}</td></tr>`).join("")}</tbody></table>` +
+      `<p>＋＝入れると結果が良くなる方向／−＝厳しくなる方向／±＝どちらにも動く</p>`;
     html += `<h2>出典・確認日</h2><p>（本番では、公的制度データごとに出典と確認日を記載します。プロトタイプの数字はダミーです。）</p>` + foot;
     document.getElementById("memo").innerHTML = html;
   }

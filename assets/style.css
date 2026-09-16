@@ -402,6 +402,14 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .todo2-when { font-size: .75rem; color: var(--muted); white-space: nowrap; }
 .todo2-body { padding: 0 12px 10px 48px; font-size: .9rem; }
 
+/* この計算に入れていないこと */
+.ni-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
+.ni-list li { display: flex; gap: 8px; align-items: baseline; font-size: .9rem; line-height: 1.7; }
+.ni-mark { flex: none; width: 1.6em; height: 1.6em; display: grid; place-items: center; border-radius: 50%; font-weight: 700; font-size: .8rem; }
+.ni-better .ni-mark { background: #e6f4e6; color: #0b5c0b; }
+.ni-worse .ni-mark { background: #fbe7e7; color: #8f1f1f; }
+.ni-both .ni-mark { background: #eef1f2; color: var(--muted); }
+
 /* 家計の表（縦＝費目、横＝年） */
 .ct-box { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 10px 0; margin-top: 10px; }
 .ct-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 0 12px 6px; }

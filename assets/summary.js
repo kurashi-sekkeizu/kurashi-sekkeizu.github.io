@@ -253,6 +253,48 @@
     return box;
   }
 
+  // ── この計算に入れていないこと ──
+  // dir: better＝実際はもっと良くなる可能性／worse＝もっと厳しくなる可能性／both＝どちらにも動く
+  function notIncludedItems(r, a) {
+    const D = r.detail;
+    const hasLoan = a.home === "loan";
+    const willBuy = D.purchase && D.purchase.on === "yes";
+    const list = [];
+    if (hasLoan || willBuy) list.push({ dir: "better", text: "住宅ローン控除（減税）。税金が戻る分は収入に入れていません" });
+    if (hasLoan || willBuy) list.push({ dir: "worse", text: "変動金利の上昇。返済額は、いま入力した額のままで計算しています" });
+    if (hasLoan && D.loan.prepayOn === "yes") list.push({ dir: "better", text: "繰り上げ返済で利息が減る分。期間が短くなる効果だけを見ています" });
+    list.push({ dir: "both", text: "税金・社会保険料の細かい計算。手取りは、年収に応じたおおよその割合で出しています" });
+    list.push({ dir: "worse", text: "物価の上昇は生活費だけに掛けています。教育費・修繕費・車の価格は、いまの水準のままです" });
+    list.push({ dir: "both", text: "投資の値動き。利回りは毎年一定として計算し、元本割れは見ていません" });
+    list.push({ dir: "worse", text: "突然の医療費・介護費・失業や休職による収入の減少（くわしく入力で設定した分を除く）" });
+    list.push({ dir: "both", text: "年金・児童手当などの制度が将来変わること。いまの制度が続く前提です" });
+    if ((a.kids === "yes" || a.kids === "plan")) list.push({ dir: "better", text: "高校無償化（就学支援金）。まだ計算に入れていません" });
+    list.push({ dir: "better", text: "相続・贈与・親からの援助" });
+    list.push({ dir: "worse", text: "退職金や年金にかかる税金" });
+    if (D.loans && D.loans.some((l) => l.kind === "shougakukin")) list.push({ dir: "both", text: "奨学金は、万一のときに返還が免除される前提で計算しています（条件は貸与元でご確認ください）" });
+    if (a.work === "self" && a.selfVary === "vary") list.push({ dir: "both", text: "自営業の収入の波。金額には反映せず、急な出費の目安を1年分にすることだけで見ています" });
+    return list;
+  }
+
+  function notIncluded(r, a) {
+    const box = h("div");
+    box.appendChild(h("p", "small", "この計算は、次のものを含んでいません。結果を見るときの目安にしてください。"));
+    const ul = h("ul", "ni-list");
+    const MARK = { better: ["＋", "実際はもっと良くなる可能性"], worse: ["−", "実際はもっと厳しくなる可能性"], both: ["±", "どちらにも動く"] };
+    notIncludedItems(r, a).forEach((it) => {
+      const li = h("li", "ni-" + it.dir);
+      const m = h("span", "ni-mark", MARK[it.dir][0]);
+      m.title = MARK[it.dir][1];
+      li.append(m, h("span", null, it.text));
+      ul.appendChild(li);
+    });
+    box.appendChild(ul);
+    const legend = h("p", "small muted");
+    legend.textContent = "＋＝入れると結果が良くなる方向／−＝厳しくなる方向／±＝どちらにも動く";
+    box.appendChild(legend);
+    return box;
+  }
+
   // ── ライフプラン表（縦＝人、横＝年） ──
   const ICON = { car: "🚗", repair: "🔧", home: "🏠", care: "👵", spend: "✈️", work: "💼" };
   const SHORT_ICON = { 誕生: "👶", 小学校: "🎒", 中学: "🏫", 高校: "🏫", 大学: "🎓", 専門: "🎓", 独立: "🌱", 定年: "👔", 年金: "💴", 完済: "🏠" };
@@ -412,5 +454,5 @@
     return box;
   }
 
-  window.KSR = { forecast, costs, costTable, lifeTable, advice, WEATHER };
+  window.KSR = { forecast, costs, costTable, lifeTable, advice, notIncluded, notIncludedItems, WEATHER };
 })();
