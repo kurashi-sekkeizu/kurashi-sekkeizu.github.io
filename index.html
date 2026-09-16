@@ -8,12 +8,12 @@
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-<div class="proto-banner">🧪 画面確認用のプロトタイプです。数字・会社名はダミーで、正しい計算ではありません。</div>
+<div class="proto-banner">🧪 お試し版です。<b>操作はすべて動きます</b>が、<b>金額はダミー</b>なので、実際の金額としては使えません。</div>
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="/">くらしの設計図</a>
     <nav class="nav" aria-label="メインメニュー">
-      <a href="/learn/">学ぶ</a><a href="/sources/">もっと知る</a><a href="/soudan/">相談する</a><a href="/about/">このサイトについて</a>
+      <a href="/learn/">学ぶ</a><a href="/sources/">もっと知る</a><a href="/soudan/">見通しをつくる</a><a href="/about/">このサイトについて</a>
     </nav>
   </div>
 </header>
@@ -22,8 +22,10 @@
   <section class="hero">
     <h1>これからのお金、<br>いつ・何を考えればいい？</h1>
     <p class="lead">家族・収入・住まいについて答えると、将来の見通しと「まずやること」がわかります。</p>
-    <a class="btn" href="/soudan/">自分の場合を整理する<span class="sub">（約5分・登録不要）</span></a>
-    <p class="note lock small" style="margin-top:10px">🔒 入力内容はこの端末の中だけで計算し、送信しません。</p>
+    <a class="btn btn-hero" href="/soudan/">自分の場合を整理する<span class="sub">（約5分・登録不要）</span></a>
+    <p class="ready">📄 <b>手ぶらでOK。</b>わからない項目は「わからない」を選べば、一般的な目安で計算します。<br>
+      <span class="muted small">源泉徴収票・ねんきん定期便・保険証券が手元にあると、より正確になります（なくても最後まで進めます）。</span></p>
+    <p class="note lock small" style="margin-top:10px">🔒 入力内容はこの端末の中だけで計算し、送信しません。入力画面でも、この表示が常に出ます。</p>
   </section>
 
   <section class="section">
@@ -34,6 +36,34 @@
       <li><b>③</b>見直せるかもしれない支出</li>
       <li><b>④</b>相談で聞くことを、PDFにまとめて持ち帰る</li>
     </ul>
+    <div class="pdf-sample">
+      <div class="pdf-thumb" aria-hidden="true">
+        <div class="pdf-title">くらしの設計図 ライフプランメモ</div>
+        <div class="pdf-box">この内容は目安です。商品をすすめるものではありません。</div>
+        <div class="pdf-h">まずやること 3つ</div>
+        <div class="pdf-line"></div><div class="pdf-line short"></div>
+        <div class="pdf-h">年表・家計の見通し</div>
+        <div class="pdf-chart"><span></span><span></span><span></span><span></span><span></span></div>
+        <div class="pdf-h">専門家に聞くこと</div>
+        <div class="pdf-check">□ 団信と死亡保障の重なり</div>
+        <div class="pdf-check">□ 教育費の準備方法</div>
+      </div>
+      <p class="small muted">こんなPDFができあがります（A4・2〜4ページ。印刷して相談に持っていけます）</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">はじめ方は2つ</h2>
+    <div class="start-two">
+      <a class="start-card" href="/soudan/">
+        <b>① まず5分で整理する</b>
+        <span>家族・収入・住まいを答えると、見通しが出ます。<br>言葉が分からなければ、あとから解説を読めます。</span>
+      </a>
+      <a class="start-card" href="/learn/">
+        <b>② 用語から知る</b>
+        <span>「遺族年金って何？」から読みたい方へ。<br>解説を読んでから整理に進めます。</span>
+      </a>
+    </div>
   </section>
 
   <section class="section">
@@ -51,6 +81,10 @@
       <p style="margin:0"><a href="/sources/">計算に使っている数字の出典と、公的な情報源</a></p>
       <p class="muted" style="margin:0">広告は掲載していません</p>
     </div>
+  </section>
+
+  <section class="section">
+    <a class="btn btn-hero" href="/soudan/">自分の場合を整理する<span class="sub">（約5分・登録不要・手ぶらでOK）</span></a>
   </section>
 </main>
 

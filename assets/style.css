@@ -146,6 +146,32 @@ body.has-lock { padding-bottom: 48px; }
 }
 .chip:hover { border-color: var(--accent); }
 
+/* トップの導線 */
+.btn-hero { min-height: 64px; font-size: 1.1rem; box-shadow: 0 3px 0 #22523f; }
+.btn-hero .sub { font-size: .8rem; }
+.ready { background: #fffdf5; border: 1px solid #e4dfc9; border-radius: var(--radius); padding: 10px 14px; font-size: .9rem; line-height: 1.7; margin: 10px 0 0; }
+.start-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 10px; }
+.start-card { display: block; background: var(--card); border: 2px solid var(--line); border-radius: var(--radius); padding: 14px; text-decoration: none; color: var(--ink); }
+.start-card:hover { border-color: var(--accent); }
+.start-card b { display: block; font-size: 1.02rem; color: var(--accent); margin-bottom: 4px; }
+.start-card span { font-size: .88rem; color: var(--muted); line-height: 1.7; }
+
+/* PDFの見本 */
+.pdf-sample { display: flex; gap: 14px; align-items: flex-start; margin-top: 12px; flex-wrap: wrap; }
+.pdf-thumb { width: 150px; flex: none; background: #fff; border: 1px solid #b9b7ad; box-shadow: 2px 2px 0 rgba(0,0,0,.06); padding: 8px 9px; font-size: 6px; line-height: 1.5; color: #333; }
+.pdf-title { font-weight: 700; font-size: 7px; border-bottom: 1.5px solid #333; padding-bottom: 2px; margin-bottom: 4px; }
+.pdf-box { border: 1px solid #666; padding: 2px 3px; margin-bottom: 4px; }
+.pdf-h { font-weight: 700; border-left: 2px solid #333; padding-left: 3px; margin: 5px 0 2px; }
+.pdf-line { height: 3px; background: #e3e1d8; margin-bottom: 2px; }
+.pdf-line.short { width: 60%; }
+.pdf-chart { display: flex; align-items: flex-end; gap: 2px; height: 22px; margin: 3px 0; }
+.pdf-chart span { flex: 1; background: #9dc0d8; }
+.pdf-chart span:nth-child(1) { height: 40%; } .pdf-chart span:nth-child(2) { height: 65%; }
+.pdf-chart span:nth-child(3) { height: 85%; } .pdf-chart span:nth-child(4) { height: 55%; }
+.pdf-chart span:nth-child(5) { height: 30%; }
+.pdf-check { color: #444; }
+.pdf-sample p { flex: 1 1 180px; margin: 0; }
+
 /* フッター */
 .site-footer { border-top: 1px solid var(--line); background: #efece4; margin-top: 40px; }
 .site-footer .wrap { padding-block: 20px 28px; font-size: .85rem; color: var(--muted); }
