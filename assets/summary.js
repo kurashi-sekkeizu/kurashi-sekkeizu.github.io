@@ -165,6 +165,89 @@
     return box;
   }
 
+  // ── 家計の表（縦＝費目、横＝年） ──
+  function costTable(r) {
+    const pts = r.sim0.points;
+    const box = h("div", "ct-box");
+    const head = h("div", "ct-head");
+    const label = h("span", "small muted", "表示：");
+    const toggle = h("div", "radio-row ct-toggle");
+    const state = { unit: "month" };
+    [["month", "毎月（万円）"], ["year", "1年あたり（万円）"]].forEach(([v, t]) => {
+      const lab = h("label");
+      const i = h("input");
+      i.type = "radio"; i.name = "ct-unit"; i.value = v; i.checked = v === state.unit;
+      i.addEventListener("change", () => { state.unit = v; draw(); });
+      lab.append(i, document.createTextNode(t));
+      toggle.appendChild(lab);
+    });
+    head.append(label, toggle);
+    box.appendChild(head);
+
+    const scroll = h("div", "lt-scroll");
+    scroll.setAttribute("role", "region");
+    scroll.setAttribute("aria-label", "年ごとの家計の表。横にスクロールできます。");
+    scroll.tabIndex = 0;
+    box.appendChild(scroll);
+    box.appendChild(h("p", "lt-hint", "← 横にスクロールできます。赤い列は、支出が収入を上回る年（貯蓄が減る年）です。"));
+
+    const ROWS = [
+      { key: "income", label: "収入（手取り）", get: (p) => p.income, cls: "ct-income" },
+      { key: "living", label: "生活費", get: (p) => p.exp.living },
+      { key: "housing", label: "住居費", get: (p) => p.exp.housing },
+      { key: "edu", label: "教育費", get: (p) => p.exp.edu },
+      { key: "car", label: "車", get: (p) => p.exp.car },
+      { key: "loan", label: "借入れ", get: (p) => p.exp.loan },
+      { key: "other", label: "その他", get: (p) => p.exp.other },
+      { key: "total", label: "支出の合計", get: (p) => p.expense, cls: "ct-total" },
+      { key: "flow", label: "収支", get: (p) => p.income - p.expense, cls: "ct-flow" },
+      { key: "balance", label: "貯蓄残高", get: (p) => p.balance, cls: "ct-balance", always: "year" },
+    ];
+
+    function fmt(v, row) {
+      const yearly = state.unit === "year" || row.always === "year";
+      const n = yearly ? v : v / 12;
+      if (Math.abs(n) < 0.05) return "0";
+      const r1 = yearly ? Math.round(n) : Math.round(n * 10) / 10;
+      return (r1 < 0 ? "−" : "") + Math.abs(r1).toLocaleString("ja-JP");
+    }
+
+    function draw() {
+      const table = h("table", "lt ct");
+      const thead = h("thead");
+      const trY = h("tr");
+      trY.appendChild(h("th", "lt-name lt-corner", "年（年齢）"));
+      pts.forEach((p, i) => {
+        const th = h("th", "lt-year" + (i === 0 ? " lt-now" : "") + (p.year % 5 === 0 ? " lt-five" : "") + (p.expense > p.income ? " ct-minus" : ""));
+        th.appendChild(h("span", "lt-y", String(p.year)));
+        th.appendChild(h("span", "lt-age", `${p.age}歳`));
+        trY.appendChild(th);
+      });
+      thead.appendChild(trY);
+      table.appendChild(thead);
+      const tbody = h("tbody");
+      ROWS.forEach((row) => {
+        if (row.key === "loan" && pts.every((p) => !p.exp.loan)) return;
+        if (row.key === "other" && pts.every((p) => !p.exp.other)) return;
+        const tr = h("tr", row.cls || "");
+        const th = h("th", "lt-name", row.label + (row.always === "year" ? "（年末）" : ""));
+        th.scope = "row";
+        tr.appendChild(th);
+        pts.forEach((p) => {
+          const v = row.get(p);
+          const td = h("td", (p.year % 5 === 0 ? "lt-five " : "") + (row.key === "flow" && v < 0 ? "lt-neg" : "") + (row.key === "balance" && p.balance < 0 ? "lt-neg" : ""));
+          td.textContent = fmt(v, row);
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      scroll.replaceChildren(table);
+    }
+    draw();
+    return box;
+  }
+
   // ── ライフプラン表（縦＝人、横＝年） ──
   const ICON = { car: "🚗", repair: "🔧", home: "🏠", care: "👵", spend: "✈️", work: "💼" };
   const SHORT_ICON = { 誕生: "👶", 小学校: "🎒", 中学: "🏫", 高校: "🏫", 大学: "🎓", 専門: "🎓", 独立: "🌱", 定年: "👔", 年金: "💴", 完済: "🏠" };
@@ -324,5 +407,5 @@
     return box;
   }
 
-  window.KSR = { forecast, costs, lifeTable, advice, WEATHER };
+  window.KSR = { forecast, costs, costTable, lifeTable, advice, WEATHER };
 })();

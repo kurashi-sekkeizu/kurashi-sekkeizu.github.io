@@ -60,12 +60,6 @@
         </div>
       </details>`;
 
-    const tableRows = r.sim0.points.map((p, i) => {
-      const pr = r.simR ? r.simR.points[i] : null;
-      const n0 = (v) => Math.round(v).toLocaleString();
-      return `<tr><td>${p.age}歳（${p.year}年）</td><td>${n0(p.income)}</td><td>${n0(p.exp.living)}</td><td>${n0(p.exp.housing)}</td><td>${n0(p.exp.edu)}</td><td>${n0(p.exp.car)}</td><td>${n0(p.exp.loan)}</td><td>${n0(p.exp.other)}</td><td>${n0(p.expense)}</td><td>${n0(p.balance)}</td>${pr ? `<td>${n0(pr.balance)}</td>` : ""}</tr>`;
-    }).join("");
-
     const death = r.death ? `
       <h3>万一のときの保障額（死亡）</h3>
       <p class="big-num">${man(r.death.low)} 〜 ${man(r.death.high)}</p>
@@ -102,9 +96,6 @@
       <p class="small" style="margin-top:8px">特定の商品をすすめるものではありません。 → <a href="/sources/">公的な情報を見る</a></p>`;
 
     const sections = [
-      { id: "cash", title: "年ごとの数字（表）", html: `
-          <p class="small">グラフと同じ数字です（万円）。</p>
-          <div class="table-wrap table-scroll"><table class="data"><thead><tr><th>年齢</th><th>収入</th><th>生活費</th><th>住居費</th><th>教育費</th><th>車</th><th>借入れ</th><th>その他</th><th>支出計</th><th>残高（0%）</th>${r.simR ? `<th>残高（${r.ret}%）</th>` : ""}</tr></thead><tbody>${tableRows}</tbody></table></div>` },
       { id: "todo", title: "やることリスト（すべて）", html: r.todos.length ? r.todos.map(todoCard).join("") : "<p>いま特に急ぐことは見つかりませんでした。</p>" },
       { id: "review", title: "見直せるかもしれない支出", html: `
           <p class="note info">固定費（通信費・電気代など）は「くわしく入力（固定費）」で答えると表示されます。</p>
@@ -133,6 +124,10 @@
         <h2 class="section-title">② 計算に使っている毎月の支出（いま）</h2>
         <p class="small">実際と<b>月2万円以上違う項目</b>は、押して「くわしく入力で直す」へ。</p>
         <div id="costs"></div>
+        <details class="fold" id="cost-table-fold" style="margin-top:12px">
+          <summary>年ごとに見る（費目×年の表）</summary>
+          <div class="body" id="cost-table"></div>
+        </details>
       </section>
 
       <section class="section">
@@ -186,6 +181,15 @@
       location.href = "/soudan/detail/";
     }));
     document.getElementById("timeline").appendChild(KSR.lifeTable(r));
+    const ctFold = document.getElementById("cost-table-fold");
+    let ctBuilt = false;
+    const buildCostTable = () => {
+      if (ctBuilt) return;
+      ctBuilt = true;
+      document.getElementById("cost-table").appendChild(KSR.costTable(r));
+    };
+    ctFold.addEventListener("toggle", () => { if (ctFold.open) { buildCostTable(); openState.add("costTable"); } else openState.delete("costTable"); });
+    if (openState.has("costTable")) { ctFold.open = true; buildCostTable(); }
     document.getElementById("advice").appendChild(KSR.advice(r, (section) => {
       try { sessionStorage.setItem("ks-open-section", section); } catch (e) { /* 保存できなくても画面は開く */ }
       location.href = "/soudan/detail/";
