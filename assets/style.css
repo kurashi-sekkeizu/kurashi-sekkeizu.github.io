@@ -299,6 +299,8 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .tip-key.dash { height: 0; border-top: 2px dashed var(--c); }
 .tip-key.rect { height: 10px; width: 10px; border-radius: 2px; background: var(--c); margin: 0 3px; }
 .tip-key.none { height: 0; }
+.tip-key.band { height: 12px; width: 12px; border-radius: 2px; background: var(--c); opacity: .25; margin: 0 2px; }
+.tip-row.flow b { font-weight: 700; }
 .viz-tip {
   position: absolute; top: 6px; z-index: 5; width: max-content; max-width: min(280px, 90%);
   background: #fff; color: var(--ink); border: 1px solid rgba(11, 11, 11, .12); border-radius: 10px;
