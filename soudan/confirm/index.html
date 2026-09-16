@@ -56,10 +56,10 @@
   const unk = (id) => A[id] === "unknown";
   const rows = [
     { th: "考えたいこと", td: show("fields"), edit: "fields" },
-    { th: "あなた", td: [show("age"), show("work"), show("income")].join("・"), edit: "age", warn: unk("income") },
-    { th: "配偶者・パートナー", td: A.spouse === "yes" ? [show("spouseAge"), show("spouseWork"), show("spouseIncome")].join("・") : "いない", edit: A.spouse === "yes" ? "spouseAge" : "spouse", warn: A.spouse === "yes" && unk("spouseIncome") },
-    { th: "お子さん", td: A.kids === "yes" ? `${A.kidsCount}人（${show("kidsAges")}）・${show("eduPlan")}` : show("kids"), edit: A.kids === "yes" ? "kidsCount" : "kids", warn: A.kids === "yes" && unk("eduPlan") },
-    { th: "住まい", td: [show("home"), show("homeType")].filter(Boolean).join("・"), edit: "home" },
+    { th: "あなた", td: [show("age"), show("work"), show("income")].filter(Boolean).join("・"), edit: "age", warn: unk("income") },
+    { th: "配偶者・パートナー", td: A.spouse === "yes" ? [show("spouseAge"), show("spouseWork"), show("spouseIncome")].filter(Boolean).join("・") : "いない", edit: A.spouse === "yes" ? "spouseAge" : "spouse", warn: A.spouse === "yes" && unk("spouseIncome") },
+    { th: "お子さん", td: A.kids === "yes" ? `${A.kidsCount}人（${show("kidsAges")}）・${show("eduPlan")}` : A.kids === "plan" ? `これから（${show("kidPlanIn")}）` : show("kids"), edit: A.kids === "yes" ? "kidsCount" : "kids", warn: A.kids === "yes" && unk("eduPlan") },
+    { th: "住まい", td: [show("home"), show("homeType"), show("rent") && `家賃 ${show("rent")}`].filter(Boolean).join("・"), edit: "home", warn: unk("rent") },
     { th: "車", td: show("cars"), edit: "cars" },
     { th: "保険", td: show("insured"), edit: "insured" },
     { th: "毎月の生活費", td: show("living"), edit: "living", warn: unk("living") },

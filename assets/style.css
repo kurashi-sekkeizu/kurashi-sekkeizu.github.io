@@ -330,6 +330,16 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .fc-rain { border-left-color: #d03b3b; } .fc-rain .fc-label { background: #fbe7e7; color: #8f1f1f; }
 .fc-foot { margin-top: 6px; }
 
+/* 受け止め方の案内 */
+.advice { border-radius: var(--radius); padding: 12px 14px; border: 1px solid var(--line); background: var(--card); }
+.advice-head { font-weight: 700; font-size: 1rem; line-height: 1.5; }
+.advice-lead { margin: 4px 0 8px; font-size: .9rem; }
+.advice-card { background: #f7f6f2; border-radius: 10px; padding: 10px 12px; }
+.advice-card p { margin: 4px 0 0; }
+.advice-list { margin: 0; padding-left: 1.2em; font-size: .9rem; }
+.advice-rain { border-left: 6px solid #d03b3b; }
+.advice-sun { border-left: 6px solid #0ca30c; }
+
 /* 計算に使っている毎月の支出（一覧は短く、押すと説明） */
 .costs2 { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
 .cost-row { border-bottom: 1px solid var(--line); }

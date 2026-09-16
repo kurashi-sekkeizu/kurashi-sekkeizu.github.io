@@ -126,6 +126,7 @@
         <h2 class="section-title">① 見通し</h2>
         <p class="small muted" style="margin-bottom:8px">言葉がわからないときは <a href="/learn/">やさしく学ぶ</a> で確認できます。</p>
         <div id="forecast"></div>
+        <div id="advice" class="section" style="margin-top:12px"></div>
       </section>
 
       <section class="section" id="costs-block">
@@ -185,6 +186,10 @@
       location.href = "/soudan/detail/";
     }));
     document.getElementById("timeline").appendChild(KSR.lifeTable(r));
+    document.getElementById("advice").appendChild(KSR.advice(r, (section) => {
+      try { sessionStorage.setItem("ks-open-section", section); } catch (e) { /* 保存できなくても画面は開く */ }
+      location.href = "/soudan/detail/";
+    }));
     app.querySelectorAll("details.fold").forEach((el) => el.addEventListener("toggle", () => {
       el.open ? openState.add(el.dataset.sec) : openState.delete(el.dataset.sec);
     }));

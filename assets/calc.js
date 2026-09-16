@@ -17,6 +17,8 @@
     disabilityMonthly: 6.5,
     funeral: 200,
     childAllowance: 15,      // 児童手当の概算（18歳まで・年額）
+    leaveRate: 0.5,          // 育休・産休中の収入の概算（元の年収に対する割合）
+    leaveYears: 2,           // 育休・産休が続く年数の仮置き
     endAge: 90,
     // 教育費（年額・万円）
     edu: {
@@ -70,13 +72,13 @@
     const livingMid = Q.mid("living", a);
     return {
       set: {},
-      family: { planned: [] },
+      family: { planned: a.kids === "plan" && a.kidPlanIn !== undefined ? [{ inYears: Number(a.kidPlanIn) || 3 }] : [] },
       living: splitLiving(livingMid == null ? 25 : livingMid),
       retire: { ratio: 85 },
       kids: Array.from({ length: nKids }, () => Object.assign({ away: "home", lessons: 0, lessonsUntil: 18 }, plan)),
       cars: Array.from({ length: nCars }, (_, i) => ({ nextIn: i === 0 ? 5 : 8, budget: 250, interval: 10, upkeep: 35, until: 75 })),
       loan: { monthly: 10, endAge: 65, balance: 2000, dansin: "yes" },
-      rent: { monthly: 8, renewal: 1 },
+      rent: { monthly: Q.mid("rent", a) ?? 8, renewal: 1 },
       move: { on: "no", age: Number(a.age) + 5, cost: 100, monthly: 10 },
       assets: { cash: null, invest: null, monthly: 0 },
       insurance: { death: 0, medical: "unknown", disability: 0 },
@@ -117,14 +119,14 @@
 
     const age = Number(a.age);
     const work = a.work;
-    let income = Q.mid("income", a);
-    if (income === null) { income = work === "none" ? 0 : 450; provisional.push("年収"); }
+    let income = work === "none" ? 0 : Q.mid("income", a);
+    if (income === null || income === undefined) { income = work === "none" ? 0 : 450; if (work !== "none") provisional.push("年収"); }
     const spouse = a.spouse === "yes";
     const spouseAge = spouse ? Number(a.spouseAge) : null;
     let spouseIncome = 0;
-    if (spouse) {
+    if (spouse && a.spouseWork !== "none") {
       spouseIncome = Q.mid("spouseIncome", a);
-      if (spouseIncome === null) { spouseIncome = 100; provisional.push("配偶者の年収"); }
+      if (spouseIncome === null || spouseIncome === undefined) { spouseIncome = 100; provisional.push("配偶者の年収"); }
     }
     const kidsNow = a.kids === "yes" ? (a.kidsAges || []).map(Number) : [];
     const planned = (D.family.planned || []).map((p) => -Number(p.inYears));  // これから生まれる子は、いまの年齢をマイナスで持つ
@@ -148,7 +150,7 @@
     if (D.cars.length && !D.set.car) provisional.push("車（10年ごと・250万円で買い替え、維持費 年35万円で仮置き）");
     if (!D.set.home) {
       if (home === "loan") provisional.push("住宅ローン（返済 月10万円・65歳完済・団信ありで仮置き）");
-      if (renting) provisional.push("家賃（月8万円で仮置き）");
+      if (renting && (a.rent === undefined || a.rent === "unknown")) provisional.push("家賃（月8万円で仮置き）");
       if (owns && homeType === "house") provisional.push("修繕費・固定資産税（築10年・塗装12年ごと120万円、税 年12万円などで仮置き）");
       if (owns && homeType === "mansion") provisional.push("修繕積立金・管理費・固定資産税（月3万円、税 年10万円で仮置き）");
     }
@@ -157,13 +159,14 @@
     const ret = as.ret / 100;
     const year0 = new Date().getFullYear();
     const span = DUMMY.endAge - age;
-    const employeeLike = work === "employee" || work === "civil";
+    const EMPLOYEE_LIKE = ["employee", "civil", "leave", "short"];
+    const employeeLike = EMPLOYEE_LIKE.includes(work);
     const W = D.work;
     const retireAge = Number(W.retireAge);
 
     const SW = D.spouseWork;
     const pensionSelf = Number(W.pension) > 0 ? Number(W.pension) : DUMMY.pensionBase + (employeeLike ? Math.min(income, 1000) * DUMMY.pensionEmployeeRate : 0);
-    const spouseEmployee = a.spouseWork === "employee" || a.spouseWork === "civil";
+    const spouseEmployee = EMPLOYEE_LIKE.includes(a.spouseWork);
     const pensionSpouse = !spouse ? 0 : Number(SW.pension) > 0 ? Number(SW.pension) : DUMMY.pensionBase + (spouseEmployee ? Math.min(spouseIncome, 1000) * DUMMY.pensionEmployeeRate : 0);
     const GROWTH = { flat: 0, up: 0.01, down: -0.01 };
 
@@ -313,8 +316,9 @@
         const cur = age + y;
         const ev = oneTime[y] || { housing: 0, repair: 0, car: 0, other: 0, income: 0 };
         const baseIncome = (changeOff !== null && y >= changeOff ? changedIncome : income) * Math.pow(1 + GROWTH[W.growth || "flat"], Math.min(y, Math.max(0, retireAge - age)));
+        const leaveFactor = (w, yy) => (w === "leave" && yy < DUMMY.leaveYears ? DUMMY.leaveRate : 1);
         let incWork = 0;
-        if (cur < retireAge) incWork = baseIncome * DUMMY.takeHomeRate;
+        if (cur < retireAge) incWork = baseIncome * leaveFactor(work, y) * DUMMY.takeHomeRate;
         else if (Number(W.rehire) > 0 && cur < Number(W.rehireUntil)) incWork = baseIncome * (Number(W.rehire) / 100) * DUMMY.takeHomeRate;
         if (Number(W.side) > 0 && cur < Number(W.sideUntil)) incWork += Number(W.side);
         let incPension = cur >= DUMMY.pensionAge ? pensionSelf : 0;
@@ -322,7 +326,7 @@
         if (spouse) {
           const sAge = spouseAge + y;
           const sBase = (SW.plan === "return" && y >= Number(SW.planFrom) ? returnIncome : spouseIncome) * Math.pow(1 + GROWTH[SW.growth || "flat"], y);
-          if (sAge < Number(SW.retireAge)) incSpouse = sBase * spouseFactor(y) * DUMMY.takeHomeRate;
+          if (sAge < Number(SW.retireAge)) incSpouse = sBase * spouseFactor(y) * leaveFactor(a.spouseWork, y) * DUMMY.takeHomeRate;
           if (sAge >= DUMMY.pensionAge) incPension += pensionSpouse;
         }
         let incAllowance = 0;
@@ -544,7 +548,11 @@
     const current = {
       living: { monthly: living, source: livingSource, items: livingItems },
       housing: {
-        monthly: hc0.base / 12, source: D.set.home ? "detail" : home === "family" ? "answer" : "provisional",
+        monthly: hc0.base / 12,
+        source: D.set.home ? "detail"
+          : home === "family" ? "answer"
+          : renting && a.rent && a.rent !== "unknown" ? "answer"
+          : "provisional",
         note: (home === "loan" ? "住宅ローンの返済＋" : renting ? "家賃" : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
       },
       edu: { monthly: p0.exp.edu / 12, source: kids.length ? (D.set.edu ? "detail" : a.eduPlan === "unknown" ? "provisional" : "answer") : "none", note: kids.length ? "今年の学年と進学の方針から" : "お子さんなし" },
@@ -553,6 +561,8 @@
       incomeMonthly: p0.income / 12,
     };
     current.total = ["living", "housing", "edu", "car", "other"].reduce((t, k) => t + current[k].monthly, 0);
+
+    const insurancePending = a.insured === "yes" && !D.set.insurance;
 
     function insuranceNote(kind) {
       if (a.insured === "no") return "保険に入っていない前提です";
@@ -602,12 +612,12 @@
       ? { key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は", weather: SUN, short: "扶養家族なし", criteria: "晴れ：不足なし／くもり：不足500万円以内／雨：不足500万円超", reason: "扶養しているご家族がいないため、大きな備えの必要性は低めです。", target: "estimate" }
       : {
         key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は",
-        weather: death.high <= 0 ? SUN : death.high <= 500 ? CLOUD : RAIN,
-        short: death.high <= 0 ? "不足なし" : `不足 ${KS.man(death.low)}〜${KS.man(death.high)}`,
+        weather: insurancePending ? CLOUD : death.high <= 0 ? SUN : death.high <= 500 ? CLOUD : RAIN,
+        short: insurancePending ? "保障額が未入力" : death.high <= 0 ? "不足なし" : `不足 ${KS.man(death.low)}〜${KS.man(death.high)}`,
         criteria: "晴れ：不足なし／くもり：不足500万円以内／雨：不足500万円超",
-        reason: death.high <= 0
-          ? "遺族年金・配偶者の収入・貯蓄で、ご家族の支出をまかなえる見込みです。"
-          : `遺族年金・配偶者の収入・貯蓄だけでは、約${KS.man(death.low)}〜${KS.man(death.high)}不足する見込みです。`,
+        reason: (insurancePending ? "加入中の保険の保障額が未入力のため、晴れ・雨の判定ができません。くわしく入力で設定してください。" + "\n" : "") + (death.high <= 0
+          ? "加入中の保険を除いて計算すると、遺族年金・配偶者の収入・貯蓄で、ご家族の支出をまかなえる見込みです。"
+          : `加入中の保険を除いて計算すると、約${KS.man(death.low)}〜${KS.man(death.high)}不足する見込みです。`),
         note: insuranceNote("death") + (home === "loan" ? (D.loan.dansin === "yes" ? "。住宅ローンは団信で完済される前提" : "。住宅ローンは団信なしとして残りの返済を含めています") : ""),
         target: "estimate",
       });
@@ -615,8 +625,8 @@
       const need18 = disability.first * 18;
       forecast.push({
         key: "sick", title: "働けなくなったとき", q: "休業中の収入減を、貯蓄で1年半しのげるか",
-        weather: disability.first <= 0 ? SUN : need18 <= savings ? CLOUD : RAIN,
-        short: disability.first <= 0 ? "不足なし" : `毎月 ${KS.man(disability.first)} 不足`,
+        weather: insurancePending ? CLOUD : disability.first <= 0 ? SUN : need18 <= savings ? CLOUD : RAIN,
+        short: insurancePending ? "保障額が未入力" : disability.first <= 0 ? "不足なし" : `毎月 ${KS.man(disability.first)} 不足`,
         criteria: "晴れ：不足なし／くもり：1年半分の不足を貯蓄でしのげる／雨：貯蓄では足りない",
         reason: disability.first <= 0
           ? "休業中の手当などで、毎月の支出をまかなえる見込みです。"

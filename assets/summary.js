@@ -20,6 +20,42 @@
   const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
   const manM = (v) => (Math.round(v * 10) / 10).toLocaleString("ja-JP", { maximumFractionDigits: 1 }) + "万円";
 
+  // 雨が多いとき・晴れが続くときの、受け止め方の案内
+  function advice(r, onFix) {
+    const rain = r.forecast.filter((f) => f.weather === "rain").length;
+    const cloud = r.forecast.filter((f) => f.weather === "cloud").length;
+    const box = h("div");
+    if (rain >= 3 && r.todos.length) {
+      const c = h("div", "advice advice-rain");
+      c.appendChild(h("div", "advice-head", "雨が続いていますが、全部を一度に直す必要はありません"));
+      c.appendChild(h("p", "advice-lead", "まず1つだけやるなら、これです。"));
+      const t = r.todos[0];
+      const card = h("div", "advice-card");
+      card.appendChild(h("b", null, t.title));
+      card.appendChild(h("p", "small", t.reason));
+      c.appendChild(card);
+      c.appendChild(h("p", "small muted", "ほかの項目は、下の「まずやること」で順に確認できます。"));
+      box.appendChild(c);
+    } else if (rain === 0) {
+      const c = h("div", "advice advice-sun");
+      c.appendChild(h("div", "advice-head", cloud ? "いまのところ、大きな心配は見当たりません" : "いまの前提では、大きな心配は見当たりません"));
+      c.appendChild(h("p", "advice-lead", cloud ? "くもりの項目を埋めると、判定がはっきりします。あわせて前提も確かめておくと安心です。" : "そのぶん、前提を厳しくしても大丈夫かを確かめておくと安心です。"));
+      const ul = h("ul", "advice-list");
+      [["年金の見込み額を入れる（ねんきん定期便）", "work"], ["物価の上昇を年2%にして見る", "assumptions"], ["親の介護を見込んでみる", "family"], ["加入中の保険の保障額を入れる", "insurance"]]
+        .forEach(([label, key]) => {
+          const li = h("li");
+          const b = h("button", "linkbtn", label);
+          b.type = "button";
+          b.addEventListener("click", () => onFix(key));
+          li.appendChild(b);
+          ul.appendChild(li);
+        });
+      c.appendChild(ul);
+      box.appendChild(c);
+    }
+    return box;
+  }
+
   // ── 見通しの天気（一覧は短く、押すと説明） ──
   function forecast(r, onJump) {
     const box = h("div", "forecast");
@@ -282,5 +318,5 @@
     return box;
   }
 
-  window.KSR = { forecast, costs, lifeTable, WEATHER };
+  window.KSR = { forecast, costs, lifeTable, advice, WEATHER };
 })();

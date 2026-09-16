@@ -44,7 +44,8 @@
 
   function botText(q, prev) {
     const react = prev && prev.react ? prev.react(A[prev.id], A) : null;
-    return (react ? react + "\n\n" : "") + (q.groupTitle ? q.groupTitle + "\n" : "") + q.label + (q.hint ? "\n（" + q.hint + "）" : "");
+    const hint = typeof q.hint === "function" ? q.hint(A) : q.hint;
+    return (react ? react + "\n\n" : "") + (q.groupTitle ? q.groupTitle + "\n" : "") + q.label + (hint ? "\n（" + hint + "）" : "");
   }
 
   function render(announce) {
@@ -95,7 +96,8 @@
       return;
     }
     const why = q.why || q.help ? `<button type="button" class="opt" id="why-btn" aria-expanded="false">なぜ聞くの？</button>` : "";
-    const whyBody = `<div class="why" id="why" hidden>${esc(q.why || "")}${q.help ? "<br><b>" + esc(q.help.title) + "</b>：" + esc(q.help.body) : ""}</div>`;
+    const hintText = typeof q.hint === "function" ? q.hint(A) : q.hint;
+    const whyBody = `<div class="why" id="why" hidden>${esc(hintText ? hintText + " " : "")}${esc(q.why || "")}${q.help ? "<br><b>" + esc(q.help.title) + "</b>：" + esc(q.help.body) : ""}</div>`;
     let body = "";
 
     if (q.type === "single") {

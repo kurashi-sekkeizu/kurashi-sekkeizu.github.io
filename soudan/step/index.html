@@ -55,7 +55,8 @@
     const v = A[q.id];
     const help = (q.why ? `<details class="help"><summary>なぜ聞くの？</summary><div>${KS.esc(q.why)}</div></details>` : "") +
       (q.help ? `<details class="help"><summary>${KS.esc(q.help.title)}</summary><div>${KS.esc(q.help.body)}</div></details>` : "");
-    const hint = q.hint ? `<p class="q-hint">${KS.esc(q.hint)}</p>` : "";
+    const hintText = typeof q.hint === "function" ? q.hint(A) : q.hint;
+    const hint = hintText ? `<p class="q-hint">${KS.esc(hintText)}</p>` : "";
 
     if (q.type === "single" || q.type === "multi") {
       const t = q.type === "single" ? "radio" : "checkbox";
@@ -87,7 +88,7 @@
     const s = screens[idx];
     const title = s[0].groupTitle ? `<h1 style="font-size:1.1rem;color:var(--muted)">${KS.esc(s[0].groupTitle)}</h1>` : "";
     document.getElementById("screen").innerHTML = title + s.map(control).join("");
-    document.getElementById("count").textContent = `${idx + 1} / ${screens.length}`;
+    document.getElementById("count").textContent = `${idx + 1}問目`;
     document.getElementById("bar").style.width = `${Math.round((idx / screens.length) * 100)}%`;
     document.getElementById("err").hidden = true;
     document.getElementById("back").textContent = idx === 0 ? "← 戻る" : "← 前の質問";
@@ -122,7 +123,8 @@
       const before = screens[idx].map((x) => x.id).join(",");
       const nextScreens = KSQ.screens(A);
       const now = nextScreens.find((sc) => sc.some((x) => x.id === screens[idx][0].id));
-      if (q.id === "kidsCount" || (now && now.map((x) => x.id).join(",") !== before)) {
+      const hintChanged = screens[idx].some((x) => typeof x.hint === "function");
+      if (q.id === "kidsCount" || hintChanged || (now && now.map((x) => x.id).join(",") !== before)) {
         screens = nextScreens;
         idx = screens.indexOf(now);
         render(false);

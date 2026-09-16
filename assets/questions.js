@@ -14,6 +14,8 @@
     { v: "civil", label: "公務員" },
     { v: "self", label: "自営業・フリーランス" },
     { v: "part", label: "パート・アルバイト" },
+    { v: "leave", label: "育休・産休中" },
+    { v: "short", label: "時短勤務" },
     { v: "none", label: "働いていない" },
   ];
   const WORK_REACT = {
@@ -21,7 +23,9 @@
     civil: "公務員の方も、共済組合から休業中の手当が出る仕組みがあります。",
     self: "自営業・フリーランスの方は、会社員に比べて国の保障が薄い部分があります。そのぶん、自分で備える範囲を結果で確認できます。",
     part: "働き方によって、加入している健康保険や年金が変わります。",
-    none: "わかりました。",
+    leave: "育休・産休中ですね。いまは収入が減っている前提（育休前の年収の約5割・2年間）で計算し、そのあとは元に戻る形にします。",
+    short: "時短勤務ですね。いまの年収（時短後の金額）でお答えください。",
+    none: "わかりました。年収の質問は飛ばします。",
   };
   const INCOME = [
     { v: "i1", label: "200万円未満", mid: 150 },
@@ -67,6 +71,8 @@
     },
     {
       id: "income", type: "single", required: true,
+      when: (a) => a.work !== "none",
+      hint: (a) => (a.work === "leave" ? "育休・産休に入る前の年収を選んでください。" : a.work === "short" ? "時短勤務になったあとの、いまの年収を選んでください。" : null),
       label: "年収はどのくらいですか？（額面・税込）",
       why: "万一のときに失う収入や、国の保障の目安を計算するためです。",
       help: { title: "額面と手取りの違い", body: "額面は、税金や社会保険料が引かれる前の金額です。会社員の方は、源泉徴収票の「支払金額」が目安です。手取りは、口座に振り込まれる金額です。" },
@@ -95,8 +101,9 @@
     {
       id: "spouseIncome", type: "single", required: true, group: "spouse",
       label: "その方の年収（額面・税込）",
+      hint: (a) => (a.spouseWork === "leave" ? "育休・産休に入る前の年収を選んでください。" : null),
       options: [{ v: "fuyo", label: "扶養の範囲内", mid: 100 }].concat(INCOME),
-      when: (a) => a.spouse === "yes",
+      when: (a) => a.spouse === "yes" && a.spouseWork !== "none",
       react: (v) => (v === "unknown" ? UNKNOWN_REACT : null),
     },
     {
@@ -135,6 +142,15 @@
       react: (v) => (v === "unknown" ? "まだ決めていなくて大丈夫です。「高校まで公立、大学は私立」で仮に計算します。" : "お子さんの年齢と進学の方針から、教育費がかかる時期を年表にします。"),
     },
     {
+      id: "kidPlanIn", type: "single", required: true,
+      label: "お子さんは、いつごろの予定ですか？",
+      hint: "だいたいで大丈夫です。あとから変えられます。",
+      why: "生まれる時期によって、教育費がかかる時期が変わるためです。",
+      options: [{ v: 1, label: "1年以内" }, { v: 2, label: "2年後ごろ" }, { v: 3, label: "3年後ごろ" }, { v: 5, label: "5年後ごろ" }, { v: 0, label: "まだわからない（3年後で計算）" }],
+      when: (a) => a.kids === "plan",
+      react: () => "ありがとうございます。生まれたあとの教育費と児童手当を、年表に入れます。",
+    },
+    {
       id: "home", type: "single", required: true, group: "home",
       label: "お住まいは？",
       why: "住宅ローンや家賃は、将来の支出と万一のときに必要なお金に大きく関わるためです。",
@@ -154,6 +170,21 @@
       options: [{ v: "house", label: "戸建て" }, { v: "mansion", label: "マンション" }],
       when: (a) => a.home === "loan" || a.home === "own",
       react: (v) => (v === "house" ? "戸建ては、10〜15年ごとに外壁・屋根の塗装や水回りの交換がかかります。一般的な目安で年表に入れます。" : "マンションは、修繕積立金が年数とともに上がることがあります。一般的な目安で計算します。"),
+    },
+    {
+      id: "rent", type: "single", required: true,
+      label: "毎月の家賃はいくらですか？（管理費を含む）",
+      why: "家賃は毎月の支出のうち大きな割合を占め、将来の見通しを大きく変えるためです。",
+      options: [
+        { v: "r1", label: "5万円未満", mid: 4 },
+        { v: "r2", label: "5〜8万円", mid: 6.5 },
+        { v: "r3", label: "8〜11万円", mid: 9.5 },
+        { v: "r4", label: "11〜15万円", mid: 13 },
+        { v: "r5", label: "15万円以上", mid: 17 },
+        { v: "unknown", label: "わからない", mid: null },
+      ],
+      when: (a) => a.home === "rent" || a.home === "plan",
+      react: (v) => (v === "unknown" ? UNKNOWN_REACT : null),
     },
     {
       id: "cars", type: "single", required: true,
