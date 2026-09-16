@@ -402,6 +402,8 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .todo2-when { font-size: .75rem; color: var(--muted); white-space: nowrap; }
 .todo2-body { padding: 0 12px 10px 48px; font-size: .9rem; }
 
+.lt.ct .ct-minus::before { content: "⚠ "; }
+
 /* 家計調査の平均と見比べる */
 .compare-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: .95rem; }
 .compare-pick select { flex: 1 1 auto; min-width: 0; }
@@ -414,11 +416,15 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .compare-label { font-weight: 600; }
 .compare-word { font-size: .85rem; color: var(--muted); white-space: nowrap; }
 .compare-bars { display: grid; gap: 2px; margin-top: 4px; }
-.compare-bar { display: grid; grid-template-columns: minmax(0, 1fr) 5.2em; align-items: center; gap: 8px; }
-.compare-bar .bar { height: 10px; border-radius: 0 4px 4px 0; }
+.compare-bar { display: grid; grid-template-columns: 3.4em minmax(0, 1fr) 5.2em; align-items: center; gap: 8px; }
+.compare-who { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.compare-track { display: block; min-width: 0; }
+.compare-bar .bar { display: block; height: 10px; border-radius: 0 4px 4px 0; }
 .bar-you { background: #2a78d6; }
 .bar-avg { background: #8b949e; }
 .compare-num { font-size: .85rem; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+
+.fc-reason { white-space: pre-line; }
 
 /* この計算に入れていないこと */
 .ni-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
@@ -517,7 +523,7 @@ details.fold > summary .badge { margin-left: 6px; }
 
 /* 印刷メモ（画面ではプレビュー） */
 .memo { background: #fff; color: #000; border: 1px solid #999; padding: 20px; font-size: 13px; line-height: 1.7; }
-.memo h1 { font-size: 18px; border-bottom: 2px solid #000; padding-bottom: 4px; }
+.memo .memo-title { font-size: 18px; border-bottom: 2px solid #000; border-left: 0; padding: 0 0 4px; margin: 0 0 8px; }
 .memo h2 { font-size: 14px; border-left: 5px solid #000; padding-left: 6px; margin-top: 18px; }
 .memo .memo-box { border: 2px solid #000; padding: 8px 10px; margin: 8px 0; }
 .memo table { border-collapse: collapse; width: 100%; }

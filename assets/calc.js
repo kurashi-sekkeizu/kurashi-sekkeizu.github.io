@@ -140,7 +140,7 @@
       living: splitLiving(livingMid == null ? 25 : livingMid),
       retire: { ratio: 85 },
       kids: Array.from({ length: nKids }, () => Object.assign({ away: "home", lessons: 0, lessonsUntil: 18 }, plan)),
-      cars: Array.from({ length: nCars }, (_, i) => ({ nextIn: i === 0 ? 5 : 8, budget: 250, interval: 10, upkeep: 35, until: 75 })),
+      cars: Array.from({ length: nCars }, (_, i) => ({ nextIn: i === 0 ? 5 : 8, budget: 250, interval: 10, upkeep: 35, until: Math.max(75, Number(a.age) + 10) })),
       loan: { monthly: 10, endAge: 65, balance: 2000, dansin: "yes", bonus: 0, prepayOn: "no", prepayAge: Number(a.age) + 3, prepayAmount: 100 },
       rent: { monthly: Q.mid("rent", a) ?? 8, renewal: 1 },
       move: { on: "no", age: Number(a.age) + 5, cost: 100, monthly: 10 },
@@ -202,17 +202,19 @@
     let living = Q.mid("living", a);
     let livingSource = "answer";
     if (D.set.living) { living = LIVING_ITEMS.reduce((t, it) => t + Number(D.living[it.key] || 0), 0); livingSource = "detail"; }
-    else if (living === null) { living = Math.min(40, 10 + household * 3.5); provisional.push("毎月の生活費"); livingSource = "provisional"; }
+    else if (living == null) { living = Math.min(40, 10 + household * 3.5); provisional.push("毎月の生活費"); livingSource = "provisional"; }
     let savings = Q.mid("savings", a);
     const assetsSplit = D.set.assets && D.assets.cash !== null && D.assets.invest !== null;
     if (assetsSplit) savings = Number(D.assets.cash) + Number(D.assets.invest);
-    else if (savings === null) { savings = 300; provisional.push("貯蓄"); }
+    else if (savings == null) { savings = 300; provisional.push("貯蓄"); }
     const home = a.home;
     const owns = home === "loan" || home === "own";
     const homeType = a.homeType;
     const renting = home === "rent" || home === "plan";
 
     if (kidsNow.length && a.eduPlan === "unknown" && !D.set.edu) provisional.push("進学（高校まで公立・大学は私立で仮置き）");
+    if (!D.set.work) provisional.push("定年65歳・退職金なし・年金は概算（くわしく入力で設定できます）");
+    if (!D.set.living) provisional.push(`老後の生活費（現役の${D.retire.ratio}%で仮置き）`);
     if (a.insured === "yes" && !D.set.insurance) {
       const band = Q.mid("insuredDeathBand", a);
       provisional.push(band === null || band === undefined
@@ -241,6 +243,8 @@
     const employeeLike = EMPLOYEE_LIKE.includes(work);
     const W = D.work;
     const retireAge = Number(W.retireAge);
+    // 「何歳まで働くか」が定年以下だと、再雇用の収入が1年も入らない。定年の翌年以降に直す
+    const rehireUntil = Math.max(Number(W.rehireUntil) || 0, retireAge + 1);
 
     const SW = D.spouseWork;
     const pensionSelf = Number(W.pension) > 0 ? Number(W.pension) : DUMMY.pensionBase + (employeeLike ? Math.min(income, 1000) * DUMMY.pensionEmployeeRate : 0);
@@ -326,9 +330,11 @@
     if (home === "loan" && D.loan.prepayOn === "yes") {
       prepayOff = Number(D.loan.prepayAge) - age;
       const shorten = loanYearly > 0 ? Math.floor(Number(D.loan.prepayAmount) / loanYearly) : 0;
-      if (inSpan(prepayOff)) {
+      // 繰り上げ返済が完済後の年齢に設定されていたら、何も起きない
+      if (inSpan(prepayOff) && age + prepayOff < loanEndAge) {
         at(prepayOff).housing += Number(D.loan.prepayAmount);
-        loanEndAge = Math.max(age + prepayOff, loanEndAge - shorten);
+        // 早まることはあっても、延びることはない
+        loanEndAge = Math.min(loanEndAge, Math.max(age + prepayOff, loanEndAge - shorten));
         lifeEvents.push({ offset: prepayOff, short: "繰上", text: `住宅ローンの繰り上げ返済（約${KS.man(D.loan.prepayAmount)}）。完済が約${shorten}年早まる計算`, kind: "home", amount: Number(D.loan.prepayAmount) });
       } else prepayOff = null;
     }
@@ -352,6 +358,11 @@
       if (inSpan(moveOff)) {
         at(moveOff).housing += Number(D.move.cost);
         lifeEvents.push({ offset: moveOff, short: "住替", text: `住み替え（費用 約${KS.man(D.move.cost)}、以降の住居費 月${KS.man(D.move.monthly)}）`, kind: "home", amount: Number(D.move.cost) });
+        // 住み替えたあとは、前の家の修繕は発生しない
+        Object.keys(oneTime).forEach((k) => { if (Number(k) >= moveOff) oneTime[k].repair = 0; });
+        for (let i = lifeEvents.length - 1; i >= 0; i--) {
+          if (lifeEvents[i].kind === "repair" && lifeEvents[i].offset >= moveOff) lifeEvents.splice(i, 1);
+        }
       } else moveOff = null;
     }
 
@@ -433,19 +444,24 @@
         const afterChange = changeOff !== null && y >= changeOff;
         const rawIncome = afterChange ? changedIncome : income;
         const refAge = afterChange ? Number(W.changeAge) : age;
-        const workYears = Math.min(y, Math.max(0, retireAge - age));
+        // 転職後は、転職した年を起点に数える（今からの年数だと初年度に数年分の昇給が乗る）
+        const growthYears = afterChange ? y - changeOff : y;
+        const workYears = Math.min(growthYears, Math.max(0, retireAge - age));
         const baseIncome = rawIncome * incomeFactor(W.growth, work, refAge, Math.min(cur, retireAge), workYears);
         const leaveFactor = (w, yy) => (w === "leave" && yy < DUMMY.leaveYears ? DUMMY.leaveRate : 1);
         let incWork = 0;
         if (cur < retireAge) incWork = baseIncome * leaveFactor(work, y) * takeHome(baseIncome);
-        else if (Number(W.rehire) > 0 && cur < Number(W.rehireUntil)) incWork = baseIncome * (Number(W.rehire) / 100) * takeHome(baseIncome * (Number(W.rehire) / 100));
+        else if (Number(W.rehire) > 0 && cur < rehireUntil) incWork = baseIncome * (Number(W.rehire) / 100) * takeHome(baseIncome * (Number(W.rehire) / 100));
         if (Number(W.side) > 0 && cur < Number(W.sideUntil)) incWork += Number(W.side);
         let incPension = cur >= DUMMY.pensionAge ? pensionSelf : 0;
         let incSpouse = 0;
         if (spouse) {
           const sAge = spouseAge + y;
-          const sBase = (SW.plan === "return" && y >= Number(SW.planFrom) ? returnIncome : spouseIncome)
-            * incomeFactor(SW.growth, a.spouseWork, spouseAge, Math.min(sAge, Number(SW.retireAge)), y);
+          const backToWork = SW.plan === "return" && y >= Number(SW.planFrom);
+          const sRefAge = backToWork ? spouseAge + Number(SW.planFrom) : spouseAge;
+          const sYears = backToWork ? y - Number(SW.planFrom) : y;
+          const sBase = (backToWork ? returnIncome : spouseIncome)
+            * incomeFactor(SW.growth, a.spouseWork, sRefAge, Math.min(sAge, Number(SW.retireAge)), sYears);
           if (sAge < Number(SW.retireAge)) incSpouse = sBase * spouseFactor(y) * leaveFactor(a.spouseWork, y) * takeHome(sBase);
           if (sAge >= DUMMY.pensionAge) incPension += pensionSpouse;
         }
@@ -454,7 +470,9 @@
         const incOther = ev.income;
         const inc = incWork + incPension + incSpouse + incAllowance + incOther;
 
-        const expLiving = living * 12 * Math.pow(1 + inf, y) * (cur >= DUMMY.pensionAge ? Number(D.retire.ratio) / 100 : 1);
+        // すでに年金の年齢に達している人は「いまの生活費」を答えているので、老後の圧縮率は掛けない
+        const retireRatio = age >= DUMMY.pensionAge ? 1 : Number(D.retire.ratio) / 100;
+        const expLiving = living * 12 * Math.pow(1 + inf, y) * (cur >= DUMMY.pensionAge ? retireRatio : 1);
         const hc = housingCost(y);
         const expHousing = hc.base + ev.housing + ev.repair;
         let expEdu = 0;
@@ -467,7 +485,7 @@
         if (Number(D.spend.travel) > 0 && cur < Number(D.spend.travelUntil)) expOther += Number(D.spend.travel);
         const exp = expLiving + expHousing + expEdu + expCar + expLoan + expOther;
 
-        if (y > 0) {
+        {
           if (assetsSplit) {
             const c = cur <= DUMMY.pensionAge ? contrib : 0;
             cash += inc - exp - c;
@@ -491,7 +509,11 @@
 
     // 万一のとき（死亡）
     const youngest = kidsNow.length ? Math.min(...kidsNow) : null;
-    const years = kidsNow.length ? Math.max(0, Math.max(...kidsNow.map((k, i) => independAge(i) - k))) : spouse ? 5 : 0;
+    // 末子が独立するまで。配偶者がいる場合は、それが短くても最低5年は見る
+    const years = Math.max(
+      spouse ? 5 : 0,
+      kidsNow.length ? Math.max(0, Math.max(...kidsNow.map((k, i) => independAge(i) - k))) : 0
+    );
     const bandDeath = a.insured === "yes" ? Q.mid("insuredDeathBand", a) : null;
     const insuredDeath = a.insured === "yes"
       ? (D.set.insurance ? Number(D.insurance.death) : (bandDeath === null || bandDeath === undefined ? 0 : Number(bandDeath)))
@@ -549,16 +571,17 @@
         gap0: round100(gap0),
         monthly0: monthly(gap0, 0),
         gapR: simR ? round100(Math.max(0, need - Math.max(0, at65(simR)))) : null,
-        monthlyR: simR ? monthly(gap0, ret) : null,
+        monthlyR: simR ? monthly(Math.max(0, need - Math.max(0, at65(simR))), ret) : null,
       };
     }
 
     // やることリスト（一般的な優先順: 生活防衛資金 → 保障 → 教育 → 近い大きな出費 → 老後）
     const todos = [];
-    const months = savings / Math.max(1, living);
+    // 「生活費＋住居費」の何か月分か。天気の判定（後述）と同じ定義にそろえる
+    const months = savings / Math.max(1, living + housingCost(0).base / 12);
     if (months < 6) {
       todos.push({ key: "emergency", when: "今すぐ", title: "急な出費に備える貯蓄を確認する",
-        reason: `貯蓄が生活費の約${Math.max(0, Math.round(months))}か月分です。一般に、生活費の半年分ほどを目安にする考え方があります。`,
+        reason: `貯蓄が、毎月の生活費と住居費の約${Math.max(0, Math.round(months))}か月分です。一般に、半年分ほどを目安にする考え方があります。`,
         link: { href: "/sources/", text: "貯蓄の考え方を読む" } });
     }
     if (death && death.high > 0) {
@@ -618,7 +641,7 @@
       { name: "医療保障", level: savings >= 100 ? L3 : L2,
         reason: "高額療養費制度により、1か月の医療費の自己負担には上限があります。差額ベッド代など対象外の費用を貯蓄で賄えるかがポイントです。" },
       { name: "働けなくなったときの保障", level: work === "self" ? L1 : L2,
-        reason: work === "self" ? "休業中の手当がないため、収入が途絶えやすい働き方です。" : "休業中の手当はありますが、長期化した場合の生活費は確認が必要です。" },
+        reason: work === "self" ? "休業中の手当がないため、収入が途絶えやすい働き方です。" : "休業中の手当はありますが、長期化したときの生活費は、確認しておきたいところです。" },
       { name: "個人賠償責任", level: L2, reason: "自転車事故などで他人にけがをさせた場合の備えです。" },
     ];
 
@@ -640,7 +663,7 @@
 
     // 家族の年表（グラフ用）。offset = いまから何年後か
     const selfEvents = [];
-    if (retireAge - age >= 0 && retireAge - age <= span) selfEvents.push({ offset: retireAge - age, short: "定年", text: `定年（${retireAge}歳）` + (Number(W.rehire) > 0 ? `・再雇用（〜${W.rehireUntil}歳）` : "") });
+    if (retireAge - age >= 0 && retireAge - age <= span) selfEvents.push({ offset: retireAge - age, short: "定年", text: `定年（${retireAge}歳）` + (Number(W.rehire) > 0 ? `・再雇用（〜${rehireUntil}歳）` : "") });
     if (DUMMY.pensionAge - age >= 0) {
       if (retireAge === DUMMY.pensionAge) selfEvents[0] && (selfEvents[0].text += "・年金受給開始");
       else selfEvents.push({ offset: DUMMY.pensionAge - age, short: "年金", text: "年金受給開始（65歳）" });
@@ -740,11 +763,11 @@
       forecast.push({
         key: "retire", title: "老後のお金", q: "90歳まで貯蓄がもつか",
         weather: outAge !== null ? RAIN : endP.balance < yearLiving * (Number(D.retire.ratio) / 100) * 2 ? CLOUD : SUN,
-        short: outAge !== null ? (post[0] && post[0].balance < 0 ? "65歳でマイナス" : `${outAge}歳で底をつく`) : `90歳で${KS.man(endP.balance)}残る`,
+        short: outAge !== null ? (post[0] && post[0].balance < 0 ? (post[0].age <= age ? "いまの時点でマイナス" : `${post[0].age}歳でマイナス`) : `${outAge}歳で底をつく`) : `90歳で${KS.man(endP.balance)}残る`,
         criteria: "晴れ：90歳で老後の生活費2年分以上残る／くもり：もつが余裕が少ない／雨：途中でなくなる",
         reason: outAge !== null
           ? (post[0] && post[0].balance < 0
-            ? `65歳の時点で、すでに貯蓄がマイナス（約${KS.man(post[0].balance)}）の見込みです。まず現役のあいだの家計の見直しが必要です。`
+            ? `${post[0].age <= age ? "いまの時点" : post[0].age + "歳の時点"}で、すでに貯蓄がマイナス（約${KS.man(post[0].balance)}）の見込みです。まず現役のあいだの家計から見ていくことになります。`
             : `${outAge}歳ごろに貯蓄がなくなる見込みです（運用しない場合）。`)
           : `90歳時点で約${KS.man(endP.balance)}残る見込みです${endP.balance < yearLiving * (Number(D.retire.ratio) / 100) * 2 ? "（老後の生活費の2年分を下回り、余裕は少なめです）" : ""}。`,
         target: "cash",
@@ -758,8 +781,8 @@
         short: insurancePending ? "保障額が未入力" : death.high <= 0 ? "不足なし" : `不足 ${KS.man(death.low)}〜${KS.man(death.high)}`,
         criteria: "晴れ：不足なし／くもり：不足500万円以内／雨：不足500万円超",
         reason: (insurancePending ? "加入中の保険の保障額が未入力のため、晴れ・雨の判定ができません。くわしく入力で設定してください。" + "\n" : "") + (death.high <= 0
-          ? "加入中の保険を除いて計算すると、遺族年金・配偶者の収入・貯蓄で、ご家族の支出をまかなえる見込みです。"
-          : `加入中の保険を除いて計算すると、約${KS.man(death.low)}〜${KS.man(death.high)}不足する見込みです。`),
+          ? "加入中の保険を差し引いて計算すると、遺族年金・配偶者の収入・貯蓄で、ご家族の支出をまかなえる見込みです。"
+          : `加入中の保険を差し引いて計算すると、約${KS.man(death.low)}〜${KS.man(death.high)}不足する見込みです。`),
         note: insuranceNote("death") + (home === "loan" ? (D.loan.dansin === "yes" ? "。住宅ローンは団信で完済される前提" : "。住宅ローンは団信なしとして残りの返済を含めています") : ""),
         target: "estimate",
       });
@@ -798,7 +821,7 @@
     events.sort((x, y) => x.year - y.year);
 
     // 年表（行ごと）：年・家族の年齢・出来事（アイコン・金額）
-    const ICON = { car: "🚗", repair: "🔧", home: "🏠", care: "👵", spend: "✈️", work: "💼" };
+    const ICON = { car: "🚗", repair: "🔧", home: "🏠", care: "👵", spend: "✈️", work: "💼", loan: "💳" };
     const SHORT_ICON = { 誕生: "👶", 小学校: "🎒", 中学: "🏫", 高校: "🏫", 大学: "🎓", 専門: "🎓", 独立: "🌱", 定年: "👔", 年金: "💴", 完済: "🏠" };
     const rowsByOff = {};
     const addRow = (off, item) => { (rowsByOff[off] = rowsByOff[off] || []).push(item); };
@@ -815,12 +838,14 @@
     }));
 
     const kidInfo = kids.map((k, i) => ({ ageNow: k, plan: eduPlanOf(i), independ: independAge(i) }));
+    // いま一緒に暮らしている人数。これから生まれる子（年齢がマイナス）と独立した子は数えない
+    const householdNow = 1 + (spouse ? 1 : 0) + kidInfo.filter((k) => k.ageNow >= 0 && k.ageNow <= k.independ).length;
 
     const incomeCheck = W.growth === "stat" ? incomeVsAverage(work, age, income) : null;
     const wageApplied = W.growth === "stat" && wageFactor(work, age, age + 1) !== null;
     const wageCapped = wageApplied && age >= wageCapAge();
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, incomeCheck, wageApplied, wageCapped, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, incomeCheck, wageApplied, wageCapped, householdNow, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
   }
 
   function round100(n) {

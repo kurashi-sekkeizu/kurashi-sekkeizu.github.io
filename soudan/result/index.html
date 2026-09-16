@@ -79,6 +79,7 @@
         <span>− 遺族年金など</span><span class="v">${man(r.death.breakdown.survivorPension)}</span>
         <span>− 配偶者の収入</span><span class="v">${man(r.death.breakdown.spouseInc)}</span>
         <span>− 貯蓄</span><span class="v">${man(r.death.breakdown.savings)}</span>
+        <span>− 加入中の死亡保障</span><span class="v">${man(r.death.breakdown.insuredDeath)}</span>
         <span class="total">不足の目安</span><span class="v total">${man(r.death.low)}〜${man(r.death.high)}</span>
       </div>${r.death.breakdown.loanNote ? '<p class="small" style="margin-top:6px">住宅ローンは、団信で完済される前提で支出から除いています。</p>' : ""}</details>
       <p class="small">幅の理由：遺族の生活費を、現在の${d.assumptions.ratioLow}%〜${d.assumptions.ratioHigh}%で計算しています。</p>`
@@ -90,7 +91,7 @@
         <span>運用しない場合</span><span class="v"><b>${man(r.retire.gap0)}</b>（毎月 約${man(r.retire.monthly0)}の積立で埋まる計算）</span>
         ${r.retire.gapR !== null ? `<span>年${r.ret}%で運用した場合</span><span class="v"><b>${man(r.retire.gapR)}</b>（毎月 約${man(r.retire.monthlyR)}）</span>` : ""}
       </div>
-      <p class="small">※運用成果は保証されません。運用しない場合の数字を必ず確認してください。</p>` : "";
+      <p class="small">※運用成果は保証されません。運用しない場合の数字もあわせて見てください。</p>` : "";
 
     const dis = `
       <h3 style="margin-top:20px">働けなくなったとき（月あたりの不足）</h3>
@@ -110,9 +111,9 @@
       { id: "review", title: "見直せるかもしれない支出", html: `
           <p class="note info">固定費（通信費・電気代など）は「くわしく入力（固定費）」で答えると表示されます。</p>
           <div class="card"><b>表示例：通信費</b><br><span class="level l2">見直しの余地があるかもしれません</span>
-          <p class="small" style="margin:6px 0">同じ世帯人数の平均より、月約5,000円多い傾向です（出典：総務省 家計調査／確認日を表示）</p>
-          <p class="small" style="margin:0">→ <a href="/sources/">出典を見る</a></p></div>
-          <p class="small" style="margin-top:8px">保険料は、この一覧には含めません（保険は「分野別の目安」で確認します）。</p>` },
+          <p class="small" style="margin:6px 0">〈ここに、同じ区分の平均との差が入ります。金額は実際の入力から出します〉</p>
+          <p class="small" style="margin:0">いまの支出を平均と見比べたい場合は、<b>「③ 家計調査の平均と見比べる」</b>をご覧ください。</p></div>
+          <p class="small" style="margin-top:8px">保険料は、この一覧には含めません（家計調査では消費支出の外に分類されるため、平均と比べられません）。</p>` },
       { id: "estimate", title: "分野別の目安", html: death + dis + retire + insurance +
           `<p class="small" style="margin-top:12px">言葉の意味：<a href="/learn/izoku-nenkin/">遺族年金</a>　<a href="/learn/kougaku-ryouyouhi/">高額療養費</a>　<a href="/learn/roukogo-2000man/">老後2000万円問題</a>　<a href="/learn/">ほかの解説を見る</a></p>` },
       { id: "ask", title: "専門家に聞くこと", html: `<ul>${r.ask.map((x) => `<li>${esc(x.q)}<br><span class="muted small">相談先の例：${esc(x.who)}</span></li>`).join("")}</ul><p class="small">自分で書き足したいことは、PDF作成の画面で追加できます。</p>` },

@@ -47,14 +47,14 @@
     <fieldset class="section">
       <legend>入力内容の保存</legend>
       <div class="options">
-        <label class="option"><input type="radio" name="persist" value="session" checked><span>このタブを閉じたら消す<br><span class="muted">おすすめ</span></span></label>
+        <label class="option"><input type="radio" name="persist" value="session" checked><span>このタブを閉じたら消す<br><span class="muted">ふつうはこちら</span></span></label>
         <label class="option" id="persist-local"><input type="radio" name="persist" value="local"><span>この端末に保存して、あとで続きから使う<br><span class="muted">⚠ 共用のパソコンでは選ばないでください</span></span></label>
       </div>
       <p id="no-local" hidden class="note warn small" style="margin-top:8px">この端末（ブラウザの設定）では保存できません。タブを閉じると入力内容は消えます。</p>
     </fieldset>
 
     <p class="note info section">答えられないところは「わからない」で大丈夫です。</p>
-    <button type="submit" class="btn">はじめる</button>
+    <button type="submit" class="btn" id="start-btn">はじめる</button>
   </form>
 </main>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
@@ -75,8 +75,10 @@
   if (KS.hasSavedLocal()) {
     const box = document.getElementById("resume");
     box.hidden = false;
+    document.getElementById("start-btn").textContent = "最初からはじめる（前回の内容は使いません）";
     document.getElementById("resume-yes").addEventListener("click", () => {
-      const d = KS.load().data;
+      const d = KS.loadLocal() || KS.load().data;
+      d.meta.persist = "local";
       KS.save(d);
       location.href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";
     });
@@ -87,10 +89,20 @@
     });
   }
 
+  // 保存済みの設定を、画面の初期値に反映する（勝手に解除しないため）
+  const saved = KS.load().data;
+  if (saved.meta && saved.meta.persist === "local" && KS.hasLocal) {
+    document.querySelector('input[name="persist"][value="local"]').checked = true;
+  }
+  if (saved.meta && saved.meta.mode === "chat") {
+    document.querySelector('input[name="mode"][value="chat"]').checked = true;
+  }
+
   document.getElementById("start").addEventListener("submit", (e) => {
     e.preventDefault();
     const f = new FormData(e.target);
-    const d = KS.load().data;
+    // 「はじめる」は常に最初から。前回の続きは、上の「前回の続きから」を使う
+    const d = KS.empty();
     d.meta.mode = f.get("mode");
     d.meta.persist = f.get("persist") || "session";
     KS.save(d);

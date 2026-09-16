@@ -24,22 +24,15 @@
 
   <section class="section">
     <h2 class="section-title">計算に使っている数字の出典</h2>
-    <p class="note warn small">⚠ プロトタイプの数字はすべてダミーです。本番では、下の表に出典・調査年・確認日を入れ、データファイルと画面表示を一致させます。</p>
+    <p class="small muted">記事と画面に出している数字は、<b>下の出典から差し込んでいます</b>（データファイルを年1回更新すれば、記事と計算の両方が新しくなります）。<b>見通しの試算に使う金額は、まだダミー</b>です。</p>
     <div class="table-wrap">
       <table class="data text">
-        <thead><tr><th>使っている場面</th><th>出典（本番で掲載）</th><th>確認日</th></tr></thead>
-        <tbody>
-          <tr><td>遺族年金・老齢年金の見込み</td><td>日本年金機構</td><td>—（未設定）</td></tr>
-          <tr><td>高額療養費の自己負担の上限</td><td>厚生労働省</td><td>—</td></tr>
-          <tr><td>休業中の手当（傷病手当金）</td><td>全国健康保険協会</td><td>—</td></tr>
-          <tr><td>教育費（公立・私立、大学）</td><td>文部科学省「子供の学習費調査」／日本政策金融公庫「教育費負担の実態調査」</td><td>—</td></tr>
-          <tr><td>生活費の内訳・費目ごとの平均</td><td>総務省「家計調査」</td><td>—</td></tr>
-          <tr><td>マンションの修繕積立金の目安</td><td>国土交通省のガイドライン</td><td>—</td></tr>
-          <tr><td>介護の期間・費用の平均</td><td>生命保険文化センターの調査</td><td>—</td></tr>
-          <tr><td>必要保障額の考え方</td><td>生命保険文化センター（積み上げ方式の解説）</td><td>—</td></tr>
-        </tbody>
+        <caption class="visually-hidden">公的データの出典・適用年度・確認日</caption>
+        <thead><tr><th>発行元</th><th>資料</th><th>適用年度</th><th>確認日</th></tr></thead>
+        <tbody id="src-rows"><tr><td colspan="4">読み込み中…</td></tr></tbody>
       </table>
     </div>
+    <p id="src-note" class="small muted"></p>
   </section>
 
   <section class="section">
@@ -70,5 +63,24 @@
     <p><a href="/about/">このサイトについて</a>　<a href="/sources/">もっと知る</a></p>
   </div>
 </footer>
+<script src="/assets/data.js"></script>
+<script>
+(function () {
+  "use strict";
+  // 出典の表は data/sources.json から作る（手書きにすると必ずずれる）
+  const tb = document.getElementById("src-rows");
+  const D = window.KSDATA;
+  if (!D || !D.sources) {
+    tb.innerHTML = '<tr><td colspan="4">公的データを読み込めませんでした。</td></tr>';
+    return;
+  }
+  const esc = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const rows = Object.values(D.sources).sort((a, b) => (a.publisher + a.name).localeCompare(b.publisher + b.name, "ja"));
+  tb.innerHTML = rows.map((s) =>
+    `<tr><td>${esc(s.publisher)}</td><td><a href="${esc(s.url)}" rel="noopener">${esc(s.name)}</a></td><td>${esc(s.year)}</td><td>${esc(s.checked)}</td></tr>`).join("");
+  document.getElementById("src-note").textContent =
+    `全${rows.length}件（データ更新日 ${D.generated}）。制度は年度ごとに変わるため、実際の手続きの前に出典でご確認ください。`;
+})();
+</script>
 </body>
 </html>

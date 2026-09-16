@@ -78,7 +78,18 @@
     const id = "f" + ++uid;
     const l = h("label", null, label); l.htmlFor = id;
     const s = h("select", "select"); s.id = id;
-    options.forEach((o) => { const op = h("option", null, o.label); op.value = o.v; if (String(obj[key]) === String(o.v)) op.selected = true; s.appendChild(op); });
+    let matched = false;
+    options.forEach((o) => { const op = h("option", null, o.label); op.value = o.v; if (String(obj[key]) === String(o.v)) { op.selected = true; matched = true; } s.appendChild(op); });
+    // 保存値が選択肢に無いとき、先頭が選ばれたように見えて計算とずれる。いまの値を先頭に足して見えるようにする
+    if (!matched && obj[key] !== null && obj[key] !== undefined && obj[key] !== "") {
+      // 単位が落ちないよう、ほかの選択肢の書き方に合わせる（「3万円」→「6.5万円」）
+      const sample = options.find((o) => o.label && String(o.label).includes(String(o.v)));
+      const label = sample ? String(sample.label).replace(String(sample.v), String(obj[key])) : `${obj[key]}`;
+      const cur = h("option", null, label);
+      cur.value = obj[key];
+      cur.selected = true;
+      s.insertBefore(cur, s.firstChild);
+    }
     s.addEventListener("change", () => {
       obj[key] = opt.text ? s.value : Number(s.value);
       if (opt.after) opt.after(s.value);
@@ -433,7 +444,8 @@
         const setBoth = () => { D.assets.cash = view.cash; D.assets.invest = view.invest; };
         box.appendChild(select("預貯金", view, "cash", vals.map((v) => ({ v, label: man(v) })), "assets", { after: setBoth }));
         box.appendChild(select("投資（NISA・iDeCo・投資信託など）", view, "invest", vals.map((v) => ({ v, label: man(v) })), "assets", { after: setBoth }));
-        box.appendChild(select("毎月の積立額（65歳まで）", D.assets, "monthly", [0, 0.5, 1, 2, 3, 5, 8, 10].map((v) => ({ v, label: v ? `月${v}万円` : "なし" })), "assets", { after: setBoth }));
+        // 積立額を変えただけでは、貯蓄を「入力済み」にしない（仮の値の注意が消えてしまうため）
+        box.appendChild(select("毎月の積立額（65歳まで）", D.assets, "monthly", [0, 0.5, 1, 2, 3, 5, 8, 10].map((v) => ({ v, label: v ? `月${v}万円` : "なし" })), "assets"));
       },
     },
     {

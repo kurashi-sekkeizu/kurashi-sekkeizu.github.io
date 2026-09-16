@@ -47,7 +47,9 @@
       if (i >= 0) return i;
     }
     const i = screens.findIndex((s) => s.some((q) => q.required && !KSQ.isAnswered(q, A)));
-    return i >= 0 ? i : 0;
+    if (i >= 0) return i;
+    // 全部答え終わっている（確認画面から戻ってきた）ときは、最後の画面を出す
+    return Math.max(0, screens.length - 1);
   }
 
   function control(q) {
@@ -118,15 +120,23 @@
         A[q.id] = t.value === "" ? null : Number(t.value);
       } else {
         A[q.id] = q.id === "kidsCount" ? Number(t.value) : t.value;
+        // 人数を変えたら、年齢の欄も同じ数にそろえる（減らしたときに古い値が残って先へ進めなくなる）
+        if (q.id === "kidsCount") {
+          const n = Number(A.kidsCount) || 0;
+          const arr = Array.isArray(A.kidsAges) ? A.kidsAges.slice(0, n) : [];
+          while (arr.length < n) arr.push(null);
+          A.kidsAges = arr;
+        }
       }
+      KS.forgetDetail(d, q.id);
       // 回答によって同じ画面の質問が増減する場合（子の人数→年齢欄、持ち家→戸建て/マンション）は描き直す
       const before = screens[idx].map((x) => x.id).join(",");
       const nextScreens = KSQ.screens(A);
       const now = nextScreens.find((sc) => sc.some((x) => x.id === screens[idx][0].id));
       const hintChanged = screens[idx].some((x) => typeof x.hint === "function");
-      if (q.id === "kidsCount" || hintChanged || (now && now.map((x) => x.id).join(",") !== before)) {
+      if (now && (q.id === "kidsCount" || hintChanged || now.map((x) => x.id).join(",") !== before)) {
         screens = nextScreens;
-        idx = screens.indexOf(now);
+        idx = Math.max(0, screens.indexOf(now));
         render(false);
         document.querySelector(`input[name="${q.id}"][value="${t.value}"]`)?.focus();
       }

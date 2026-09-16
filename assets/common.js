@@ -37,8 +37,16 @@
     if (!raw) return null;
     try {
       const d = JSON.parse(raw);
-      if (!d || d.version !== VERSION || typeof d.answers !== "object") return "broken";
-      return d;
+      const obj = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
+      if (!obj(d) || d.version !== VERSION) return "broken";
+      if (!obj(d.answers) || !obj(d.meta) || !obj(d.assumptions) || !obj(d.pdf)) return "broken";
+      // 足りない項目は既定で補う（古い保存データで画面が止まらないように）
+      const base = empty();
+      return Object.assign(base, d, {
+        meta: Object.assign(base.meta, d.meta),
+        assumptions: Object.assign(base.assumptions, d.assumptions),
+        pdf: Object.assign(base.pdf, d.pdf),
+      });
     } catch (e) {
       return "broken";
     }
@@ -77,10 +85,40 @@
     return !!p && p !== "broken";
   }
 
+  // 端末に保存した内容だけを読む（「前回の続きから」で使う）
+  function loadLocal() {
+    if (!hasLocal) return null;
+    const d = parse(localStorage.getItem(KEY));
+    return d && d !== "broken" ? d : null;
+  }
+
   function clearAll() {
     memory = null;
-    if (hasSession) sessionStorage.removeItem(KEY);
+    if (hasSession) {
+      sessionStorage.removeItem(KEY);
+      sessionStorage.removeItem("ks-open-section");
+    }
     if (hasLocal) localStorage.removeItem(KEY);
+  }
+
+  // かんたんの回答を変えたら、対応する「くわしく入力の設定済み」を解除する。
+  // そうしないと、確認画面の表示と計算がずれたままになる
+  const SECTION_OF = {
+    age: "family", spouse: "family", spouseAge: "family", kids: "family", kidsCount: "family", kidsAges: "family", kidPlanIn: "family",
+    work: "work", income: "work", selfVary: "work", selfPension: "work",
+    spouseWork: "spouseWork", spouseIncome: "spouseWork",
+    living: "living",
+    home: "home", homeType: "home", rent: "home",
+    eduPlan: "edu",
+    cars: "car",
+    otherLoan: "loans", otherLoanLeft: "loans",
+    savings: "assets",
+    insured: "insurance", insuredDeathBand: "insurance",
+  };
+  function forgetDetail(d, questionId) {
+    const sec = SECTION_OF[questionId];
+    if (!sec || !d.detail || !d.detail.set) return;
+    delete d.detail.set[sec];
   }
 
   function esc(s) {
@@ -131,6 +169,6 @@
     });
   }
 
-  window.KS = { load, save, clearAll, hasSavedLocal, hasLocal, hasSession, empty, esc, man, initDelete };
+  window.KS = { forgetDetail, SECTION_OF, loadLocal, load, save, clearAll, hasSavedLocal, hasLocal, hasSession, empty, esc, man, initDelete };
   document.addEventListener("DOMContentLoaded", initDelete);
 })();

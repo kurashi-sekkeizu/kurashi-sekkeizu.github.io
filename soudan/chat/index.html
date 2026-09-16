@@ -81,6 +81,14 @@
 
   function commit(q, value) {
     A[q.id] = value;
+    // 人数を変えたら、年齢の欄も同じ数にそろえる
+    if (q.id === "kidsCount") {
+      const n = Number(value) || 0;
+      const arr = Array.isArray(A.kidsAges) ? A.kidsAges.slice(0, n) : [];
+      while (arr.length < n) arr.push(null);
+      A.kidsAges = arr;
+    }
+    KS.forgetDetail(d, q.id);
     if (!d.meta.done.includes(q.id)) d.meta.done.push(q.id);
     render(true);
     const first = document.querySelector("#panel button, #panel select");
@@ -117,7 +125,8 @@
       let rows = "";
       for (let i = 0; i < n; i++) {
         rows += `<div class="field-row"><label for="age-${i}">${i + 1}人目</label><select class="select" id="age-${i}">` +
-          `<option value="">選んでください</option>` + Array.from({ length: 26 }, (_, a) => `<option value="${a}">${a}歳</option>`).join("") + `</select></div>`;
+          `<option value="">選んでください</option>` +
+          Array.from({ length: 26 }, (_, a) => `<option value="${a}" ${String((A.kidsAges || [])[i]) === String(a) ? "selected" : ""}>${a}歳</option>`).join("") + `</select></div>`;
       }
       body = rows + `<button type="button" class="btn" id="ok" style="margin-top:10px">決定</button>`;
     }

@@ -21,7 +21,7 @@
   <noscript><p class="note warn">相談機能はJavaScriptを有効にするとお使いいただけます。</p></noscript>
   <div id="incomplete" hidden>
     <p class="note warn">まだ答えていない質問があります。</p>
-    <a class="btn" href="/soudan/step/">続きから答える</a>
+    <a class="btn" id="resume-link" href="/soudan/step/">続きから答える</a>
   </div>
   <div id="ok" hidden>
     <h1>この内容で計算します</h1>
@@ -48,7 +48,8 @@
   if (missing) {
     d.meta.pos = missing.id;
     KS.save(d);
-    document.getElementById("incomplete").hidden = false;
+    document.getElementById("resume-link").href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";
+  document.getElementById("incomplete").hidden = false;
     return;
   }
 
@@ -75,9 +76,9 @@
 
   document.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => {
     d.meta.pos = b.dataset.edit;
-    d.meta.mode = "step";
+    d.meta.from = "confirm";  // 直したらこの画面へ戻す
     KS.save(d);
-    location.href = "/soudan/step/";
+    location.href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";
   }));
 })();
 </script>

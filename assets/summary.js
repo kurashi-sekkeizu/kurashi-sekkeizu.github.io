@@ -39,7 +39,7 @@
     } else if (rain === 0) {
       const c = h("div", "advice advice-sun");
       c.appendChild(h("div", "advice-head", cloud ? "いまのところ、大きな心配は見当たりません" : "いまの前提では、大きな心配は見当たりません"));
-      c.appendChild(h("p", "advice-lead", cloud ? "くもりの項目を埋めると、判定がはっきりします。あわせて前提も確かめておくと安心です。" : "そのぶん、前提を厳しくしても大丈夫かを確かめておくと安心です。"));
+      c.appendChild(h("p", "advice-lead", cloud ? "くもりの項目を埋めると、判定がはっきりします。あわせて前提も確かめておくと、見通しがはっきりします。" : "そのぶん、前提を厳しくしたらどうなるかを見ておくのも手です。"));
       const ul = h("ul", "advice-list");
       [["年金の見込み額を入れる（ねんきん定期便）", "work"], ["物価の上昇を年2%にして見る", "assumptions"], ["親の介護を見込んでみる", "family"], ["加入中の保険の保障額を入れる", "insurance"]]
         .forEach(([label, key]) => {
@@ -149,8 +149,11 @@
         body.appendChild(ul);
         if (c.living.source !== "detail") body.appendChild(h("p", "costs-note", "内訳は一般的な割合で分けた目安です（プロトタイプの仮の割合）。"));
       }
+      // 飛び先のセクションが無い項目には、修正ボタンを出さない（押しても何も開かないため）
+      const noSection = row.fix === "edu" && !(r.kidInfo || []).length;
       const b = h("button", "btn secondary inline costs-fixbtn", "くわしく入力で直す");
       b.type = "button";
+      b.hidden = noSection;
       b.addEventListener("click", () => onFix(row.fix));
       body.appendChild(b);
       det.appendChild(body);
@@ -194,7 +197,7 @@
     scroll.setAttribute("aria-label", "年ごとの家計の表。横にスクロールできます。");
     scroll.tabIndex = 0;
     box.appendChild(scroll);
-    box.appendChild(h("p", "lt-hint", "← 横にスクロールできます。赤い列は、支出が収入を上回る年（貯蓄が減る年）です。"));
+    box.appendChild(h("p", "lt-hint", "← 横にスクロールできます。⚠ の付いた年は、支出が収入を上回る年（貯蓄が減る年）です。"));
 
     const ROWS = [
       { key: "income", label: "収入（手取り）", get: (p) => p.income, cls: "ct-income" },
@@ -223,7 +226,9 @@
       const trY = h("tr");
       trY.appendChild(h("th", "lt-name lt-corner", "年（年齢）"));
       pts.forEach((p, i) => {
-        const th = h("th", "lt-year" + (i === 0 ? " lt-now" : "") + (p.year % 5 === 0 ? " lt-five" : "") + (p.expense > p.income ? " ct-minus" : ""));
+        const minus = p.expense > p.income;
+        const th = h("th", "lt-year" + (i === 0 ? " lt-now" : "") + (p.year % 5 === 0 ? " lt-five" : "") + (minus ? " ct-minus" : ""));
+        if (minus) th.title = "支出が収入を上回る年（貯蓄が減る年）";
         th.appendChild(h("span", "lt-y", String(p.year)));
         th.appendChild(h("span", "lt-age", `${p.age}歳`));
         trY.appendChild(th);
@@ -256,7 +261,8 @@
   // ── 家計調査の平均と見比べる ──
   // 「多い＝悪い」とは書かない。差があることと、比べられない費目があることを示すだけ（CLAUDE.md §4）
   function householdSize(r) {
-    return 1 + (r.spouse ? 1 : 0) + (r.kidInfo ? r.kidInfo.length : 0);
+    if (typeof r.householdNow === "number") return r.householdNow;
+    return 1 + (r.spouse ? 1 : 0) + (r.kidInfo ? r.kidInfo.filter((k) => k.ageNow >= 0 && k.ageNow <= k.independ).length : 0);
   }
 
   function pickGroup(r, a, groups) {
@@ -307,6 +313,7 @@
 
     const pick = h("div", "compare-pick");
     const axisSel = h("select");
+    axisSel.setAttribute("aria-label", "比べ方を選ぶ");
     if (hasAge) {
       [["persons", (K.axes && K.axes.persons) || "世帯の人数で比べる"], ["age", (K.axes && K.axes.age) || "年齢で比べる"]].forEach(([v, label]) => {
         const o = h("option", null, label);
@@ -317,6 +324,7 @@
       pick.appendChild(axisSel);
     }
     const sel = h("select");
+    sel.setAttribute("aria-label", "比べる相手の区分を選ぶ");
     function fillGroups() {
       sel.textContent = "";
       Object.entries(groupsOf()).forEach(([k, g]) => {
@@ -340,8 +348,18 @@
         g.persons ? `平均 ${g.persons}人` : null,
         g.headAge ? `世帯主の平均 ${g.headAge}歳` : null,
       ].filter(Boolean).join("・");
-      body.appendChild(h("p", "small muted",
-        `${src.publisher || ""}「${K.survey.name}」${K.survey.year}／${g.label}（${shape}）の1か月あたりの平均と並べています。`));
+      const cite = h("p", "small muted");
+      if (src.url) {
+        const link = h("a", null, `${src.publisher || ""}「${K.survey.name}」`);
+        link.href = src.url;
+        link.rel = "noopener";
+        cite.appendChild(link);
+      } else {
+        cite.appendChild(document.createTextNode(`${src.publisher || ""}「${K.survey.name}」`));
+      }
+      cite.appendChild(document.createTextNode(
+        `${K.survey.year}${src.checked ? "／確認日 " + src.checked : ""}／${g.label}（${shape}）の1か月あたりの平均と並べています。`));
+      body.appendChild(cite);
       if (K.smallSampleUnder && g.n && g.n < K.smallSampleUnder) {
         body.appendChild(h("p", "note warn small", `⚠ この区分は集計した世帯数が少ないため（${g.n}世帯）、数字が振れやすくなっています。`));
       }
@@ -358,7 +376,8 @@
         // どちらもほぼ0の費目は、比べても何もわからない（表示上は「0万円」でも数円残ることがある）
         if (you < 0.05 && avg < 0.05) return;
         let note = m.note;
-        if (m.key === "education" && you < 0.05 && r.kidInfo && r.kidInfo.length) {
+        const kidsNow = (r.kidInfo || []).filter((k) => k.ageNow >= 0 && k.ageNow <= k.independ);
+        if (m.key === "education" && you < 0.05 && kidsNow.length) {
           note = "お子さんがまだ小さいため、いまは0円です。これから増える費目なので、少ないこと自体は心配の材料になりません。";
         } else if (m.key === "education" && you < 0.05) {
           note = "いま教育費のかかるお子さんがいないため0円です。";
@@ -381,11 +400,13 @@
         head.append(h("span", "compare-label", x.label), h("span", "compare-word", word));
         li.appendChild(head);
         const bars = h("div", "compare-bars");
-        [["you", x.you], ["avg", x.avg]].forEach(([cls, v]) => {
+        [["you", x.you, "あなた"], ["avg", x.avg, "平均"]].forEach(([cls, v, who]) => {
           const row = h("div", "compare-bar");
+          const track = h("span", "compare-track");
           const fill = h("span", "bar bar-" + cls);
           fill.style.width = Math.max(1, (v / max) * 100) + "%";
-          row.append(fill, h("b", "compare-num", manM(v)));
+          track.appendChild(fill);
+          row.append(h("span", "compare-who", who), track, h("b", "compare-num", manM(v)));
           bars.appendChild(row);
         });
         li.appendChild(bars);
@@ -409,7 +430,16 @@
       det2.appendChild(h("summary", null, "この比べ方の注意"));
       const in2 = h("div", "body");
       const cul = h("ul");
-      (K.caveats || []).forEach((cv) => cul.appendChild(h("li", null, cv.text)));
+      (K.caveats || []).forEach((cv) => {
+        const li = h("li", null, cv.text);
+        if (cv.url) {
+          const link = h("a", "small", "（出典）");
+          link.href = cv.url;
+          link.rel = "noopener";
+          li.appendChild(link);
+        }
+        cul.appendChild(li);
+      });
       in2.appendChild(cul);
       in2.appendChild(h("p", "small muted", "多い・少ないは、良い・悪いではありません。住んでいる地域・家族構成・働き方によって、必要な金額は変わります。"));
       det2.appendChild(in2);
@@ -435,11 +465,13 @@
     list.push({ dir: "both", text: "税金・社会保険料の細かい計算。手取りは、年収に応じたおおよその割合で出しています" });
     // 「年齢に応じて」を選んでいても、統計の対象外の働き方（自営業など）では横ばいになる。
     // 実際に使われたかどうかで言い分けないと、画面の中で食い違う
-    const wageUsed = Boolean(r.wageApplied);
-    if (wageUsed) {
+    const mode = (D.work && D.work.growth) || "flat";
+    if (r.wageApplied) {
       list.push({ dir: "both", text: "あなた個人の昇給や役職の変化。収入は、統計の年齢別の賃金の形にならって増減させているだけです" });
-    } else if (D.work && D.work.growth === "stat") {
+    } else if (mode === "stat") {
       list.push({ dir: "both", text: "年齢による収入の変化。この働き方は賃金の統計の対象外のため、いまの収入がそのまま続く前提で計算しています" });
+    } else if (mode === "up" || mode === "down") {
+      list.push({ dir: "both", text: `あなた個人の事情。収入は毎年1%ずつ${mode === "up" ? "増える" : "減る"}前提にそろえているだけです` });
     } else {
       list.push({ dir: "both", text: "年齢による収入の変化。いまの収入がそのまま続く前提で計算しています（くわしく入力で変えられます）" });
     }
@@ -572,7 +604,8 @@
     pts.forEach((p, i) => {
       const td = h("td", (p.balance < 0 ? "lt-neg" : "") + (p.year % 5 === 0 ? " lt-five" : ""));
       td.dataset.col = i;
-      td.appendChild(h("span", "lt-bal", Math.round(p.balance / 10) * 10 < 0 ? "−" + Math.abs(Math.round(p.balance / 10) * 10).toLocaleString("ja-JP") : (Math.round(p.balance / 10) * 10).toLocaleString("ja-JP")));
+      const bal = Math.round(p.balance);
+      td.appendChild(h("span", "lt-bal", bal < 0 ? "−" + Math.abs(bal).toLocaleString("ja-JP") : bal.toLocaleString("ja-JP")));
       trB.appendChild(td);
     });
     tbody.appendChild(trB);
