@@ -151,7 +151,7 @@
     const def = KSC.detailDefaults(A, (D.family.planned || []).length);
     const keys = {
       family: ["family", "care"], work: ["work"], spouseWork: ["spouseWork"], living: ["living", "retire"],
-      home: ["loan", "rent", "house", "mansion", "purchase", "rebuild", "move"], edu: ["kids"], car: ["cars"],
+      home: ["loan", "rent", "house", "mansion", "purchase", "rebuild", "move"], edu: ["kids"], car: ["cars"], loans: ["loans"],
       assets: ["assets"], insurance: ["insurance"], spend: ["spend"],
     }[section] || [];
     keys.forEach((k) => { D[k] = def[k]; });
@@ -209,6 +209,7 @@
         box.appendChild(select("仕事をやめる（定年の）年齢", D.work, "retireAge", [55, 60, 63, 65, 70, 75].map((v) => ({ v, label: `${v}歳` })), "work", { rerender: true }));
         box.appendChild(select("定年後の働き方（再雇用など）", D.work, "rehire", [{ v: 0, label: "働かない" }, { v: 50, label: "定年前の年収の5割" }, { v: 70, label: "定年前の年収の7割" }, { v: 100, label: "定年前と同じ" }], "work", { rerender: true }));
         if (Number(D.work.rehire) > 0) box.appendChild(select("何歳まで働くか", D.work, "rehireUntil", range(Math.max(60, Number(D.work.retireAge) + 1), 80, 1, (v) => `${v}歳まで`), "work"));
+        if (A.work === "self") box.appendChild(h("p", "muted small", "自営業・フリーランスには会社の退職金がないため、小規模企業共済などを使っている場合はその見込み額を入れてください。"));
         box.appendChild(select("退職金の見込み", D.work, "allowance", [0, 300, 500, 800, 1000, 1500, 2000, 3000].map((v) => ({ v, label: v ? man(v) : "なし・わからない" })), "work"));
         box.appendChild(sub("転職・独立"));
         box.appendChild(radios("予定", D.work, "change", yesNo, "work"));
@@ -380,6 +381,31 @@
           box.appendChild(select("1年あたりの維持費", c, "upkeep", [10, 20, 30, 35, 40, 50, 60].map((v) => ({ v, label: `年${man(v)}` })), "car", { note: "自動車税・保険・車検・ガソリン・駐車場などの合計" }));
           box.appendChild(select("何歳まで持つ予定か", c, "until", range(60, 85, 5, (v) => `${v}歳まで`), "car"));
         });
+      },
+    },
+    {
+      key: "loans", title: "💳 借入れ（住宅ローン以外）",
+      body: (box) => {
+        box.appendChild(note("奨学金・自動車ローン・教育ローンなど。住宅ローンは「住まい」で設定します。"));
+        const KINDS = [{ v: "shougakukin", label: "奨学金" }, { v: "car", label: "自動車ローン" }, { v: "edu", label: "教育ローン" }, { v: "other", label: "そのほか（カードローンなど）" }];
+        D.loans.forEach((l, i) => {
+          const card = h("div", "card detail-item");
+          card.appendChild(select("種類", l, "kind", KINDS, "loans", { text: true }));
+          card.appendChild(select("いまの残高", l, "balance", [0, 10, 30, 50, 100, 200, 300, 500, 800, 1000].map((v) => ({ v, label: man(v) })), "loans"));
+          card.appendChild(select("毎月の返済額", l, "monthly", range(0.5, 10, 0.5, (v) => `月${v}万円`), "loans"));
+          card.appendChild(select("完済する年齢", l, "endAge", range(age(), 85, 1, (v) => `${v}歳`), "loans"));
+          if (l.kind === "shougakukin") card.appendChild(h("p", "muted small", "奨学金は、本人が亡くなったときに返還が免除される制度があります。万一のときの計算には含めていません（条件は貸与元でご確認ください）。"));
+          const del = h("button", "linkbtn danger", "この借入れを消す"); del.type = "button";
+          del.addEventListener("click", () => { D.loans.splice(i, 1); changed("loans", true); });
+          card.appendChild(del);
+          box.appendChild(card);
+        });
+        if (D.loans.length < 3) {
+          const add = h("button", "btn secondary inline", "＋ 借入れを追加"); add.type = "button";
+          add.addEventListener("click", () => { D.loans.push({ kind: "shougakukin", balance: 100, monthly: 1.5, endAge: Math.min(85, age() + 10) }); changed("loans", true); });
+          box.appendChild(add);
+        }
+        if (!D.loans.length && A.otherLoan === "yes") box.appendChild(h("p", "note warn small", "「借入れがある」と答えていますが、まだ設定されていません。0円として計算しています。"));
       },
     },
     {

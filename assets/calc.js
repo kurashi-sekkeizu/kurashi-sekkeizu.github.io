@@ -7,7 +7,7 @@
   const Q = window.KSQ;
 
   const DUMMY = {
-    takeHomeRate: 0.78,      // 額面→手取りの概算
+    takeHomeRate: 0.78,      // 額面→手取りの概算（既定。年収に応じて takeHome() で変える）
     pensionBase: 80,         // 老齢基礎年金の概算（年・万円）
     pensionEmployeeRate: 0.18,
     pensionAge: 65,
@@ -54,6 +54,17 @@
     return out;
   }
 
+  // 額面から手取りへのおおよその割合。収入が低いほど手取りの割合は高い（⚠ ダミーの値）
+  function takeHome(income) {
+    const y = Number(income) || 0;
+    if (y < 200) return 0.84;
+    if (y < 300) return 0.82;
+    if (y < 500) return 0.80;
+    if (y < 700) return 0.77;
+    if (y < 1000) return 0.75;
+    return 0.72;
+  }
+
   const EDU_PLAN = {
     public: { elem: "public", junior: "public", high: "public", univ: "national" },
     univPrivate: { elem: "public", junior: "public", high: "public", univ: "privArts" },
@@ -81,6 +92,7 @@
       rent: { monthly: Q.mid("rent", a) ?? 8, renewal: 1 },
       move: { on: "no", age: Number(a.age) + 5, cost: 100, monthly: 10 },
       assets: { cash: null, invest: null, monthly: 0 },
+      loans: [],
       insurance: { death: 0, medical: "unknown", disability: 0 },
       house: { built: 10, paintEvery: 12, paintCost: 120, waterEvery: 15, waterCost: 60, tax: 12 },
       mansion: { built: 10, monthly: 3, raise: 20, tax: 10 },
@@ -108,6 +120,7 @@
     if (!saved.set || !saved.set.car) out.cars = def.cars;
     out.set = Object.assign({}, saved.set || {});
     out.spend.items = (out.spend.items || []).filter((it) => it && it.age && it.amount);
+    out.loans = (saved.loans || []).filter((l) => l && l.monthly);
     return out;
   }
 
@@ -147,6 +160,7 @@
 
     if (kidsNow.length && a.eduPlan === "unknown" && !D.set.edu) provisional.push("進学（高校まで公立・大学は私立で仮置き）");
     if (a.insured === "yes" && !D.set.insurance) provisional.push("加入中の保険の保障額（未入力のため含めていません）");
+    if (a.otherLoan === "yes" && !D.loans.length) provisional.push("住宅ローン以外の借入れ（未入力のため0円で計算）");
     if (D.cars.length && !D.set.car) provisional.push("車（10年ごと・250万円で買い替え、維持費 年35万円で仮置き）");
     if (!D.set.home) {
       if (home === "loan") provisional.push("住宅ローン（返済 月10万円・65歳完済・団信ありで仮置き）");
@@ -318,15 +332,15 @@
         const baseIncome = (changeOff !== null && y >= changeOff ? changedIncome : income) * Math.pow(1 + GROWTH[W.growth || "flat"], Math.min(y, Math.max(0, retireAge - age)));
         const leaveFactor = (w, yy) => (w === "leave" && yy < DUMMY.leaveYears ? DUMMY.leaveRate : 1);
         let incWork = 0;
-        if (cur < retireAge) incWork = baseIncome * leaveFactor(work, y) * DUMMY.takeHomeRate;
-        else if (Number(W.rehire) > 0 && cur < Number(W.rehireUntil)) incWork = baseIncome * (Number(W.rehire) / 100) * DUMMY.takeHomeRate;
+        if (cur < retireAge) incWork = baseIncome * leaveFactor(work, y) * takeHome(baseIncome);
+        else if (Number(W.rehire) > 0 && cur < Number(W.rehireUntil)) incWork = baseIncome * (Number(W.rehire) / 100) * takeHome(baseIncome * (Number(W.rehire) / 100));
         if (Number(W.side) > 0 && cur < Number(W.sideUntil)) incWork += Number(W.side);
         let incPension = cur >= DUMMY.pensionAge ? pensionSelf : 0;
         let incSpouse = 0;
         if (spouse) {
           const sAge = spouseAge + y;
           const sBase = (SW.plan === "return" && y >= Number(SW.planFrom) ? returnIncome : spouseIncome) * Math.pow(1 + GROWTH[SW.growth || "flat"], y);
-          if (sAge < Number(SW.retireAge)) incSpouse = sBase * spouseFactor(y) * leaveFactor(a.spouseWork, y) * DUMMY.takeHomeRate;
+          if (sAge < Number(SW.retireAge)) incSpouse = sBase * spouseFactor(y) * leaveFactor(a.spouseWork, y) * takeHome(sBase);
           if (sAge >= DUMMY.pensionAge) incPension += pensionSpouse;
         }
         let incAllowance = 0;
@@ -341,9 +355,11 @@
         kids.forEach((k, i) => { expEdu += eduCost(i, k + y); });
         let expCar = ev.car;
         D.cars.forEach((c) => { if (cur < Number(c.until)) expCar += Number(c.upkeep); });
+        let expLoan = 0;
+        D.loans.forEach((l) => { if (cur < Number(l.endAge)) expLoan += Number(l.monthly) * 12; });
         let expOther = ev.other;
         if (Number(D.spend.travel) > 0 && cur < Number(D.spend.travelUntil)) expOther += Number(D.spend.travel);
-        const exp = expLiving + expHousing + expEdu + expCar + expOther;
+        const exp = expLiving + expHousing + expEdu + expCar + expLoan + expOther;
 
         if (y > 0) {
           if (assetsSplit) {
@@ -358,7 +374,7 @@
         points.push({
           age: cur, year: year0 + y, balance: Math.round(balance), income: Math.round(inc), expense: Math.round(exp),
           inc: { work: incWork, spouse: incSpouse, pension: incPension, allowance: incAllowance, lump: incOther },
-          exp: { living: expLiving, housing: expHousing, repair: ev.repair, edu: expEdu, car: expCar, other: expOther },
+          exp: { living: expLiving, housing: expHousing, repair: ev.repair, edu: expEdu, car: expCar, loan: expLoan, other: expOther },
         });
         if (shortageAge === null && balance < 0) shortageAge = cur;
       }
@@ -376,24 +392,26 @@
     if (spouse || kidsNow.length) {
       const eduRemain = kidsNow.reduce((s, k, i) => { let t = 0; for (let x = k; x <= 21; x++) t += eduCost(i, x); return s + t; }, 0);
       const loanLeft = home === "loan" && D.loan.dansin !== "yes" ? Math.min(Number(D.loan.balance), Number(D.loan.monthly) * 12 * Math.max(0, Number(D.loan.endAge) - age)) : 0;
+      // 奨学金は、本人が亡くなったときに返還が免除される制度があるため、ここでは残さない（要確認）
+      const otherLoanLeft = D.loans.filter((l) => l.kind !== "shougakukin").reduce((t, l) => t + Number(l.balance || 0), 0);
       const rent = renting ? Number(D.rent.monthly) * 12 * years : 0;
       const pensionYears = kidsNow.length ? Math.max(0, 18 - youngest) : 0;
       const survivorPension = pensionYears * (DUMMY.survivorBase + (employeeLike ? income * DUMMY.survivorEmployeeRate : 0));
-      const spouseInc = spouse ? spouseIncome * DUMMY.takeHomeRate * years : 0;
+      const spouseInc = spouse ? spouseIncome * takeHome(spouseIncome) * years : 0;
       const calc = (ratio) => {
-        const expense = living * 12 * ratio * years + eduRemain + rent + loanLeft + DUMMY.funeral;
+        const expense = living * 12 * ratio * years + eduRemain + rent + loanLeft + otherLoanLeft + DUMMY.funeral;
         return { expense, need: Math.max(0, expense - survivorPension - spouseInc - savings - insuredDeath) };
       };
       const lo = calc(as.ratioLow / 100), hi = calc(as.ratioHigh / 100);
       death = {
         years, low: round100(lo.need), high: round100(hi.need),
-        breakdown: { expenseLow: lo.expense, expenseHigh: hi.expense, eduRemain, rent, loanLeft, survivorPension, spouseInc, savings, insuredDeath, loanNote: home === "loan" && D.loan.dansin === "yes" },
+        breakdown: { expenseLow: lo.expense, expenseHigh: hi.expense, eduRemain, rent, loanLeft, otherLoanLeft, survivorPension, spouseInc, savings, insuredDeath, loanNote: home === "loan" && D.loan.dansin === "yes", shougakukin: D.loans.some((l) => l.kind === "shougakukin") },
       };
     }
 
     // 働けなくなったとき（月あたり）
     const monthlyNeed = living + housingCost(0).base / 12;
-    const spouseMonthly = spouse ? (spouseIncome * DUMMY.takeHomeRate) / 12 : 0;
+    const spouseMonthly = spouse ? (spouseIncome * takeHome(spouseIncome)) / 12 : 0;
     const sickMonthly = employeeLike ? (income / 12) * DUMMY.sickRate : 0;
     const disability = {
       first: Math.max(0, monthlyNeed - sickMonthly - spouseMonthly - insuredDisability),
@@ -503,6 +521,8 @@
     if (owns && homeType === "house") ask.push({ q: "修繕費をどう積み立てるか", who: "FP" });
     if (D.care.on === "yes") ask.push({ q: "介護が始まったときに使える公的な制度", who: "地域包括支援センター" });
     if (a.insured === "yes") ask.push({ q: "加入中の保険の保障内容が、いまの家族構成に合っているか", who: "保険相談員" });
+    if (work === "self" && (a.selfPension || []).includes("none")) ask.push({ q: "自営業の上乗せの年金・退職金の代わりになる制度（国民年金基金・iDeCo・小規模企業共済など）", who: "年金事務所・商工会・FP" });
+    if (D.loans.some((l) => l.kind === "shougakukin")) ask.push({ q: "奨学金の返還が免除・猶予される場合の条件", who: "日本学生支援機構など貸与元" });
     if (planned.length) ask.push({ q: "出産・育児のときに使える公的な給付", who: "勤務先・自治体" });
     if ((a.worries || []).includes("cash")) ask.push({ q: "毎月お金が残らない原因の見つけ方", who: "FP" });
 
@@ -538,6 +558,10 @@
         events: ms.filter(([m]) => m > k && m - k <= span).map(([m, short, text]) => ({ offset: m - k, short, text: `${i + 1}人目の子 ${text}` })),
       });
     });
+    D.loans.forEach((l) => {
+      const off = Number(l.endAge) - age;
+      if (off > 0 && off <= span) lifeEvents.push({ offset: off, short: "完済", text: `${{ shougakukin: "奨学金", car: "自動車ローン", edu: "教育ローン", other: "そのほかの借入れ" }[l.kind] || "借入れ"}の完済`, kind: "loan", amount: 0 });
+    });
     if (lifeEvents.length) lanes.push({ label: "くらし（車・住まい・出費）", ageNow: null, end: span, track: false, events: lifeEvents.sort((x, y) => x.offset - y.offset) });
 
     // ── 計算に使っている「いま」の毎月の支出 ──
@@ -557,10 +581,11 @@
       },
       edu: { monthly: p0.exp.edu / 12, source: kids.length ? (D.set.edu ? "detail" : a.eduPlan === "unknown" ? "provisional" : "answer") : "none", note: kids.length ? "今年の学年と進学の方針から" : "お子さんなし" },
       car: { monthly: D.cars.reduce((t, c) => t + (age < Number(c.until) ? Number(c.upkeep) : 0), 0) / 12, source: D.cars.length ? (D.set.car ? "detail" : "provisional") : "none", note: D.cars.length ? "維持費（税金・保険・車検・ガソリンなど）。買い替えは年表の時期にまとめて計上" : "車なし" },
+      loan: { monthly: D.loans.reduce((t, l) => t + (age < Number(l.endAge) ? Number(l.monthly) : 0), 0), source: D.loans.length ? "detail" : a.otherLoan === "yes" ? "provisional" : "none", note: D.loans.length ? "奨学金・自動車ローンなどの毎月の返済" : a.otherLoan === "yes" ? "「ある」と答えていますが、未入力です" : "住宅ローン以外の借入れなし" },
       other: { monthly: (Number(D.spend.travel) > 0 ? Number(D.spend.travel) : 0) / 12 + (D.care.on === "yes" && Number(D.care.startAge) <= age ? Number(D.care.monthly) : 0), source: D.set.spend || D.set.care ? "detail" : "none", note: "旅行・介護など（くわしく入力で設定）" },
       incomeMonthly: p0.income / 12,
     };
-    current.total = ["living", "housing", "edu", "car", "other"].reduce((t, k) => t + current[k].monthly, 0);
+    current.total = ["living", "housing", "edu", "car", "loan", "other"].reduce((t, k) => t + current[k].monthly, 0);
 
     const insurancePending = a.insured === "yes" && !D.set.insurance;
 
@@ -637,12 +662,14 @@
     }
     {
       const m = savings / Math.max(1, living + hc0.base / 12);
+      const varyIncome = work === "self" && a.selfVary === "vary";
+      const need = varyIncome ? 12 : 6;
       forecast.push({
-        key: "emergency", title: "急な出費への備え", q: "貯蓄が毎月の支出の何か月分あるか",
-        weather: m >= 6 ? SUN : m >= 3 ? CLOUD : RAIN,
+        key: "emergency", title: "急な出費への備え", q: `貯蓄が毎月の支出の何か月分あるか（目安${need}か月分）`,
+        weather: m >= need ? SUN : m >= need / 2 ? CLOUD : RAIN,
         short: `貯蓄 ${m >= 24 ? "24か月分以上" : Math.floor(m) + "か月分"}`,
-        criteria: "晴れ：毎月の支出の6か月分以上／くもり：3〜6か月分／雨：3か月分未満",
-        reason: `貯蓄は毎月の支出（生活費＋住居費）の約${m >= 24 ? "24か月分以上" : Math.floor(m) + "か月分"}です。一般に、半年分ほどを目安にする考え方があります。`,
+        criteria: `晴れ：毎月の支出の${need}か月分以上／くもり：${need / 2}〜${need}か月分／雨：${need / 2}か月分未満`,
+        reason: `貯蓄は毎月の支出（生活費＋住居費）の約${m >= 24 ? "24か月分以上" : Math.floor(m) + "か月分"}です。${varyIncome ? "収入の波が大きい働き方のため、1年分を目安にしています。" : "一般に、半年分ほどを目安にする考え方があります。"}`,
         target: "costs",
       });
     }

@@ -120,6 +120,7 @@
       { fix: "home", label: "住居費", data: c.housing, note: c.housing.note },
       { fix: "edu", label: "教育費", data: c.edu, note: c.edu.note },
       { fix: "car", label: "車", data: c.car, note: c.car.note },
+      { fix: "loans", label: "借入れ", data: c.loan, note: c.loan.note },
       { fix: "spend", label: "その他", data: c.other, note: c.other.note },
     ];
     rows.forEach((row) => {
@@ -151,6 +152,11 @@
       box.appendChild(det);
     });
     const diff = c.incomeMonthly - c.total;
+    if (diff < 0) {
+      const warn = h("div", "note warn small cost-warn");
+      warn.textContent = `入力した支出の合計（月${manM(c.total)}）が、手取り（月${manM(c.incomeMonthly)}）を上回っています。実際と違う項目がないか確認してください（生活費・住居費・借入れなど）。`;
+      box.appendChild(warn);
+    }
     const total = h("div", "cost-total");
     total.appendChild(h("span", "cost-label", "合計（毎月）"));
     total.appendChild(h("span", "cost-value", manM(c.total)));

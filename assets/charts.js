@@ -13,6 +13,7 @@
     edu: "#1baf7a",      // カテゴリ3 青緑
     car: "#eda100",      // カテゴリ4 黄
     other: "#e87ba4",    // カテゴリ5 マゼンタ
+    loan: "#008300",     // カテゴリ6 緑
     income: "#0b0b0b",   // 収入の線（主インク）
     balance: "#2a78d6",
     scenario: "#52514e",
@@ -113,7 +114,7 @@
     const bw = Math.max(1, Math.min(24, fr.band - 2));
     const rad = Math.min(4, bw / 2);
     pts.forEach((p, i) => {
-      const segs = [["living", COLOR.living], ["housing", COLOR.housing], ["edu", COLOR.edu], ["car", COLOR.car], ["other", COLOR.other]].filter(([k]) => p.exp[k] > 0);
+      const segs = [["living", COLOR.living], ["housing", COLOR.housing], ["edu", COLOR.edu], ["car", COLOR.car], ["other", COLOR.other], ["loan", COLOR.loan]].filter(([k]) => p.exp[k] > 0);
       let base = 0;
       segs.forEach(([k, c], si) => {
         const v = p.exp[k];
@@ -210,7 +211,7 @@
       if (p.inc[k] > 0) row({ type: "none" }, l, man(p.inc[k]), "sub");
     });
     row({ type: "none" }, "支出", man(p.expense));
-    [["living", "生活費"], ["housing", "住居費"], ["edu", "教育費"], ["car", "車"], ["other", "その他の予定出費"]].forEach(([k, l]) => {
+    [["living", "生活費"], ["housing", "住居費"], ["edu", "教育費"], ["car", "車"], ["other", "その他の予定出費"], ["loan", "借入れの返済"]].forEach(([k, l]) => {
       if (p.exp[k] > 0) row({ type: "rect", color: COLOR[k] }, l + (k === "housing" && p.exp.repair > 0 ? `（うち修繕 ${man(p.exp.repair)}）` : ""), man(p.exp[k]), "sub");
     });
     row({ type: "line", color: COLOR.balance }, "貯蓄残高（運用しない場合）", man(p.balance));
@@ -246,7 +247,7 @@
     const defs = [
       {
         title: "収入と支出の推移", sub: "1年あたり（万円）。棒＝支出の内訳、線＝収入", build: flowChart,
-        legend: [{ type: "line", color: COLOR.income, label: "収入（手取り）" }, { type: "rect", color: COLOR.living, label: "生活費" }, { type: "rect", color: COLOR.housing, label: "住居費（修繕含む）" }, { type: "rect", color: COLOR.edu, label: "教育費" }, { type: "rect", color: COLOR.car, label: "車" }, { type: "rect", color: COLOR.other, label: "その他の予定出費" }],
+        legend: [{ type: "line", color: COLOR.income, label: "収入（手取り）" }, { type: "rect", color: COLOR.living, label: "生活費" }, { type: "rect", color: COLOR.housing, label: "住居費（修繕含む）" }, { type: "rect", color: COLOR.edu, label: "教育費" }, { type: "rect", color: COLOR.car, label: "車" }, { type: "rect", color: COLOR.other, label: "その他の予定出費" }, { type: "rect", color: COLOR.loan, label: "借入れの返済" }],
       },
       {
         title: "貯蓄残高の推移", sub: "各年の終わりの残高（万円）", build: balanceChart,
