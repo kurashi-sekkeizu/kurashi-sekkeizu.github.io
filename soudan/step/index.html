@@ -29,6 +29,12 @@
     </div>
   </form>
 </main>
+<footer class="app-footer no-print">
+  <div class="wrap">
+    <a class="linkbtn" href="/">🏠 くらしの設計図のトップへ</a>
+    <span class="small muted">答えた内容は、この端末の中だけにあります</span>
+  </div>
+</footer>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
 <script src="/assets/common.js"></script>
@@ -66,11 +72,11 @@
         const checked = q.type === "single" ? String(v) === String(o.v) : Array.isArray(v) && v.includes(o.v);
         return `<label class="option${o.v === "unknown" ? " unknown" : ""}"><input type="${t}" name="${name}" value="${KS.esc(o.v)}" ${checked ? "checked" : ""}><span>${KS.esc(o.label)}</span></label>`;
       }).join("");
-      return `<fieldset class="q-block" data-q="${q.id}"><legend>${KS.esc(q.label)}</legend>${hint}${help}<div class="options">${opts}</div></fieldset>`;
+      return `<fieldset class="q-block" data-q="${q.id}"><legend>${KS.esc(KSQ.labelOf(q, A))}</legend>${hint}${help}<div class="options">${opts}</div></fieldset>`;
     }
     if (q.type === "select") {
       const opts = `<option value="">選んでください</option>` + q.options.map((o) => `<option value="${o.v}" ${String(v) === String(o.v) ? "selected" : ""}>${KS.esc(o.label)}</option>`).join("");
-      return `<div class="q-block" data-q="${q.id}"><label for="f-${name}" style="display:block;font-size:1.25rem;font-weight:700">${KS.esc(q.label)}</label>${hint}${help}<select class="select" id="f-${name}" name="${name}" style="margin-top:10px">${opts}</select></div>`;
+      return `<div class="q-block" data-q="${q.id}"><label for="f-${name}" style="display:block;font-size:1.25rem;font-weight:700">${KS.esc(KSQ.labelOf(q, A))}</label>${hint}${help}<select class="select" id="f-${name}" name="${name}" style="margin-top:10px">${opts}</select></div>`;
     }
     if (q.type === "ages") {
       const n = Number(A.kidsCount) || 0;
@@ -81,7 +87,7 @@
         const opts = `<option value="">選んでください</option>` + Array.from({ length: 26 }, (_, a) => `<option value="${a}" ${String(cur[i]) === String(a) ? "selected" : ""}>${a}歳</option>`).join("");
         rows += `<div class="field-row"><label for="f-age-${i}">${i + 1}人目</label><select class="select" id="f-age-${i}" data-age="${i}">${opts}</select></div>`;
       }
-      return `<fieldset class="q-block" data-q="${q.id}"><legend>${KS.esc(q.label)}</legend>${rows}</fieldset>`;
+      return `<fieldset class="q-block" data-q="${q.id}"><legend>${KS.esc(KSQ.labelOf(q, A))}</legend>${rows}</fieldset>`;
     }
     return "";
   }

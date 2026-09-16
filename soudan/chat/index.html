@@ -24,6 +24,12 @@
   <p id="live" class="visually-hidden" aria-live="polite"></p>
   <div class="chat-panel" id="panel"></div>
 </main>
+<footer class="app-footer no-print">
+  <div class="wrap">
+    <a class="linkbtn" href="/">🏠 くらしの設計図のトップへ</a>
+    <span class="small muted">答えた内容は、この端末の中だけにあります</span>
+  </div>
+</footer>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
 <script src="/assets/common.js"></script>
@@ -45,7 +51,7 @@
   function botText(q, prev) {
     const react = prev && prev.react ? prev.react(A[prev.id], A) : null;
     const hint = typeof q.hint === "function" ? q.hint(A) : q.hint;
-    return (react ? react + "\n\n" : "") + (q.groupTitle ? q.groupTitle + "\n" : "") + q.label + (hint ? "\n（" + hint + "）" : "");
+    return (react ? react + "\n\n" : "") + (q.groupTitle ? q.groupTitle + "\n" : "") + KSQ.labelOf(q, A) + (hint ? "\n（" + hint + "）" : "");
   }
 
   function render(announce) {
@@ -109,15 +115,15 @@
     let body = "";
 
     if (q.type === "single") {
-      body = `<div class="chat-options" role="group" aria-label="${esc(q.label)}">` +
+      body = `<div class="chat-options" role="group" aria-label="${esc(KSQ.labelOf(q, A))}">` +
         q.options.map((o) => `<button type="button" class="opt${o.v === "unknown" ? " unknown" : ""}" data-v="${esc(o.v)}">${esc(o.label)}</button>`).join("") + why + `</div>`;
     } else if (q.type === "multi") {
       const sel = new Set(Array.isArray(A[q.id]) ? A[q.id] : []);
-      body = `<div class="chat-options" role="group" aria-label="${esc(q.label)}">` +
+      body = `<div class="chat-options" role="group" aria-label="${esc(KSQ.labelOf(q, A))}">` +
         q.options.map((o) => `<button type="button" class="opt" data-m="${esc(o.v)}" aria-pressed="${sel.has(o.v)}">${esc(o.label)}</button>`).join("") + why + `</div>` +
         `<button type="button" class="btn" id="ok" style="margin-top:10px">${q.required ? "決定" : "決定（選ばずに進む場合もこちら）"}</button>`;
     } else if (q.type === "select") {
-      body = `<label class="visually-hidden" for="sel">${esc(q.label)}</label><select class="select" id="sel"><option value="">選んでください</option>` +
+      body = `<label class="visually-hidden" for="sel">${esc(KSQ.labelOf(q, A))}</label><select class="select" id="sel"><option value="">選んでください</option>` +
         q.options.map((o) => `<option value="${o.v}" ${String(A[q.id]) === String(o.v) ? "selected" : ""}>${esc(o.label)}</option>`).join("") +
         `</select><div class="chat-options" style="margin-top:8px"><button type="button" class="btn inline" id="ok">決定</button>${why}</div>`;
     } else if (q.type === "ages") {

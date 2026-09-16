@@ -108,6 +108,27 @@
     return { avg: Math.round(avgMan), ratio: Math.round(ratio * 100) / 100, far: ratio > FAR_HIGH || ratio < FAR_LOW };
   }
 
+  // 元利均等返済。金利0%でも割り算が壊れないようにする
+  function loanFromOrigin(loan, age) {
+    const P = Number(loan.borrowed) || 0;
+    const years = Math.max(1, Number(loan.years) || 0);
+    const ago = Math.min(Math.max(0, Number(loan.startedAgo) || 0), years);
+    const r = (Number(loan.rate) || 0) / 100 / 12;
+    const n = years * 12;
+    const monthly = r === 0 ? P / n : (P * r) / (1 - Math.pow(1 + r, -n));
+    const k = ago * 12;                                  // これまでに返した回数
+    const balance = r === 0
+      ? Math.max(0, P - monthly * k)
+      : Math.max(0, P * Math.pow(1 + r, k) - monthly * ((Math.pow(1 + r, k) - 1) / r));
+    return {
+      monthly: Math.round(monthly * 10) / 10,
+      balance: Math.round(balance),
+      endAge: Number(age) + (years - ago),
+      paid: ago,
+      years: years,
+    };
+  }
+
   function takeHome(income) {
     const y = Number(income) || 0;
     if (y < 200) return 0.84;
@@ -141,7 +162,16 @@
       retire: { ratio: 85 },
       kids: Array.from({ length: nKids }, () => Object.assign({ away: "home", lessons: 0, lessonsUntil: 18 }, plan)),
       cars: Array.from({ length: nCars }, (_, i) => ({ nextIn: i === 0 ? 5 : 8, budget: 250, interval: 10, upkeep: 35, until: Math.max(75, Number(a.age) + 10) })),
-      loan: { monthly: 10, endAge: 65, balance: 2000, dansin: "yes", bonus: 0, prepayOn: "no", prepayAge: Number(a.age) + 3, prepayAmount: 100 },
+      // 住宅ローンは「借りたときの内容」から入れられるようにする（残高は覚えていないことが多いため）
+      loan: {
+        input: "origin",           // origin＝借りたときの内容から計算／current＝いまの返済額と残高を直接入れる
+        borrowed: 3000,            // 借りた金額（万円）
+        years: 35,                 // 借りた期間（年）
+        startedAgo: 5,             // 何年前から返済しているか
+        rate: 1,                   // 金利（年%）
+        monthly: 10, endAge: 65, balance: 2000,
+        dansin: "yes", bonus: 0, prepayOn: "no", prepayAge: Number(a.age) + 3, prepayAmount: 100,
+      },
       rent: { monthly: Q.mid("rent", a) ?? 8, renewal: 1 },
       move: { on: "no", age: Number(a.age) + 5, cost: 100, monthly: 10 },
       assets: { cash: null, invest: null, monthly: 0 },
@@ -324,8 +354,12 @@
     if (purchaseOff !== null && P.type === "house") houseRepairs(0, purchaseOff);
 
     // 住宅ローン：ボーナス返済・繰り上げ返済・入力の整合
-    const loanYearly = home === "loan" ? Number(D.loan.monthly) * 12 + Number(D.loan.bonus || 0) : 0;
-    let loanEndAge = home === "loan" ? Number(D.loan.endAge) : null;
+    // 「借りたときの内容から計算する」を選んでいるときは、そこから毎月の返済額・残高・完済年齢を出す
+    const loanView = home === "loan" && D.loan.input !== "current" ? loanFromOrigin(D.loan, age) : null;
+    const loanMonthly = home === "loan" ? Number(loanView ? loanView.monthly : D.loan.monthly) : 0;
+    const loanBalance = home === "loan" ? Number(loanView ? loanView.balance : D.loan.balance) : 0;
+    const loanYearly = home === "loan" ? loanMonthly * 12 + Number(D.loan.bonus || 0) : 0;
+    let loanEndAge = home === "loan" ? Number(loanView ? loanView.endAge : D.loan.endAge) : null;
     let prepayOff = null;
     if (home === "loan" && D.loan.prepayOn === "yes") {
       prepayOff = Number(D.loan.prepayAge) - age;
@@ -340,8 +374,9 @@
     }
     // 残高・返済額・完済年齢の食い違い（利息があるため、ゆるめに判定）
     let loanMismatch = null;
-    // 仮の値どうしの食い違いで警告を出さない。本人が入力したときだけ見る
-    if (home === "loan" && loanYearly > 0 && D.set.loan) {
+    // 借りたときの内容から計算した場合は、値どうしが必ず整合するので検査しない。
+    // 残高を直接入れたときだけ、食い違いを見る
+    if (home === "loan" && loanYearly > 0 && D.set.loan && D.loan.input === "current") {
       const years = Math.max(0, Number(D.loan.endAge) - age);
       const total = loanYearly * years;
       if (total > 0) {
@@ -522,7 +557,7 @@
     let death = null;
     if (spouse || kidsNow.length) {
       const eduRemain = kidsNow.reduce((s, k, i) => { let t = 0; for (let x = k; x <= 21; x++) t += eduCost(i, x); return s + t; }, 0);
-      const loanLeft = home === "loan" && D.loan.dansin !== "yes" ? Math.min(Number(D.loan.balance), loanYearly * Math.max(0, loanEndAge - age)) : 0;
+      const loanLeft = home === "loan" && D.loan.dansin !== "yes" ? Math.min(loanBalance, loanYearly * Math.max(0, loanEndAge - age)) : 0;
       // 奨学金は、本人が亡くなったときに返還が免除される制度があるため、ここでは残さない（要確認）
       const bandLoanLeft = a.otherLoan === "yes" ? Q.mid("otherLoanLeft", a) : null;
       const otherLoanLeft = D.loans.length
@@ -712,7 +747,7 @@
           : home === "family" ? "answer"
           : renting && a.rent && a.rent !== "unknown" ? "answer"
           : "provisional",
-        note: (home === "loan" ? `住宅ローンの返済（${loanEndAge}歳まで${Number(D.loan.bonus) > 0 ? "・ボーナス返済を含む" : ""}。返済額は変わらない前提で、金利の上昇や住宅ローン控除は計算に入れていません）＋` : renting ? "家賃" : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
+        note: (home === "loan" ? `住宅ローンの返済（月${KS.man(loanMonthly)}・${loanEndAge}歳まで${Number(D.loan.bonus) > 0 ? "・ボーナス返済を含む" : ""}${loanView ? `。借入${KS.man(D.loan.borrowed)}・${loanView.years}年・金利${D.loan.rate}%から計算` : ""}。返済額は変わらない前提で、金利の上昇や住宅ローン控除は計算に入れていません）＋` : renting ? "家賃" : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
       },
       edu: { monthly: p0.exp.edu / 12, source: kids.length ? (D.set.edu ? "detail" : a.eduPlan === "unknown" ? "provisional" : "answer") : "none", note: kids.length ? "今年の学年と進学の方針から" : "お子さんなし" },
       car: { monthly: D.cars.reduce((t, c) => t + (age < Number(c.until) ? Number(c.upkeep) : 0), 0) / 12, source: D.cars.length ? (D.set.car ? "detail" : "provisional") : "none", note: D.cars.length ? "維持費（税金・保険・車検・ガソリンなど）。買い替えは年表の時期にまとめて計上" : "車なし" },
@@ -845,12 +880,12 @@
     const wageApplied = W.growth === "stat" && wageFactor(work, age, age + 1) !== null;
     const wageCapped = wageApplied && age >= wageCapAge();
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, incomeCheck, wageApplied, wageCapped, householdNow, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, loanView, incomeCheck, wageApplied, wageCapped, householdNow, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
   }
 
   function round100(n) {
     return Math.round(n / 100) * 100;
   }
 
-  window.KSC = { compute, detailOf, detailDefaults, splitLiving, DUMMY, LIVING_ITEMS, EDU_PLAN };
+  window.KSC = { compute, detailOf, detailDefaults, splitLiving, loanFromOrigin, DUMMY, LIVING_ITEMS, EDU_PLAN };
 })();

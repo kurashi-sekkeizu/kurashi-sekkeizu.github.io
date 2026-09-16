@@ -218,7 +218,10 @@
     },
     {
       id: "otherLoan", type: "single", required: true,
-      label: "住宅ローン以外の借入れはありますか？",
+      // 住宅ローンがある人にだけ「以外」と言う。無い人には不自然なので聞き方を変える
+      label: (a) => (a.home === "loan" || a.home === "buy"
+        ? "住宅ローン以外の借入れはありますか？"
+        : "返済中の借入れはありますか？"),
       hint: "奨学金・自動車ローン・教育ローン・カードローンなど",
       why: "毎月の返済は家計に長く効くため、見通しに入れる必要があるからです。",
       options: [{ v: "yes", label: "ある" }, { v: "no", label: "ない" }, { v: "unknown", label: "わからない" }],
@@ -356,10 +359,15 @@
     return option(q, v)?.label ?? "";
   }
 
+  // 質問文は、回答によって変わることがある（例：住宅ローンの有無で聞き方を変える）
+  function labelOf(question, answers) {
+    return typeof question.label === "function" ? question.label(answers || {}) : question.label;
+  }
+
   function mid(id, answers) {
     const o = option(byId[id], answers[id]);
     return o ? o.mid : undefined;
   }
 
-  window.KSQ = { QUESTIONS, byId, visible, screens, isAnswered, display, option, mid, UNKNOWN_REACT };
+  window.KSQ = { QUESTIONS, byId, visible, screens, isAnswered, display, option, mid, labelOf, UNKNOWN_REACT };
 })();

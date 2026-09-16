@@ -84,6 +84,10 @@ main.wrap { padding-block: 20px 40px; }
 }
 body.has-lock { padding-bottom: 48px; }
 
+/* どの画面からもトップへ戻れるようにする */
+.app-footer { border-top: 1px solid var(--line); margin-top: 28px; padding: 14px 0 18px; }
+.app-footer .wrap { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; }
+
 /* 削除確認 */
 .confirm-panel {
   background: #fdeceb; border: 2px solid var(--danger); border-radius: var(--radius);
