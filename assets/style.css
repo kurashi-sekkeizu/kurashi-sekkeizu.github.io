@@ -289,6 +289,21 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .memo-chart-title { font-size: 12px; font-weight: 700; margin: 10px 0 2px; }
 .memo svg { width: 100%; height: auto; }
 
+/* 解説記事 */
+.article h2 { font-size: 1.15rem; margin-top: 0; }
+.article .section { margin-top: 24px; }
+.article .byline { font-size: .8rem; color: var(--muted); margin-bottom: 0; }
+.article ul, .article ol { padding-left: 1.3em; }
+.article li { margin-bottom: 6px; }
+.fig { font-weight: 700; background: var(--accent-weak); padding: 1px 6px; border-radius: 6px; }
+.src-list { list-style: none; padding: 0; margin: 0; font-size: .88rem; }
+.src-list li { border-bottom: 1px dotted var(--line); padding: 6px 0; }
+.learn-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.learn-list li { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.learn-list a { font-weight: 700; }
+.learn-note { font-size: .82rem; color: var(--muted); }
+.learn-todo { color: var(--muted); }
+
 /* 見通しの天気（一覧は短く、押すと説明） */
 .fc-head { display: flex; gap: 12px; align-items: center; border-radius: var(--radius); padding: 10px 14px; border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
 .fc-head-icon { font-size: 2.2rem; line-height: 1; }

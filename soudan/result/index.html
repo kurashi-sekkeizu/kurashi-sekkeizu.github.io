@@ -112,7 +112,8 @@
           <p class="small" style="margin:6px 0">同じ世帯人数の平均より、月約5,000円多い傾向です（出典：総務省 家計調査／確認日を表示）</p>
           <p class="small" style="margin:0">→ <a href="/sources/">出典を見る</a></p></div>
           <p class="small" style="margin-top:8px">保険料は、この一覧には含めません（保険は「分野別の目安」で確認します）。</p>` },
-      { id: "estimate", title: "分野別の目安", html: death + dis + retire + insurance },
+      { id: "estimate", title: "分野別の目安", html: death + dis + retire + insurance +
+          `<p class="small" style="margin-top:12px">言葉の意味：<a href="/learn/izoku-nenkin/">遺族年金</a>　<a href="/learn/kougaku-ryouyouhi/">高額療養費</a>　<a href="/learn/roukogo-2000man/">老後2000万円問題</a>　<a href="/learn/">ほかの解説を見る</a></p>` },
       { id: "ask", title: "専門家に聞くこと", html: `<ul>${r.ask.map((x) => `<li>${esc(x.q)}<br><span class="muted small">相談先の例：${esc(x.who)}</span></li>`).join("")}</ul><p class="small">自分で書き足したいことは、PDF作成の画面で追加できます。</p>` },
     ];
 
@@ -123,6 +124,7 @@
 
       <section class="section" id="forecast-block">
         <h2 class="section-title">① 見通し</h2>
+        <p class="small muted" style="margin-bottom:8px">言葉がわからないときは <a href="/learn/">やさしく学ぶ</a> で確認できます。</p>
         <div id="forecast"></div>
       </section>
 
