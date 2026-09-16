@@ -99,7 +99,7 @@
     const insurance = `
       <h3 style="margin-top:20px">保険の種類ごとの優先度</h3>
       ${r.insurance.map((x) => `<div style="padding:8px 0;border-bottom:1px solid var(--line)"><b>${esc(x.name)}</b><br><span class="level ${x.level.cls}">${esc(x.level.text)}</span><p class="small" style="margin:4px 0 0">${esc(x.reason)}</p></div>`).join("")}
-      <p class="small" style="margin-top:8px">特定の商品をすすめるものではありません。 → <a href="/guide/">保障の考え方を読む</a></p>`;
+      <p class="small" style="margin-top:8px">特定の商品をすすめるものではありません。 → <a href="/sources/">公的な情報を見る</a></p>`;
 
     const sections = [
       { id: "cash", title: "年ごとの数字（表）", html: `
@@ -110,7 +110,7 @@
           <p class="note info">固定費（通信費・電気代など）は「くわしく入力（固定費）」で答えると表示されます。</p>
           <div class="card"><b>表示例：通信費</b><br><span class="level l2">見直しの余地があるかもしれません</span>
           <p class="small" style="margin:6px 0">同じ世帯人数の平均より、月約5,000円多い傾向です（出典：総務省 家計調査／確認日を表示）</p>
-          <p class="small" style="margin:0">→ <a href="/guide/">通信費の見直し方を読む</a></p></div>
+          <p class="small" style="margin:0">→ <a href="/sources/">出典を見る</a></p></div>
           <p class="small" style="margin-top:8px">保険料は、この一覧には含めません（保険は「分野別の目安」で確認します）。</p>` },
       { id: "estimate", title: "分野別の目安", html: death + dis + retire + insurance },
       { id: "ask", title: "専門家に聞くこと", html: `<ul>${r.ask.map((x) => `<li>${esc(x.q)}<br><span class="muted small">相談先の例：${esc(x.who)}</span></li>`).join("")}</ul><p class="small">自分で書き足したいことは、PDF作成の画面で追加できます。</p>` },

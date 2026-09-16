@@ -425,19 +425,19 @@
     if (months < 6) {
       todos.push({ key: "emergency", when: "今すぐ", title: "急な出費に備える貯蓄を確認する",
         reason: `貯蓄が生活費の約${Math.max(0, Math.round(months))}か月分です。一般に、生活費の半年分ほどを目安にする考え方があります。`,
-        link: { href: "/guide/", text: "貯蓄の考え方を読む" } });
+        link: { href: "/sources/", text: "貯蓄の考え方を読む" } });
     }
     if (death && death.high > 0) {
       todos.push({ key: "death", when: "今すぐ", title: "万一のときの保障額を確認する",
         reason: kids.length
           ? `お子さんが独立するまでの支出が、遺族年金・配偶者の収入・貯蓄だけでは約${KS.man(death.low)}〜${KS.man(death.high)}不足する見込みです。`
           : `ご家族の生活費が、配偶者の収入と貯蓄だけでは約${KS.man(death.low)}〜${KS.man(death.high)}不足する見込みです。`,
-        link: { href: "/guide/", text: "保障の考え方を読む" } });
+        link: { href: "/sources/", text: "保障の考え方を読む" } });
     }
     if (work === "self") {
       todos.push({ key: "disability", when: "今すぐ", title: "働けなくなったときの備えを確認する",
         reason: "自営業・フリーランスには、会社員のような休業中の手当がありません。",
-        link: { href: "/guide/", text: "働けなくなったときの備えを読む" } });
+        link: { href: "/sources/", text: "働けなくなったときの備えを読む" } });
     }
     // 教育費のピーク（最も教育費が多い年）
     if (kids.length) {
@@ -445,7 +445,7 @@
       if (peak.exp.edu > 0 && peak.age > age) {
         todos.push({ key: "edu", when: `${peak.age - age}年以内`, title: "教育費の準備を始める時期を決める",
           reason: `教育費がいちばん多いのは${peak.year}年（あなたが${peak.age}歳）で、その年は約${KS.man(peak.exp.edu)}の見込みです。`,
-          link: { href: "/guide/", text: "教育費の準備を読む" } });
+          link: { href: "/sources/", text: "教育費の準備を読む" } });
       }
     }
     const soon = lifeEvents.filter((e) => e.offset > 0 && e.offset <= 5 && e.amount >= 50).sort((x, y) => x.offset - y.offset)[0];
@@ -453,27 +453,27 @@
       const title = { car: "車の買い替え資金を準備する", repair: "住まいの修繕費を準備する", home: "住まいの大きな出費に備える", spend: "予定している大きな出費に備える", care: "親の介護について家族で話し合う" }[soon.kind] || "予定している出費に備える";
       todos.push({ key: "soon", when: `${soon.offset}年以内`, title,
         reason: `${year0 + soon.offset}年（${age + soon.offset}歳）に「${soon.text}」を見込んでいます。`,
-        link: { href: "/guide/", text: "大きな出費への備え方を読む" } });
+        link: { href: "/sources/", text: "大きな出費への備え方を読む" } });
     }
     if (D.care.on === "yes" && !(soon && soon.kind === "care")) {
       todos.push({ key: "care", when: `${Math.max(0, D.care.startAge - age)}年以内`, title: "親の介護について家族で話し合う",
         reason: `${D.care.startAge}歳ごろから、年約${KS.man(D.care.monthly * 12)}の負担を見込んでいます。`,
-        link: { href: "/guide/", text: "介護とお金を読む" } });
+        link: { href: "/sources/", text: "介護とお金を読む" } });
     }
     if (retire && retire.gap0 > 0) {
       todos.push({ key: "retire", when: `${DUMMY.pensionAge - age}年以内`, title: "老後資金の積立を検討する",
         reason: `65歳時点で約${KS.man(retire.gap0)}不足する見込みです（運用しない場合）。毎月約${KS.man(retire.monthly0)}の積立で埋まる計算です。`,
-        link: { href: "/guide/tsumitate/", text: "つみたて投資の始め方を読む" } });
+        link: { href: "/sources/", text: "公的な情報を見る" } });
     }
     if (home === "loan") {
       todos.push({ key: "loan", when: "次の相談時", title: "住宅ローンと保障の重なりを確認する",
         reason: "団信に入っていれば、万一のときローン残高がなくなり、必要な保障額が変わります。",
-        link: { href: "/guide/", text: "住宅ローンと保障を読む" } });
+        link: { href: "/sources/", text: "住宅ローンと保障を読む" } });
     }
     if (sim0.shortageAge !== null) {
       todos.push({ key: "cash", when: "見直しの目安", title: "家計の見通しを見直す",
         reason: `運用しない場合、${sim0.shortageAge}歳ごろに貯蓄が底をつく見込みです。`,
-        link: { href: "/guide/", text: "家計の見直し方を読む" } });
+        link: { href: "/sources/", text: "家計の見直し方を読む" } });
     }
 
     // 保険の種類ごとの優先度（3段階）
