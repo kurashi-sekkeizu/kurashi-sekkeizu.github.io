@@ -88,7 +88,7 @@
       retire: { ratio: 85 },
       kids: Array.from({ length: nKids }, () => Object.assign({ away: "home", lessons: 0, lessonsUntil: 18 }, plan)),
       cars: Array.from({ length: nCars }, (_, i) => ({ nextIn: i === 0 ? 5 : 8, budget: 250, interval: 10, upkeep: 35, until: 75 })),
-      loan: { monthly: 10, endAge: 65, balance: 2000, dansin: "yes" },
+      loan: { monthly: 10, endAge: 65, balance: 2000, dansin: "yes", bonus: 0, prepayOn: "no", prepayAge: Number(a.age) + 3, prepayAmount: 100 },
       rent: { monthly: Q.mid("rent", a) ?? 8, renewal: 1 },
       move: { on: "no", age: Number(a.age) + 5, cost: 100, monthly: 10 },
       assets: { cash: null, invest: null, monthly: 0 },
@@ -96,7 +96,7 @@
       insurance: { death: 0, medical: "unknown", disability: 0 },
       house: { built: 10, paintEvery: 12, paintCost: 120, waterEvery: 15, waterCost: 60, tax: 12 },
       mansion: { built: 10, monthly: 3, raise: 20, tax: 10 },
-      purchase: { on: "no", age: Math.max(30, Number(a.age) + 3), type: "house", price: 4000, down: 400, years: 35, rate: 1 },
+      purchase: { on: "no", age: Math.max(30, Number(a.age) + 3), type: "house", price: 4000, down: 400, years: 35, rate: 1, cost: 280 },
       rebuild: { on: "no", age: Math.max(55, Number(a.age) + 15), budget: 1000 },
       care: { on: "no", startAge: Math.max(50, Number(a.age) + 10), years: 5, monthly: 5 },
       spend: { travel: 0, travelUntil: 75, items: [] },
@@ -207,12 +207,12 @@
     if (!owns && P.on === "yes") {
       purchaseOff = Number(P.age) - age;
       if (inSpan(purchaseOff)) {
-        at(purchaseOff).housing += Number(P.down);
+        at(purchaseOff).housing += Number(P.down) + Number(P.cost || 0);
         const principal = Math.max(0, Number(P.price) - Number(P.down));
         const r = Number(P.rate) / 100, n = Number(P.years);
         purchaseLoan = r > 0 ? (principal * r) / (1 - Math.pow(1 + r, -n)) : principal / n;
         purchaseLoanYears = n;
-        lifeEvents.push({ offset: purchaseOff, short: "購入", text: `住宅の購入（${P.type === "house" ? "戸建て" : "マンション"}・頭金${KS.man(P.down)}）`, kind: "home", amount: Number(P.down) });
+        lifeEvents.push({ offset: purchaseOff, short: "購入", text: `住宅の購入（${P.type === "house" ? "戸建て" : "マンション"}・頭金${KS.man(P.down)}＋諸費用${KS.man(P.cost || 0)}）`, kind: "home", amount: Number(P.down) + Number(P.cost || 0) });
       } else purchaseOff = null;
     }
     // 修繕（戸建て）。今の家、または購入する家
@@ -243,6 +243,31 @@
       if (rebuildOff !== null) { const save = rebuildOff; rebuildOff = null; houseRepairs(0, save); rebuildOff = save; }
     }
     if (purchaseOff !== null && P.type === "house") houseRepairs(0, purchaseOff);
+
+    // 住宅ローン：ボーナス返済・繰り上げ返済・入力の整合
+    const loanYearly = home === "loan" ? Number(D.loan.monthly) * 12 + Number(D.loan.bonus || 0) : 0;
+    let loanEndAge = home === "loan" ? Number(D.loan.endAge) : null;
+    let prepayOff = null;
+    if (home === "loan" && D.loan.prepayOn === "yes") {
+      prepayOff = Number(D.loan.prepayAge) - age;
+      const shorten = loanYearly > 0 ? Math.floor(Number(D.loan.prepayAmount) / loanYearly) : 0;
+      if (inSpan(prepayOff)) {
+        at(prepayOff).housing += Number(D.loan.prepayAmount);
+        loanEndAge = Math.max(age + prepayOff, loanEndAge - shorten);
+        lifeEvents.push({ offset: prepayOff, short: "繰上", text: `住宅ローンの繰り上げ返済（約${KS.man(D.loan.prepayAmount)}）。完済が約${shorten}年早まる計算`, kind: "home", amount: Number(D.loan.prepayAmount) });
+      } else prepayOff = null;
+    }
+    // 残高・返済額・完済年齢の食い違い（利息があるため、ゆるめに判定）
+    let loanMismatch = null;
+    if (home === "loan" && loanYearly > 0) {
+      const years = Math.max(0, Number(D.loan.endAge) - age);
+      const total = loanYearly * years;
+      if (total > 0) {
+        if (Number(D.loan.balance) > total * 1.15) loanMismatch = `残高（${KS.man(D.loan.balance)}）に対して、完済年齢までの返済額の合計（約${KS.man(total)}）が少なすぎます。返済額か完済年齢を確認してください。`;
+        else if (Number(D.loan.balance) < total * 0.7) loanMismatch = `残高（${KS.man(D.loan.balance)}）に対して、完済年齢までの返済額の合計（約${KS.man(total)}）が多すぎます。もっと早く完済になるかもしれません。`;
+      }
+    }
+    if (loanMismatch) provisional.push("住宅ローンの入力に食い違いがあります（「計算に使っている毎月の支出」で確認）");
 
     // 住み替え（その年に費用、以降の住居費を置き換える）
     let moveOff = null;
@@ -296,7 +321,7 @@
       const cur = age + y;
       let c = 0, fee = 0;
       if (moveOff !== null && y >= moveOff) return { base: Number(D.move.monthly) * 12, fee: 0 };
-      if (home === "loan" && cur < Number(D.loan.endAge)) c += Number(D.loan.monthly) * 12;
+      if (home === "loan" && cur < loanEndAge) c += loanYearly;
       if (renting && (purchaseOff === null || y < purchaseOff)) c += Number(D.rent.monthly) * (12 + Number(D.rent.renewal) / 2);  // 更新料は2年ごと
       if (purchaseOff !== null && y >= purchaseOff && y < purchaseOff + purchaseLoanYears) c += purchaseLoan;
       const ownFrom = owns ? 0 : purchaseOff;
@@ -391,7 +416,7 @@
     let death = null;
     if (spouse || kidsNow.length) {
       const eduRemain = kidsNow.reduce((s, k, i) => { let t = 0; for (let x = k; x <= 21; x++) t += eduCost(i, x); return s + t; }, 0);
-      const loanLeft = home === "loan" && D.loan.dansin !== "yes" ? Math.min(Number(D.loan.balance), Number(D.loan.monthly) * 12 * Math.max(0, Number(D.loan.endAge) - age)) : 0;
+      const loanLeft = home === "loan" && D.loan.dansin !== "yes" ? Math.min(Number(D.loan.balance), loanYearly * Math.max(0, loanEndAge - age)) : 0;
       // 奨学金は、本人が亡くなったときに返還が免除される制度があるため、ここでは残さない（要確認）
       const otherLoanLeft = D.loans.filter((l) => l.kind !== "shougakukin").reduce((t, l) => t + Number(l.balance || 0), 0);
       const rent = renting ? Number(D.rent.monthly) * 12 * years : 0;
@@ -533,7 +558,7 @@
       if (retireAge === DUMMY.pensionAge) selfEvents[0] && (selfEvents[0].text += "・年金受給開始");
       else selfEvents.push({ offset: DUMMY.pensionAge - age, short: "年金", text: "年金受給開始（65歳）" });
     }
-    if (home === "loan" && Number(D.loan.endAge) - age > 0) selfEvents.push({ offset: Number(D.loan.endAge) - age, short: "完済", text: `住宅ローン完済（${D.loan.endAge}歳）` });
+    if (home === "loan" && loanEndAge - age > 0) selfEvents.push({ offset: loanEndAge - age, short: "完済", text: `住宅ローン完済（${loanEndAge}歳）` });
     const lanes = [{ label: "あなた", ageNow: age, end: span, events: selfEvents.filter((e) => e.offset <= span) }];
     if (spouse) {
       const sev = [];
@@ -577,7 +602,7 @@
           : home === "family" ? "answer"
           : renting && a.rent && a.rent !== "unknown" ? "answer"
           : "provisional",
-        note: (home === "loan" ? "住宅ローンの返済＋" : renting ? "家賃" : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
+        note: (home === "loan" ? `住宅ローンの返済（${loanEndAge}歳まで${Number(D.loan.bonus) > 0 ? "・ボーナス返済を含む" : ""}）＋` : renting ? "家賃" : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
       },
       edu: { monthly: p0.exp.edu / 12, source: kids.length ? (D.set.edu ? "detail" : a.eduPlan === "unknown" ? "provisional" : "answer") : "none", note: kids.length ? "今年の学年と進学の方針から" : "お子さんなし" },
       car: { monthly: D.cars.reduce((t, c) => t + (age < Number(c.until) ? Number(c.upkeep) : 0), 0) / 12, source: D.cars.length ? (D.set.car ? "detail" : "provisional") : "none", note: D.cars.length ? "維持費（税金・保険・車検・ガソリンなど）。買い替えは年表の時期にまとめて計上" : "車なし" },
@@ -699,7 +724,7 @@
 
     const kidInfo = kids.map((k, i) => ({ ageNow: k, plan: eduPlanOf(i), independ: independAge(i) }));
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
   }
 
   function round100(n) {

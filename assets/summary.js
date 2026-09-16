@@ -114,6 +114,11 @@
   function costs(r, answers, onFix) {
     const c = r.current;
     const box = h("div", "costs2");
+    if (r.loanMismatch) {
+      const w = h("div", "note warn small cost-warn");
+      w.textContent = "⚠ 住宅ローンの入力に食い違いがあります。" + r.loanMismatch;
+      box.appendChild(w);
+    }
     const rows = [
       { fix: "living", label: "生活費", data: c.living, breakdown: true,
         note: c.living.source === "answer" ? `回答「${KSQ.display(KSQ.byId.living, answers)}」の真ん中で計算。食費・光熱費・通信費・保険料・おこづかいなどの合計です。` : c.living.source === "detail" ? "くわしく入力した内訳の合計です。" : "「わからない」のため、世帯の人数から仮に置いています。" },
