@@ -253,6 +253,118 @@
     return box;
   }
 
+  // ── 家計調査の平均と見比べる ──
+  // 「多い＝悪い」とは書かない。差があることと、比べられない費目があることを示すだけ（CLAUDE.md §4）
+  function pickGroup(r, a, groups) {
+    const persons = 1 + (r.spouse ? 1 : 0) + (r.kidInfo ? r.kidInfo.length : 0);
+    if (persons === 2 && Number(r.age) >= 65 && a.work === "none" && groups.elderly_couple) return "elderly_couple";
+    if (persons <= 1) return "single";
+    if (persons === 2) return "two_person";
+    if (persons === 3) return "three_person";
+    if (persons === 4) return "four_person";
+    return "five_person";
+  }
+
+  function compare(r, a) {
+    const box = h("div", "compare");
+    const K = window.KSDATA && window.KSDATA.kakei;
+    if (!K || !K.groups || !K.map) {
+      box.appendChild(h("p", "note warn small", "⚠ 家計調査のデータを読み込めませんでした。比較は表示していません。"));
+      return box;
+    }
+    const src = (window.KSDATA.sources || {})[K.survey.src] || {};
+    const c = r.current;
+    const L = Object.fromEntries(c.living.items.map((i) => [i.key, i.monthly]));
+    const SPECIAL = { car: c.car.monthly, education: c.edu.monthly, housing: c.housing.monthly, loan: c.loan.monthly };
+    const mine = (key) => (L[key] != null ? L[key] : SPECIAL[key] != null ? SPECIAL[key] : 0);
+
+    // 世帯区分を選ぶ（自動で選んだうえで、利用者が変えられるようにする）
+    let gkey = pickGroup(r, a, K.groups);
+    const pick = h("label", "compare-pick");
+    pick.appendChild(h("span", null, "比べる相手："));
+    const sel = h("select");
+    Object.entries(K.groups).forEach(([k, g]) => {
+      const o = h("option", null, g.label);
+      o.value = k;
+      if (k === gkey) o.selected = true;
+      sel.appendChild(o);
+    });
+    pick.appendChild(sel);
+    box.appendChild(pick);
+
+    const body = h("div");
+    box.appendChild(body);
+
+    function render() {
+      body.textContent = "";
+      const g = K.groups[gkey];
+      body.appendChild(h("p", "small muted",
+        `${src.publisher || ""}「${K.survey.name}」${K.survey.year}／${g.label}（世帯主の平均 ${g.headAge}歳）の1か月あたりの平均と並べています。`));
+
+      const rows = [];
+      const skipped = [];
+      K.map.forEach((m) => {
+        if (!m.kakei) { skipped.push(m); return; }
+        const you = (m.parts || [m.key]).reduce((t, k) => t + mine(k), 0);
+        const avg = (g.items[m.kakei] || 0) / 10000; // 円 → 万円
+        rows.push({ label: m.label, you, avg, note: m.note });
+      });
+      const max = Math.max(...rows.map((x) => Math.max(x.you, x.avg)), 1);
+
+      const legend = h("p", "compare-legend");
+      legend.append(h("span", "lg lg-you", "■"), h("span", null, "あなた　"), h("span", "lg lg-avg", "■"), h("span", null, "平均"));
+      body.appendChild(legend);
+
+      const ul = h("ul", "compare-list");
+      rows.forEach((x) => {
+        const d = x.you - x.avg;
+        const near = x.avg > 0 ? Math.abs(d) / x.avg <= 0.1 : Math.abs(d) < 0.5;
+        const word = near ? "平均的" : d > 0 ? "平均より多い" : "平均より少ない";
+        const li = h("li");
+        const head = h("div", "compare-head");
+        head.append(h("span", "compare-label", x.label), h("span", "compare-word", word));
+        li.appendChild(head);
+        const bars = h("div", "compare-bars");
+        [["you", x.you], ["avg", x.avg]].forEach(([cls, v]) => {
+          const row = h("div", "compare-bar");
+          const fill = h("span", "bar bar-" + cls);
+          fill.style.width = Math.max(1, (v / max) * 100) + "%";
+          row.append(fill, h("b", "compare-num", manM(v)));
+          bars.appendChild(row);
+        });
+        li.appendChild(bars);
+        if (x.note) li.appendChild(h("p", "small muted", x.note));
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+
+      if (skipped.length) {
+        const det = h("details", "fold");
+        det.appendChild(h("summary", null, `比べられない費目（${skipped.length}）`));
+        const inner = h("div", "body");
+        skipped.forEach((m) => {
+          inner.appendChild(h("p", null, `【${m.label}】${m.reason}`));
+        });
+        det.appendChild(inner);
+        body.appendChild(det);
+      }
+
+      const det2 = h("details", "fold");
+      det2.appendChild(h("summary", null, "この比べ方の注意"));
+      const in2 = h("div", "body");
+      const cul = h("ul");
+      (K.caveats || []).forEach((cv) => cul.appendChild(h("li", null, cv.text)));
+      in2.appendChild(cul);
+      in2.appendChild(h("p", "small muted", "多い・少ないは、良い・悪いではありません。住んでいる地域・家族構成・働き方によって、必要な金額は変わります。"));
+      det2.appendChild(in2);
+      body.appendChild(det2);
+    }
+
+    sel.addEventListener("change", () => { gkey = sel.value; render(); });
+    render();
+    return box;
+  }
+
   // ── この計算に入れていないこと ──
   // dir: better＝実際はもっと良くなる可能性／worse＝もっと厳しくなる可能性／both＝どちらにも動く
   function notIncludedItems(r, a) {
@@ -268,7 +380,7 @@
     list.push({ dir: "both", text: "投資の値動き。利回りは毎年一定として計算し、元本割れは見ていません" });
     list.push({ dir: "worse", text: "突然の医療費・介護費・失業や休職による収入の減少（くわしく入力で設定した分を除く）" });
     list.push({ dir: "both", text: "年金・児童手当などの制度が将来変わること。いまの制度が続く前提です" });
-    if ((a.kids === "yes" || a.kids === "plan")) list.push({ dir: "better", text: "高校無償化（就学支援金）。まだ計算に入れていません" });
+    if (a.kids === "yes" || a.kids === "plan") list.push({ dir: "better", text: "高校の就学支援金の拡充分。教育費のもとにした調査が、当時の支援を反映した金額のため、重ねて差し引いていません" });
     list.push({ dir: "better", text: "相続・贈与・親からの援助" });
     list.push({ dir: "worse", text: "退職金や年金にかかる税金" });
     if (D.loans && D.loans.some((l) => l.kind === "shougakukin")) list.push({ dir: "both", text: "奨学金は、万一のときに返還が免除される前提で計算しています（条件は貸与元でご確認ください）" });
@@ -454,5 +566,5 @@
     return box;
   }
 
-  window.KSR = { forecast, costs, costTable, lifeTable, advice, notIncluded, notIncludedItems, WEATHER };
+  window.KSR = { forecast, costs, costTable, lifeTable, advice, compare, notIncluded, notIncludedItems, WEATHER };
 })();

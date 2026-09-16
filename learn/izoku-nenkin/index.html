@@ -27,7 +27,7 @@
     <section class="section">
       <h2>ひとことで言うと</h2>
       <p>家計を支えていた人が亡くなったときに、<b>残された家族が受け取れる公的な年金</b>です。国民年金から出る「遺族基礎年金」と、会社員・公務員だった場合に上乗せされる「遺族厚生年金」があります。</p>
-      <p>民間の保険に入る前に、<b>まずこの金額を差し引いて考える</b>のが順番です。</p>
+      <p>民間の保険を考えるときは、<b>まずこの金額を差し引いてから</b>足りない分を見るのが順番です。</p>
     </section>
 
     <section class="section">
@@ -35,39 +35,41 @@
       <div class="card">
         <div class="kv">
           <span>遺族基礎年金（子のある配偶者）</span><span class="v"><span data-fig="izoku.kiso"></span></span>
-          <span>　子の加算（1人あたり）</span><span class="v"><span data-fig="izoku.kasan"></span></span>
+          <span>　子の加算（1人目・2人目）</span><span class="v"><span data-fig="izoku.kasan"></span></span>
+          <span>　子の加算（3人目以降）</span><span class="v"><span data-fig="izoku.kasan3"></span></span>
           <span>受け取れる期間</span><span class="v"><span data-fig="izoku.until"></span></span>
           <span>遺族厚生年金（会社員・公務員だった場合）</span><span class="v"><span data-fig="izoku.kousei"></span></span>
+          <span>中高齢寡婦加算</span><span class="v"><span data-fig="izoku.chukourei"></span></span>
         </div>
       </div>
-      <p class="small muted">金額は毎年度見直されます。このページの数字は、下の出典のデータから自動で差し込んでいます。</p>
+      <p class="small muted">金額は毎年度見直されます。このページの数字は、下の出典のデータから差し込んでいます。</p>
     </section>
 
     <section class="section">
       <h2>よくある勘違い</h2>
       <ul>
         <li><b>「配偶者ならいつでももらえる」わけではありません。</b>遺族基礎年金は、原則として<b>子がいる家庭</b>が対象です（子の年齢の条件もあります）。</li>
-        <li><b>子が大きくなると止まります。</b>いちばん下のお子さんが条件の年齢を超えると、遺族基礎年金は終わります。ここで家計が変わります。</li>
-        <li><b>自営業・フリーランスは上乗せがありません。</b>会社員・公務員のような遺族厚生年金の部分がないため、必要な備えは大きくなりがちです。</li>
+        <li><b>子が大きくなると止まります。</b>いちばん下のお子さんが条件の年齢を超えると、遺族基礎年金は終わります。ここで家計が大きく変わります。</li>
+        <li><b>自営業・フリーランスは上乗せがありません。</b>会社員・公務員のような遺族厚生年金の部分がないため、家計の穴は大きくなりがちです。</li>
+        <li><b>保険料の納付状況によっては受け取れないことがあります。</b>未納の期間が長いと要件を満たさない場合があります。</li>
       </ul>
     </section>
 
     <section class="section">
       <h2>このサイトの計算では、どう使っているか</h2>
-      <p>「万一のとき」の見通しで、<b>ご家族の今後の支出から、遺族年金を差し引いて</b>不足額を出しています。働き方（会社員・公務員／自営業）と、お子さんの年齢によって金額が変わります。</p>
+      <p>「万一のとき」の見通しで、<b>ご家族の今後の支出から、遺族年金を差し引いて</b>不足額を出しています。働き方（会社員・公務員／自営業）と、お子さんの年齢によって金額が変わります。子の加算が終わる年も、年表に出しています。</p>
       <p><a href="/soudan/">自分の場合を計算してみる →</a></p>
     </section>
 
     <section class="section">
       <h2>もっと正確に知るには</h2>
-      <p>実際の金額は、加入期間や収入によって一人ひとり違います。<b>年金事務所や「ねんきんダイヤル」で確認できます。</b>（本番では、日本年金機構の該当ページへリンクします）</p>
+      <p>実際の金額は、加入期間や在職中の収入によって一人ひとり違います。<b>年金事務所や「ねんきんダイヤル」で確認できます。</b>正確な見込み額は、下の出典（日本年金機構）でご確認ください。</p>
     </section>
   </div>
 
   <section class="section">
     <h2 class="section-title">このページの数字の出典</h2>
     <div id="article-sources"></div>
-    <p class="small muted">⚠ プロトタイプでは、出典・年度・確認日は未設定です。本番では必ず入れます。</p>
   </section>
 </main>
 
@@ -77,6 +79,7 @@
     <p><a href="/about/">このサイトについて</a>　<a href="/sources/">もっと知る</a></p>
   </div>
 </footer>
+<script src="/assets/data.js"></script>
 <script src="/assets/figures.js"></script>
 </body>
 </html>

@@ -29,6 +29,7 @@
 
 <script src="/assets/common.js"></script>
 <script src="/assets/questions.js"></script>
+<script src="/assets/data.js"></script>
 <script src="/assets/calc.js"></script>
 <script src="/assets/charts.js"></script>
 <script src="/assets/summary.js"></script>
@@ -130,25 +131,31 @@
         </details>
       </section>
 
+      <section class="section" id="compare-block">
+        <h2 class="section-title">③ 家計調査の平均と見比べる</h2>
+        <p class="small">同じくらいの世帯の平均と並べます。<b>多い・少ないは、良い・悪いではありません。</b></p>
+        <div id="compare"></div>
+      </section>
+
       <section class="section">
-        <h2 class="section-title">③ まずやること 3つ</h2>
+        <h2 class="section-title">④ まずやること 3つ</h2>
         ${top3.length ? top3.map(todoCard).join("") : '<p class="card">いま特に急ぐことは見つかりませんでした。</p>'}
       </section>
 
       <section class="section" id="timeline-block">
-        <h2 class="section-title">④ ライフプラン表</h2>
+        <h2 class="section-title">⑤ ライフプラン表</h2>
         <div id="timeline"></div>
       </section>
 
       <section class="section" id="viz-block">
-        <h2 class="section-title">⑤ お金の流れ</h2>
+        <h2 class="section-title">⑥ お金の流れ</h2>
         <p class="small muted" style="margin-bottom:8px">グラフを触る（またはキーボードの矢印キー）と、その年の内訳が出ます。</p>
         <div id="viz"></div>
         <p class="small" style="margin-top:8px">前提：物価上昇 年${d.assumptions.inflation}% ／ 運用 年${d.assumptions.ret}%　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button></p>
       </section>
 
       <section class="section" id="notinc-block">
-        <h2 class="section-title">⑥ この計算に入れていないこと</h2>
+        <h2 class="section-title">⑦ この計算に入れていないこと</h2>
         <div id="notinc"></div>
       </section>
 
@@ -185,6 +192,7 @@
       try { sessionStorage.setItem("ks-open-section", section); } catch (e) { /* 保存できなくても画面は開く */ }
       location.href = "/soudan/detail/";
     }));
+    document.getElementById("compare").appendChild(KSR.compare(r, A));
     document.getElementById("timeline").appendChild(KSR.lifeTable(r));
     document.getElementById("notinc").appendChild(KSR.notIncluded(r, A));
     const ctFold = document.getElementById("cost-table-fold");

@@ -402,6 +402,23 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .todo2-when { font-size: .75rem; color: var(--muted); white-space: nowrap; }
 .todo2-body { padding: 0 12px 10px 48px; font-size: .9rem; }
 
+/* 家計調査の平均と見比べる */
+.compare-pick { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; font-size: .95rem; }
+.compare-pick select { padding: 6px 8px; font: inherit; border: 1px solid var(--line); border-radius: 8px; background: var(--card); color: inherit; }
+.compare-legend { display: flex; align-items: center; gap: 4px; font-size: .85rem; color: var(--muted); margin: 4px 0 8px; }
+.compare-legend .lg-you { color: #2a78d6; }
+.compare-legend .lg-avg { color: #8b949e; }
+.compare-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.compare-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.compare-label { font-weight: 600; }
+.compare-word { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+.compare-bars { display: grid; gap: 2px; margin-top: 4px; }
+.compare-bar { display: grid; grid-template-columns: minmax(0, 1fr) 5.2em; align-items: center; gap: 8px; }
+.compare-bar .bar { height: 10px; border-radius: 0 4px 4px 0; }
+.bar-you { background: #2a78d6; }
+.bar-avg { background: #8b949e; }
+.compare-num { font-size: .85rem; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+
 /* この計算に入れていないこと */
 .ni-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
 .ni-list li { display: flex; gap: 8px; align-items: baseline; font-size: .9rem; line-height: 1.7; }
