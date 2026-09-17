@@ -57,20 +57,21 @@
       react: () => "ありがとうございます。まず、あなたのことを教えてください。",
     },
     {
-      id: "age", type: "select", required: true,
+      id: "age", type: "select", required: true, group: "you",
+      groupTitle: "あなたのこと",
       label: "あなたの年齢を教えてください",
       why: "年表を作り、定年や年金までの年数を計算するためです。",
       options: range(18, 80, "歳"),
     },
     {
-      id: "work", type: "single", required: true,
+      id: "work", type: "single", required: true, group: "you",
       label: "お仕事のしかたは？",
       why: "働き方によって、国の保障（休業中の手当・遺族年金・老後の年金）が大きく変わるためです。",
       options: WORK,
       react: (v) => WORK_REACT[v],
     },
     {
-      id: "income", type: "single", required: true,
+      id: "income", type: "single", required: true, group: "you",
       when: (a) => a.work !== "none",
       hint: (a) => (a.work === "leave" ? "育休・産休に入る前の年収を選んでください。" : a.work === "short" ? "時短勤務になったあとの、いまの年収を選んでください。" : null),
       label: "年収はどのくらいですか？（額面・税込）",
@@ -80,7 +81,35 @@
       react: (v) => (v === "unknown" ? UNKNOWN_REACT : null),
     },
     {
-      id: "spouse", type: "single", required: true,
+      id: "selfVary", type: "single", required: true, group: "you",
+      label: "収入は年によって変わりますか？",
+      why: "収入の波が大きいほど、急な出費に備える貯蓄を厚めに見る必要があるためです。",
+      options: [{ v: "stable", label: "だいたい安定している" }, { v: "vary", label: "年によって差が大きい" }],
+      when: (a) => a.work === "self",
+      react: (v) => (v === "vary" ? "波が大きい場合は、急な出費への備えを「生活費の1年分」で判定します（会社員などは半年分）。" : null),
+    },
+    {
+      id: "selfPension", type: "multi", required: false, group: "you",
+      label: "上乗せの年金・退職金の代わりに、入っているものはありますか？（任意・複数選択）",
+      hint: "自営業・フリーランスには会社の退職金や厚生年金がないぶん、自分で上乗せする制度があります。",
+      why: "老後の見通しと、専門家に聞くことに反映するためです。",
+      options: [
+        { v: "kikin", label: "国民年金基金",
+          help: { text: "国民年金に上乗せする、一生受け取れる年金です。掛金の上限は月6万8千円（iDeCoと合わせて）。加入後は途中でやめられないとされています。付加年金とは併用できません。" } },
+        { v: "ideco", label: "iDeCo（個人型確定拠出年金）",
+          help: { text: "自分で掛金を出して運用し、原則60歳以降に受け取ります。自営業の上限は月6万8千円（国民年金基金と合わせて）で、2026年12月からは7万5千円に上がる予定です。原則60歳まで引き出せません。", link: "/learn/ideco/" } },
+        { v: "kyosai", label: "小規模企業共済",
+          help: { text: "小さな事業主が、廃業・引退のときのために自分で積み立てる退職金の制度です。掛金は月1千円〜7万円で、全額が所得控除の対象。ただし20年未満でやめると、掛金の合計を下回るとされています。" } },
+        { v: "fuka", label: "付加年金",
+          help: { text: "国民年金の保険料に月400円を足して納めると、老齢基礎年金に「200円×納めた月数」が毎年上乗せされます。国民年金基金に入っている人は納められません。" } },
+        { v: "none", label: "どれも入っていない" },
+        { v: "unknown", label: "わからない" },
+      ],
+      when: (a) => a.work === "self",
+    },
+    {
+      id: "spouse", type: "single", required: true, group: "family",
+      groupTitle: "ご家族のこと",
       label: "配偶者・パートナーはいますか？",
       why: "万一のとき、ご家族に入る収入や年金を計算するためです。",
       options: [
@@ -94,20 +123,19 @@
         ? "ありがとうございます。遺族年金や健康保険の扶養は、結婚している場合と同じ扱いとされています。税の配偶者控除と相続だけ扱いが違うので、結果の「専門家に聞くこと」に出します。" : null),
     },
     {
-      id: "spouseAge", type: "select", required: true, group: "spouse",
-      groupTitle: "配偶者・パートナーについて教えてください",
+      id: "spouseAge", type: "select", required: true, group: "family",
       label: "その方の年齢",
       options: range(18, 80, "歳"),
       when: (a) => a.spouse === "yes" || a.spouse === "partner",
     },
     {
-      id: "spouseWork", type: "single", required: true, group: "spouse",
+      id: "spouseWork", type: "single", required: true, group: "family",
       label: "その方のお仕事のしかた",
       options: WORK,
       when: (a) => a.spouse === "yes" || a.spouse === "partner",
     },
     {
-      id: "spouseIncome", type: "single", required: true, group: "spouse",
+      id: "spouseIncome", type: "single", required: true, group: "family",
       label: "その方の年収（額面・税込）",
       hint: (a) => (a.spouseWork === "leave" ? "育休・産休に入る前の年収を選んでください。" : null),
       options: [{ v: "fuyo", label: "扶養の範囲内", mid: 100 }].concat(INCOME),
@@ -115,28 +143,27 @@
       react: (v) => (v === "unknown" ? UNKNOWN_REACT : null),
     },
     {
-      id: "kids", type: "single", required: true,
+      id: "kids", type: "single", required: true, group: "family",
       label: "お子さんはいますか？",
       why: "教育費がかかる時期と、万一のときに必要なお金を計算するためです。",
       options: [{ v: "yes", label: "いる" }, { v: "no", label: "いない" }, { v: "plan", label: "これから予定している" }],
     },
     {
-      id: "kidsCount", type: "single", required: true, group: "kids",
-      groupTitle: "お子さんについて教えてください",
+      id: "kidsCount", type: "single", required: true, group: "family",
       label: "お子さんの人数",
       options: range(1, 5, "人"),
       when: (a) => a.kids === "yes",
     },
     {
-      id: "kidsAges", type: "ages", required: true, group: "kids",
+      id: "kidsAges", type: "ages", required: true, group: "family",
       label: "お子さんの年齢",
       when: (a) => a.kids === "yes",
     },
     {
-      id: "eduPlan", type: "single", required: true,
+      id: "eduPlan", type: "single", required: true, group: "family",
       help: { title: "幼稚園・保育園はどう扱われますか？",
         body: "3〜5歳は幼稚園にかかるお金（習い事などを含む1年分の平均）を入れています。「すべて私立」を選ぶと幼稚園も私立で計算します。0〜2歳の保育料は、自治体と世帯の所得で決まるため入れていません。給食費・行事費・通園送迎費も入れていません。",
-        link: "/assumptions/", linkText: "使っている金額を見る" }, group: "kids",
+        link: "/assumptions/", linkText: "使っている金額を見る" },
       label: "進学の方針（おおまかに）",
       hint: "お子さんごとの細かい設定は、結果画面の「くわしく入力」でできます。",
       why: "公立か私立か、大学に行くかで、教育費は大きく変わるためです。",
@@ -153,7 +180,7 @@
       react: (v) => (v === "unknown" ? "まだ決めていなくて大丈夫です。「高校まで公立、大学は私立」で仮に計算します。" : "お子さんの年齢と進学の方針から、教育費がかかる時期を年表にします。"),
     },
     {
-      id: "kidPlanIn", type: "single", required: true,
+      id: "kidPlanIn", type: "single", required: true, group: "family",
       label: "お子さんは、いつごろの予定ですか？",
       hint: "だいたいで大丈夫です。あとから変えられます。",
       why: "生まれる時期によって、教育費がかかる時期が変わるためです。",
@@ -162,17 +189,7 @@
       react: () => "ありがとうございます。生まれたあとの教育費と児童手当を、年表に入れます。",
     },
     {
-      id: "pref", type: "select", text: true, required: true,
-      label: "お住まいの都道府県は？",
-      hint: "家賃と生活費の目安に使います。市区町村は聞きません。",
-      why: "家賃は地域で2倍以上ちがい、生活費も地域で差があるためです。",
-      help: { title: "何に使いますか？",
-        body: "家賃を「わからない」と答えたときに、その都道府県の民営借家の平均を使います。生活費を「わからない」と答えたときは、家計調査の地方別の水準で調整します。地域による差の大半は物価の差ではなく暮らし方の差なので、目安として見てください。",
-        link: "/assumptions/", linkText: "使っている金額を見る" },
-      options: [],   // 下で都道府県から作る
-    },
-    {
-      id: "others", type: "single", required: true,
+      id: "others", type: "single", required: true, group: "family",
       label: "ほかに、生活費をともにしている家族はいますか？",
       hint: "同居している親など。配偶者・パートナーとお子さんは、ここには含めません。",
       why: "人数によって生活費の目安が変わり、支出を平均と見比べるときの区分も変わるためです。",
@@ -188,7 +205,7 @@
         ? "ありがとうございます。生活費の目安と、平均と見比べるときの世帯の区分に反映します。" : null),
     },
     {
-      id: "othersCare", type: "single", required: true,
+      id: "othersCare", type: "single", required: true, group: "family",
       label: "その方を、あなたの健康保険の扶養に入れていますか？",
       hint: "わからなければ「わからない」で大丈夫です。",
       why: "扶養に入れているかどうかで、万一のときに家族に残る負担の見方が変わるためです。",
@@ -198,6 +215,17 @@
         { v: "no", label: "入れていない" },
         { v: "unknown", label: "わからない" },
       ],
+    },
+    {
+      id: "pref", type: "select", text: true, required: true, group: "home",
+      groupTitle: "住まいと車",
+      label: "お住まいの都道府県は？",
+      hint: "家賃と生活費の目安に使います。市区町村は聞きません。",
+      why: "家賃は地域で2倍以上ちがい、生活費も地域で差があるためです。",
+      help: { title: "何に使いますか？",
+        body: "家賃を「わからない」と答えたときに、その都道府県の民営借家の平均を使います。生活費を「わからない」と答えたときは、家計調査の地方別の水準で調整します。地域による差の大半は物価の差ではなく暮らし方の差なので、目安として見てください。",
+        link: "/assumptions/", linkText: "使っている金額を見る" },
+      options: [],   // 下で都道府県から作る
     },
     {
       id: "home", type: "single", required: true, group: "home",
@@ -221,7 +249,7 @@
       react: (v) => (v === "house" ? "戸建ては、10〜15年ごとに外壁・屋根の塗装や水回りの交換がかかります。一般的な目安で年表に入れます。" : "マンションは、修繕積立金が年数とともに上がることがあります。一般的な目安で計算します。"),
     },
     {
-      id: "rent", type: "single", required: true,
+      id: "rent", type: "single", required: true, group: "home",
       label: "毎月の家賃はいくらですか？（管理費を含む）",
       why: "家賃は毎月の支出のうち大きな割合を占め、将来の見通しを大きく変えるためです。",
       options: [
@@ -236,41 +264,15 @@
       react: (v) => (v === "unknown" ? UNKNOWN_REACT : null),
     },
     {
-      id: "cars", type: "single", required: true,
+      id: "cars", type: "single", required: true, group: "home",
       label: "車を持っていますか？",
       why: "車の維持費と、買い替えのときの大きな出費を年表に入れるためです。",
       options: [{ v: 0, label: "持っていない" }, { v: 1, label: "1台" }, { v: 2, label: "2台以上" }],
       react: (v) => (Number(v) > 0 ? "買い替えの時期や予算は、結果画面の「くわしく入力」で設定できます。まずは一般的な目安（10年ごとに買い替え）で計算します。" : null),
     },
     {
-      id: "selfVary", type: "single", required: true,
-      label: "収入は年によって変わりますか？",
-      why: "収入の波が大きいほど、急な出費に備える貯蓄を厚めに見る必要があるためです。",
-      options: [{ v: "stable", label: "だいたい安定している" }, { v: "vary", label: "年によって差が大きい" }],
-      when: (a) => a.work === "self",
-      react: (v) => (v === "vary" ? "波が大きい場合は、急な出費への備えを「生活費の1年分」で判定します（会社員などは半年分）。" : null),
-    },
-    {
-      id: "selfPension", type: "multi", required: false,
-      label: "上乗せの年金・退職金の代わりに、入っているものはありますか？（任意・複数選択）",
-      hint: "自営業・フリーランスには会社の退職金や厚生年金がないぶん、自分で上乗せする制度があります。",
-      why: "老後の見通しと、専門家に聞くことに反映するためです。",
-      options: [
-        { v: "kikin", label: "国民年金基金",
-          help: { text: "国民年金に上乗せする、一生受け取れる年金です。掛金の上限は月6万8千円（iDeCoと合わせて）。加入後は途中でやめられないとされています。付加年金とは併用できません。" } },
-        { v: "ideco", label: "iDeCo（個人型確定拠出年金）",
-          help: { text: "自分で掛金を出して運用し、原則60歳以降に受け取ります。自営業の上限は月6万8千円（国民年金基金と合わせて）で、2026年12月からは7万5千円に上がる予定です。原則60歳まで引き出せません。", link: "/learn/ideco/" } },
-        { v: "kyosai", label: "小規模企業共済",
-          help: { text: "小さな事業主が、廃業・引退のときのために自分で積み立てる退職金の制度です。掛金は月1千円〜7万円で、全額が所得控除の対象。ただし20年未満でやめると、掛金の合計を下回るとされています。" } },
-        { v: "fuka", label: "付加年金",
-          help: { text: "国民年金の保険料に月400円を足して納めると、老齢基礎年金に「200円×納めた月数」が毎年上乗せされます。国民年金基金に入っている人は納められません。" } },
-        { v: "none", label: "どれも入っていない" },
-        { v: "unknown", label: "わからない" },
-      ],
-      when: (a) => a.work === "self",
-    },
-    {
-      id: "otherLoan", type: "single", required: true,
+      id: "otherLoan", type: "single", required: true, group: "money",
+      groupTitle: "くらしとお金",
       // 住宅ローンがある人にだけ「以外」と言う。無い人には不自然なので聞き方を変える
       label: (a) => (a.home === "loan" || a.home === "buy"
         ? "住宅ローン以外の借入れはありますか？"
@@ -281,7 +283,7 @@
       react: (v) => (v === "yes" ? "ありがとうございます。だいたいの残高だけ、次でうかがいます。" : null),
     },
     {
-      id: "otherLoanLeft", type: "single", required: true,
+      id: "otherLoanLeft", type: "single", required: true, group: "money",
       label: "その借入れは、いまだいたいいくら残っていますか？",
       hint: "だいたいで大丈夫です。正確な額と毎月の返済額は、あとで「くわしく入力」から直せます。",
       why: "残高がわからないと0円で計算してしまい、万一のときの見通しがずれるからです。",
@@ -296,7 +298,7 @@
       ],
     },
     {
-      id: "insured", type: "multi", required: true,
+      id: "insured", type: "multi", required: true, group: "money",
       label: "入っている保険は、どれですか？",
       hint: "会社名や商品名は聞きません。当てはまるものをすべて選んでください。",
       why: "保険は「何が起きたときのお金か」で役割が違うため、種類ごとに見通しへの反映を変えます。",
@@ -316,7 +318,7 @@
         ? "ありがとうございます。亡くなったときに出る額を、次でうかがいます。" : null),
     },
     {
-      id: "insuredDeathBand", type: "single", required: true,
+      id: "insuredDeathBand", type: "single", required: true, group: "money",
       label: "亡くなったときに出る保険金は、だいたいいくらですか？",
       hint: "証券が手元になくても大丈夫です。わからなければ「わからない」を選んでください。",
       why: "この額がわからないと、万一のときに足りるかどうかを出せないからです。",
@@ -330,7 +332,7 @@
       ],
     },
     {
-      id: "living", type: "single", required: true,
+      id: "living", type: "single", required: true, group: "money",
       label: "毎月の生活費はどのくらいですか？（住居費を除く）",
       why: "将来の支出と、働けなくなったときに不足するお金を計算するためです。",
       help: { title: "わからないときは", body: "食費・日用品・光熱費・通信費・保険料・お小遣いなどの合計です。家計簿アプリやカードの明細を見ると早くわかります。わからなければ「わからない」で大丈夫です。", link: "/assumptions/", linkText: "「わからない」のときに使う値と、生活費の内訳を見る" },
@@ -349,7 +351,7 @@
       react: (v) => (v === "unknown" ? UNKNOWN_REACT : null),
     },
     {
-      id: "savings", type: "single", required: true,
+      id: "savings", type: "single", required: true, group: "money",
       label: "貯蓄はどのくらいありますか？（投資を含む）",
       why: "急な出費や老後にどのくらい備えがあるかを計算するためです。",
       options: [
@@ -364,7 +366,7 @@
       react: (v) => (v === "unknown" ? UNKNOWN_REACT : null),
     },
     {
-      id: "worries", type: "multi", required: false,
+      id: "worries", type: "multi", required: false, group: "money",
       label: "気になっていることはありますか？（任意）",
       hint: "当てはまるものがなければ、そのまま進んでください。選んだものは、結果とPDFの「専門家に聞くこと」に1行ずつ足されます。",
       why: "選んだものが、結果とPDFの「専門家に聞くこと」に1行ずつ足されます。計算する金額は変わりません。",

@@ -22,6 +22,7 @@
   <noscript><p class="note warn">相談機能はJavaScriptを有効にするとお使いいただけます。</p></noscript>
   <form id="form" novalidate>
     <div id="screen"></div>
+  <div id="more"></div>
     <p id="err" class="error" role="alert" hidden></p>
     <div class="section stack">
       <button type="submit" class="btn">次へ</button>
@@ -40,6 +41,8 @@
 <script src="/assets/common.js"></script>
 <script src="/assets/data.js"></script>
 <script src="/assets/questions.js"></script>
+<script src="/assets/calc.js"></script>
+<script src="/assets/detail.js"></script>
 <script>
 (function () {
   const d = KS.load().data;
@@ -98,11 +101,45 @@
     return "";
   }
 
+  // まとまりごとに、同じ画面で深められる「詳しい条件」を出す
+  const DETAIL_OF_GROUP = {
+    you: ["work"],
+    family: ["family", "spouseWork", "edu"],
+    home: ["home", "car", "loans"],
+    money: ["living", "assets", "insurance", "spend", "assumptions"],
+  };
+
+  // ここまでの画面の必須が埋まっていれば、詳しい条件を組み立てられる
+  function detailReady() {
+    return !screens.slice(0, idx + 1).flat().some((q) => q.required && !KSQ.isAnswered(q, A));
+  }
+
+  function renderDetail(groupKey) {
+    const slot = document.getElementById("more");
+    slot.replaceChildren();
+    const keys = DETAIL_OF_GROUP[groupKey];
+    if (!keys || !detailReady() || typeof KSD === "undefined") return;
+    const det = document.createElement("details");
+    det.className = "fold more-fold";
+    const sum = document.createElement("summary");
+    sum.textContent = "詳しい条件を入力する（あとからでも大丈夫です）";
+    det.appendChild(sum);
+    const body = document.createElement("div");
+    body.className = "body";
+    det.appendChild(body);
+    det.addEventListener("toggle", () => { if (det.open) moreOpen.add(groupKey); else moreOpen.delete(groupKey); });
+    det.open = moreOpen.has(groupKey);
+    slot.appendChild(det);
+    KSD.build(d, { only: keys, onChange: () => { /* 保存は KSD 側で行う */ } }).mount(body);
+  }
+  const moreOpen = new Set();
+
   function render(focus) {
     const s = screens[idx];
     const title = s[0].groupTitle ? `<h1 style="font-size:1.1rem;color:var(--muted)">${KS.esc(s[0].groupTitle)}</h1>` : "";
     document.getElementById("screen").innerHTML = title + s.map(control).join("");
-    document.getElementById("count").textContent = `${idx + 1}問目`;
+    renderDetail(s[0].group);
+    document.getElementById("count").textContent = `${idx + 1}／${screens.length}`;
     document.getElementById("bar").style.width = `${Math.round((idx / screens.length) * 100)}%`;
     document.getElementById("err").hidden = true;
     document.getElementById("back").textContent = idx === 0 ? "← 戻る" : "← 前の質問";
@@ -154,6 +191,8 @@
       }
     }
     KS.save(d);
+    // その画面の質問に答え終わった時点で「詳しい条件」を出す（答えを消したら引っ込める）
+    if (!!document.querySelector("#more details") !== detailReady()) renderDetail(screens[idx][0].group);
   });
 
   document.getElementById("form").addEventListener("submit", (e) => {

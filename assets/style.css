@@ -428,6 +428,12 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 
 .fc-reason { white-space: pre-line; }
 
+/* 1問ずつの画面の「詳しい条件」 */
+.more-fold { margin-top: 18px; border-top: 1px dashed var(--line); padding-top: 14px; }
+.more-fold > summary { color: var(--accent); font-weight: 700; }
+.more-fold > .body { margin-top: 10px; }
+.more-fold .fold { margin-bottom: 8px; }
+
 /* 収入の見込みを、線の形で選ぶ */
 .curve-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .curve-opt {

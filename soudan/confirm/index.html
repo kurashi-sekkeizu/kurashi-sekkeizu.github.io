@@ -68,6 +68,7 @@
     { th: "配偶者・パートナー", td: KSQ.hasSpouse(A) ? [show("spouseAge"), show("spouseWork"), show("spouseIncome")].filter(Boolean).join("・") : "いない", edit: KSQ.hasSpouse(A) ? "spouseAge" : "spouse", warn: KSQ.hasSpouse(A) && unk("spouseIncome") },
     { th: "お子さん", td: A.kids === "yes" ? `${A.kidsCount}人（${show("kidsAges")}）・${show("eduPlan")}` : A.kids === "plan" ? `これから（${show("kidPlanIn")}）` : show("kids"), edit: A.kids === "yes" ? "kidsCount" : "kids", warn: A.kids === "yes" && unk("eduPlan") },
     { th: "ほかの家族", td: [show("others"), show("othersCare") && `健康保険の扶養 ${show("othersCare")}`].filter(Boolean).join("／"), edit: "others" },
+    { th: "お住まいの地域", td: show("pref"), edit: "pref" },
     { th: "住まい", td: [show("home"), show("homeType"), show("rent") && `家賃 ${show("rent")}`].filter(Boolean).join("・"), edit: "home", warn: unk("rent") },
     { th: "車", td: show("cars"), edit: "cars" },
     { th: "借入れ", td: [show("otherLoan"), show("otherLoanLeft") && `残高 ${show("otherLoanLeft")}`].filter(Boolean).join("・"), edit: "otherLoan", warn: unk("otherLoanLeft") },
@@ -76,10 +77,12 @@
     { th: "貯蓄", td: show("savings"), edit: "savings", warn: unk("savings") },
     { th: "気になること", td: show("worries") || "特になし", edit: "worries" },
   ];
-  document.getElementById("rows").innerHTML = rows.map((r) =>
+  // 聞いていない項目（地域を答えていない・データが無いなど）は行ごと出さない
+  const shown = rows.filter((r) => r.td);
+  document.getElementById("rows").innerHTML = shown.map((r) =>
     `<tr><th scope="row">${KS.esc(r.th)}</th><td>${KS.esc(r.td)} ${r.warn ? '<span class="badge warn">⚠ 仮の値</span>' : ""}` +
     `<button type="button" class="linkbtn" data-edit="${r.edit}" aria-label="${KS.esc(r.th)}を修正">修正</button></td></tr>`).join("");
-  document.getElementById("prov").hidden = !rows.some((r) => r.warn);
+  document.getElementById("prov").hidden = !shown.some((r) => r.warn);
   document.getElementById("ok").hidden = false;
 
   document.querySelectorAll("[data-edit]").forEach((b) => b.addEventListener("click", () => {
