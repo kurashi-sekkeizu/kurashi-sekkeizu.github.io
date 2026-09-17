@@ -101,6 +101,15 @@
     first?.focus();
   }
 
+  // 選択肢の説明（？）は、チャットではまとめて1つの折りたたみに出す
+  function optHelp(q) {
+    const items = (q.options || []).filter((o) => o.help);
+    if (!items.length) return "";
+    return `<details class="help" style="margin-top:8px"><summary>選択肢の意味を見る</summary><div>` +
+      items.map((o) => `<p style="margin:4px 0"><b>${esc(o.label)}</b>：${esc(o.help.text)}` +
+        (o.help.link ? ` <a href="${o.help.link}">くわしく読む</a>` : "") + `</p>`).join("") + `</div></details>`;
+  }
+
   function panel(q) {
     const p = document.getElementById("panel");
     const switcher = `<p style="margin:10px 0 0"><button type="button" class="linkbtn" id="to-step">📋 1問ずつの形式に切り替える</button></p>`;
@@ -111,16 +120,16 @@
     }
     const why = q.why || q.help ? `<button type="button" class="opt" id="why-btn" aria-expanded="false">なぜ聞くの？</button>` : "";
     const hintText = typeof q.hint === "function" ? q.hint(A) : q.hint;
-    const whyBody = `<div class="why" id="why" hidden>${esc(hintText ? hintText + " " : "")}${esc(q.why || "")}${q.help ? "<br><b>" + esc(q.help.title) + "</b>：" + esc(q.help.body) : ""}</div>`;
+    const whyBody = `<div class="why" id="why" hidden>${esc(hintText ? hintText + " " : "")}${esc(q.why || "")}${q.help ? "<br><b>" + esc(q.help.title) + "</b>：" + esc(q.help.body) + (q.help.link ? ` <a href="${q.help.link}">${esc(q.help.linkText || "くわしく見る")}</a>` : "") : ""}</div>`;
     let body = "";
 
     if (q.type === "single") {
       body = `<div class="chat-options" role="group" aria-label="${esc(KSQ.labelOf(q, A))}">` +
-        q.options.map((o) => `<button type="button" class="opt${o.v === "unknown" ? " unknown" : ""}" data-v="${esc(o.v)}">${esc(o.label)}</button>`).join("") + why + `</div>`;
+        q.options.map((o) => `<button type="button" class="opt${o.v === "unknown" ? " unknown" : ""}" data-v="${esc(o.v)}">${esc(o.label)}</button>`).join("") + why + optHelp(q) + `</div>`;
     } else if (q.type === "multi") {
       const sel = new Set(Array.isArray(A[q.id]) ? A[q.id] : []);
       body = `<div class="chat-options" role="group" aria-label="${esc(KSQ.labelOf(q, A))}">` +
-        q.options.map((o) => `<button type="button" class="opt" data-m="${esc(o.v)}" aria-pressed="${sel.has(o.v)}">${esc(o.label)}</button>`).join("") + why + `</div>` +
+        q.options.map((o) => `<button type="button" class="opt" data-m="${esc(o.v)}" aria-pressed="${sel.has(o.v)}">${esc(o.label)}</button>`).join("") + why + optHelp(q) + `</div>` +
         `<button type="button" class="btn" id="ok" style="margin-top:10px">${q.required ? "決定" : "決定（選ばずに進む場合もこちら）"}</button>`;
     } else if (q.type === "select") {
       body = `<label class="visually-hidden" for="sel">${esc(KSQ.labelOf(q, A))}</label><select class="select" id="sel"><option value="">選んでください</option>` +

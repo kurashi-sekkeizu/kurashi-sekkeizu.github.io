@@ -44,7 +44,9 @@
       <p class="muted" style="margin-top:6px">途中で切り替えられます。</p>
     </fieldset>
 
-    <fieldset class="section">
+    <!-- 保存の選び方は、はじめる前には見せない（既定は「このタブを閉じたら消す」）。
+         端末に保存したい人のために、処理と選択肢は残しておく -->
+    <fieldset class="section" hidden>
       <legend>入力内容の保存</legend>
       <div class="options">
         <label class="option"><input type="radio" name="persist" value="session" checked><span>このタブを閉じたら消す<br><span class="muted">ふつうはこちら</span></span></label>
@@ -53,7 +55,7 @@
       <p id="no-local" hidden class="note warn small" style="margin-top:8px">この端末（ブラウザの設定）では保存できません。タブを閉じると入力内容は消えます。</p>
     </fieldset>
 
-    <p class="note info section">答えられないところは「わからない」で大丈夫です。</p>
+    <p class="note info section">答えられないところは「わからない」で大丈夫です。入力内容は<b>このタブを閉じると消えます</b>。</p>
     <button type="submit" class="btn" id="start-btn">はじめる</button>
   </form>
 </main>

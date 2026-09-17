@@ -22,6 +22,8 @@
     endAge: 90,
     // 教育費（年額・万円）
     edu: {
+      // 幼稚園（3〜5歳）。文部科学省「子供の学習費調査」の学習費総額に合わせた目安（無償化のあとの実負担）
+      kinder: { public: 18.5, private: 34.5 },
       elem: { public: 35, private: 170 },    // 6〜11歳
       junior: { public: 55, private: 145 },  // 12〜14歳
       high: { public: 50, private: 105 },    // 15〜17歳
@@ -129,6 +131,19 @@
     };
   }
 
+  // 入っている保険の種類（複数選択）。古い保存データ（"yes"/"no"）にも合わせる
+  function hasInsurance(answers, kind) {
+    const v = answers.insured;
+    if (Array.isArray(v)) return v.includes(kind);
+    if (v === "yes") return kind === "death" || kind === "medical";  // 旧データは死亡・医療に入っていた扱い
+    return false;
+  }
+  function anyInsurance(answers) {
+    const v = answers.insured;
+    if (Array.isArray(v)) return v.some((x) => x !== "none" && x !== "unknown");
+    return v === "yes";
+  }
+
   function takeHome(income) {
     const y = Number(income) || 0;
     if (y < 200) return 0.84;
@@ -140,13 +155,13 @@
   }
 
   const EDU_PLAN = {
-    public: { elem: "public", junior: "public", high: "public", univ: "national" },
-    univPrivate: { elem: "public", junior: "public", high: "public", univ: "privArts" },
-    highPrivate: { elem: "public", junior: "public", high: "private", univ: "privArts" },
-    juniorPrivate: { elem: "public", junior: "private", high: "private", univ: "privArts" },
-    allPrivate: { elem: "private", junior: "private", high: "private", univ: "privArts" },
-    noUniv: { elem: "public", junior: "public", high: "public", univ: "none" },
-    unknown: { elem: "public", junior: "public", high: "public", univ: "privArts" },
+    public: { kinder: "public", elem: "public", junior: "public", high: "public", univ: "national" },
+    univPrivate: { kinder: "public", elem: "public", junior: "public", high: "public", univ: "privArts" },
+    highPrivate: { kinder: "public", elem: "public", junior: "public", high: "private", univ: "privArts" },
+    juniorPrivate: { kinder: "public", elem: "public", junior: "private", high: "private", univ: "privArts" },
+    allPrivate: { kinder: "private", elem: "private", junior: "private", high: "private", univ: "privArts" },
+    noUniv: { kinder: "public", elem: "public", junior: "public", high: "public", univ: "none" },
+    unknown: { kinder: "public", elem: "public", junior: "public", high: "public", univ: "privArts" },
   };
 
   // くわしく入力の初期値（かんたんの回答から作る）
@@ -218,7 +233,7 @@
     const work = a.work;
     let income = work === "none" ? 0 : Q.mid("income", a);
     if (income === null || income === undefined) { income = work === "none" ? 0 : 450; if (work !== "none") provisional.push("年収"); }
-    const spouse = a.spouse === "yes";
+    const spouse = Q.hasSpouse(a);
     const spouseAge = spouse ? Number(a.spouseAge) : null;
     let spouseIncome = 0;
     if (spouse && a.spouseWork !== "none") {
@@ -245,7 +260,7 @@
     if (kidsNow.length && a.eduPlan === "unknown" && !D.set.edu) provisional.push("進学（高校まで公立・大学は私立で仮置き）");
     if (!D.set.work) provisional.push("定年65歳・退職金なし・年金は概算（くわしく入力で設定できます）");
     if (!D.set.living) provisional.push(`老後の生活費（現役の${D.retire.ratio}%で仮置き）`);
-    if (a.insured === "yes" && !D.set.insurance) {
+    if (hasInsurance(a, "death") && !D.set.insurance) {
       const band = Q.mid("insuredDeathBand", a);
       provisional.push(band === null || band === undefined
         ? "加入中の保険の保障額（未入力のため含めていません）"
@@ -429,6 +444,8 @@
     };
     const schoolCost = (p, kidAge) => {
       const E = DUMMY.edu;
+      // 0〜2歳の保育料は、自治体と世帯の所得で決まるため、ここでは入れない（結果に明示する）
+      if (kidAge >= 3 && kidAge <= 5) return E.kinder[p.kinder || "public"] || 0;
       if (kidAge >= 6 && kidAge <= 11) return E.elem[p.elem] || 0;
       if (kidAge >= 12 && kidAge <= 14) return E.junior[p.junior] || 0;
       if (kidAge >= 15 && kidAge <= 17) return E.high[p.high] || 0;
@@ -549,11 +566,11 @@
       spouse ? 5 : 0,
       kidsNow.length ? Math.max(0, Math.max(...kidsNow.map((k, i) => independAge(i) - k))) : 0
     );
-    const bandDeath = a.insured === "yes" ? Q.mid("insuredDeathBand", a) : null;
-    const insuredDeath = a.insured === "yes"
+    const bandDeath = hasInsurance(a, "death") ? Q.mid("insuredDeathBand", a) : null;
+    const insuredDeath = hasInsurance(a, "death")
       ? (D.set.insurance ? Number(D.insurance.death) : (bandDeath === null || bandDeath === undefined ? 0 : Number(bandDeath)))
       : 0;
-    const insuredDisability = a.insured === "yes" && D.set.insurance ? Number(D.insurance.disability) : 0;
+    const insuredDisability = hasInsurance(a, "income") && D.set.insurance ? Number(D.insurance.disability) : 0;
     let death = null;
     if (spouse || kidsNow.length) {
       const eduRemain = kidsNow.reduce((s, k, i) => { let t = 0; for (let x = k; x <= 21; x++) t += eduCost(i, x); return s + t; }, 0);
@@ -707,10 +724,16 @@
     if (P.on === "yes" && !owns) ask.push({ q: "住宅購入の予算と、無理のない返済額", who: "FP" });
     if (owns && homeType === "house") ask.push({ q: "修繕費をどう積み立てるか", who: "FP" });
     if (D.care.on === "yes") ask.push({ q: "介護が始まったときに使える公的な制度", who: "地域包括支援センター" });
-    if (a.insured === "yes") ask.push({ q: "加入中の保険の保障内容が、いまの家族構成に合っているか", who: "保険相談員" });
+    if (anyInsurance(a)) ask.push({ q: "加入中の保険の保障内容が、いまの家族構成に合っているか", who: "保険相談員" });
     if (work === "self" && (a.selfPension || []).includes("none")) ask.push({ q: "自営業の上乗せの年金・退職金の代わりになる制度（国民年金基金・iDeCo・小規模企業共済など）", who: "年金事務所・商工会・FP" });
     if (D.loans.some((l) => l.kind === "shougakukin")) ask.push({ q: "奨学金の返還が免除・猶予される場合の条件", who: "日本学生支援機構など貸与元" });
     if (planned.length) ask.push({ q: "出産・育児のときに使える公的な給付", who: "勤務先・自治体" });
+    // 事実婚のとき、届出をしている場合と扱いが違うところ（公的な整理にもとづく）
+    if (a.spouse === "partner") {
+      ask.push({ q: "遺族年金を請求するときに必要な、事実婚関係を証明する書類", who: "年金事務所" });
+      ask.push({ q: "パートナーに財産を残すための方法（事実婚は法定相続人にならないとされています）", who: "司法書士・弁護士" });
+    }
+
     // 「気になっていること」で選んだものを、聞くことに反映する
     const WORRY_ASK = {
       death: { q: "万一のときに必要な保障額の考え方（遺族年金を差し引いたあとの不足分）", who: "保険相談員・FP" },
@@ -787,14 +810,14 @@
     };
     current.total = ["living", "housing", "edu", "car", "loan", "other"].reduce((t, k) => t + current[k].monthly, 0);
 
-    const insurancePending = a.insured === "yes" && !D.set.insurance && (bandDeath === null || bandDeath === undefined);
+    const insurancePending = hasInsurance(a, "death") && !D.set.insurance && (bandDeath === null || bandDeath === undefined);
 
     function insuranceNote(kind) {
-      if (a.insured === "no") return "保険に入っていない前提です";
-      if (a.insured === "yes" && D.set.insurance) {
+      if (!anyInsurance(a)) return "保険に入っていない前提です";
+      if (anyInsurance(a) && D.set.insurance) {
         return kind === "death" ? `加入中の死亡保障 ${KS.man(D.insurance.death)}を差し引いています` : `加入中の働けなくなったときの保障 月${KS.man(D.insurance.disability)}を差し引いています`;
       }
-      if (a.insured === "yes") {
+      if (hasInsurance(a, "death")) {
         const band = Q.mid("insuredDeathBand", a);
         return band === null || band === undefined
           ? "加入中の保険の保障額が未入力のため、含めていません（くわしく入力で設定できます）"

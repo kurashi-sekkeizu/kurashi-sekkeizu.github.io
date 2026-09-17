@@ -11,7 +11,7 @@
     const today = new Date();
     const summary = [
       ["本人", [KSQ.display(KSQ.byId.age, A), KSQ.display(KSQ.byId.work, A), KSQ.display(KSQ.byId.income, A)].join("・")],
-      ["配偶者", A.spouse === "yes" ? [KSQ.display(KSQ.byId.spouseAge, A), KSQ.display(KSQ.byId.spouseWork, A), KSQ.display(KSQ.byId.spouseIncome, A)].join("・") : "いない"],
+      ["配偶者", KSQ.hasSpouse(A) ? [KSQ.display(KSQ.byId.spouseAge, A), KSQ.display(KSQ.byId.spouseWork, A), KSQ.display(KSQ.byId.spouseIncome, A)].join("・") : "いない"],
       ["子ども", A.kids === "yes" ? `${A.kidsCount}人（${KSQ.display(KSQ.byId.kidsAges, A)}）` : KSQ.display(KSQ.byId.kids, A)],
       ["住まい", KSQ.display(KSQ.byId.home, A)],
       ["生活費・貯蓄", KSQ.display(KSQ.byId.living, A) + "／" + KSQ.display(KSQ.byId.savings, A)],

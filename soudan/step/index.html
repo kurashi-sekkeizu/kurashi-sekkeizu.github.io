@@ -62,7 +62,8 @@
     const name = q.id;
     const v = A[q.id];
     const help = (q.why ? `<details class="help"><summary>なぜ聞くの？</summary><div>${KS.esc(q.why)}</div></details>` : "") +
-      (q.help ? `<details class="help"><summary>${KS.esc(q.help.title)}</summary><div>${KS.esc(q.help.body)}</div></details>` : "");
+      (q.help ? `<details class="help"><summary>${KS.esc(q.help.title)}</summary><div>${KS.esc(q.help.body)}` +
+        (q.help.link ? ` <a href="${q.help.link}">${KS.esc(q.help.linkText || "くわしく見る")}</a>` : "") + `</div></details>` : "");
     const hintText = typeof q.hint === "function" ? q.hint(A) : q.hint;
     const hint = hintText ? `<p class="q-hint">${KS.esc(hintText)}</p>` : "";
 
@@ -70,7 +71,11 @@
       const t = q.type === "single" ? "radio" : "checkbox";
       const opts = q.options.map((o) => {
         const checked = q.type === "single" ? String(v) === String(o.v) : Array.isArray(v) && v.includes(o.v);
-        return `<label class="option${o.v === "unknown" ? " unknown" : ""}"><input type="${t}" name="${name}" value="${KS.esc(o.v)}" ${checked ? "checked" : ""}><span>${KS.esc(o.label)}</span></label>`;
+        const tip = o.help
+          ? `<details class="opt-help"><summary aria-label="${KS.esc(o.label)}の説明">？</summary><div>${KS.esc(o.help.text)}` +
+            (o.help.link ? ` <a href="${o.help.link}">くわしく読む</a>` : "") + `</div></details>`
+          : "";
+        return `<div class="option-row"><label class="option${o.v === "unknown" ? " unknown" : ""}"><input type="${t}" name="${name}" value="${KS.esc(o.v)}" ${checked ? "checked" : ""}><span>${KS.esc(o.label)}</span></label>${tip}</div>`;
       }).join("");
       return `<fieldset class="q-block" data-q="${q.id}"><legend>${KS.esc(KSQ.labelOf(q, A))}</legend>${hint}${help}<div class="options">${opts}</div></fieldset>`;
     }

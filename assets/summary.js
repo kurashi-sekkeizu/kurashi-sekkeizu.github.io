@@ -479,7 +479,15 @@
     list.push({ dir: "both", text: "投資の値動き。利回りは毎年一定として計算し、元本割れは見ていません" });
     list.push({ dir: "worse", text: "突然の医療費・介護費・失業や休職による収入の減少（くわしく入力で設定した分を除く）" });
     list.push({ dir: "both", text: "年金・児童手当などの制度が将来変わること。いまの制度が続く前提です" });
+    const babies = (r.kidInfo || []).filter((k) => k.ageNow >= 0 && k.ageNow <= 2).length;
+    if (babies || a.kids === "plan") {
+      list.push({ dir: "worse", text: "0〜2歳の保育料。自治体と世帯の所得で決まるため、入れていません（住民税非課税の世帯は無償とされています）" });
+    }
+    if (a.kids === "yes" || a.kids === "plan") list.push({ dir: "worse", text: "保育園・幼稚園の給食費・行事費・通園送迎費。無償化の対象外とされていますが、計算には入れていません" });
     if (a.kids === "yes" || a.kids === "plan") list.push({ dir: "better", text: "高校の就学支援金の拡充分。教育費のもとにした調査が、当時の支援を反映した金額のため、重ねて差し引いていません" });
+    if (a.spouse === "partner") {
+      list.push({ dir: "worse", text: "事実婚では、税の配偶者控除と相続の扱いが、届出をしている場合と違うとされています。この違いは金額に反映していません" });
+    }
     list.push({ dir: "better", text: "相続・贈与・親からの援助" });
     list.push({ dir: "worse", text: "退職金や年金にかかる税金" });
     if (D.loans && D.loans.some((l) => l.kind === "shougakukin")) list.push({ dir: "both", text: "奨学金は、万一のときに返還が免除される前提で計算しています（条件は貸与元でご確認ください）" });

@@ -7,7 +7,7 @@
 (function () {
   "use strict";
 
-  const UNKNOWN_REACT = "わからなくても大丈夫です。一般的な値で仮に計算し、結果に「仮の値」と表示します。";
+  const UNKNOWN_REACT = "わからなくても大丈夫です。一般的な値で仮に計算し、結果に「仮の値」と表示します。どんな値を使うかは「わからないときに使う値」で見られます。";
 
   const WORK = [
     { v: "employee", label: "会社員" },
@@ -43,7 +43,7 @@
     {
       id: "fields", type: "multi", required: true,
       label: "今日は、どのことを考えたいですか？",
-      hint: "複数選べます。あとから変えられます。",
+      hint: "複数選べます。あとから変えられます。選んだところを結果の最初に案内し、「まずやること」も選んだ分野を先に出します。どの分野も計算はします。",
       why: "結果のはじめに、選んだことを見る場所への案内を出します。「まずやること」も、選んだ分野を先に並べます。計算する内容そのものは変わりません（どの分野も必ず計算します）。",
       options: [
         { v: "insurance", label: "保険" },
@@ -83,27 +83,35 @@
       id: "spouse", type: "single", required: true,
       label: "配偶者・パートナーはいますか？",
       why: "万一のとき、ご家族に入る収入や年金を計算するためです。",
-      options: [{ v: "yes", label: "いる" }, { v: "no", label: "いない" }],
+      options: [
+        { v: "yes", label: "いる（結婚している）",
+          help: { text: "婚姻の届出をしている場合です。遺族年金・健康保険の扶養・税の配偶者控除・相続のすべてで「配偶者」として扱われます。" } },
+        { v: "partner", label: "いる（事実婚・パートナー）",
+          help: { text: "届出はしていないが、事実上夫婦として暮らしている場合です。遺族年金・健康保険の扶養・国民年金の第3号は、届出をしている場合と同じ扱いとされています。一方で、税の配偶者控除と相続は対象外とされています（財産を残すには遺言などが要ります）。このサイトの計算では、この2つの違いは金額に反映していません。" } },
+        { v: "no", label: "いない" },
+      ],
+      react: (v) => (v === "partner"
+        ? "ありがとうございます。遺族年金や健康保険の扶養は、結婚している場合と同じ扱いとされています。税の配偶者控除と相続だけ扱いが違うので、結果の「専門家に聞くこと」に出します。" : null),
     },
     {
       id: "spouseAge", type: "select", required: true, group: "spouse",
       groupTitle: "配偶者・パートナーについて教えてください",
       label: "その方の年齢",
       options: range(18, 80, "歳"),
-      when: (a) => a.spouse === "yes",
+      when: (a) => a.spouse === "yes" || a.spouse === "partner",
     },
     {
       id: "spouseWork", type: "single", required: true, group: "spouse",
       label: "その方のお仕事のしかた",
       options: WORK,
-      when: (a) => a.spouse === "yes",
+      when: (a) => a.spouse === "yes" || a.spouse === "partner",
     },
     {
       id: "spouseIncome", type: "single", required: true, group: "spouse",
       label: "その方の年収（額面・税込）",
       hint: (a) => (a.spouseWork === "leave" ? "育休・産休に入る前の年収を選んでください。" : null),
       options: [{ v: "fuyo", label: "扶養の範囲内", mid: 100 }].concat(INCOME),
-      when: (a) => a.spouse === "yes" && a.spouseWork !== "none",
+      when: (a) => hasSpouse(a) && a.spouseWork !== "none",
       react: (v) => (v === "unknown" ? UNKNOWN_REACT : null),
     },
     {
@@ -125,7 +133,10 @@
       when: (a) => a.kids === "yes",
     },
     {
-      id: "eduPlan", type: "single", required: true, group: "kids",
+      id: "eduPlan", type: "single", required: true,
+      help: { title: "幼稚園・保育園はどう扱われますか？",
+        body: "3〜5歳は幼稚園にかかるお金（習い事などを含む1年分の平均）を入れています。「すべて私立」を選ぶと幼稚園も私立で計算します。0〜2歳の保育料は、自治体と世帯の所得で決まるため入れていません。給食費・行事費・通園送迎費も入れていません。",
+        link: "/assumptions/", linkText: "使っている金額を見る" }, group: "kids",
       label: "進学の方針（おおまかに）",
       hint: "お子さんごとの細かい設定は、結果画面の「くわしく入力」でできます。",
       why: "公立か私立か、大学に行くかで、教育費は大きく変わるためです。",
@@ -207,10 +218,14 @@
       hint: "自営業・フリーランスには会社の退職金や厚生年金がないぶん、自分で上乗せする制度があります。",
       why: "老後の見通しと、専門家に聞くことに反映するためです。",
       options: [
-        { v: "kikin", label: "国民年金基金" },
-        { v: "ideco", label: "iDeCo" },
-        { v: "kyosai", label: "小規模企業共済" },
-        { v: "fuka", label: "付加年金" },
+        { v: "kikin", label: "国民年金基金",
+          help: { text: "国民年金に上乗せする、一生受け取れる年金です。掛金の上限は月6万8千円（iDeCoと合わせて）。加入後は途中でやめられないとされています。付加年金とは併用できません。" } },
+        { v: "ideco", label: "iDeCo（個人型確定拠出年金）",
+          help: { text: "自分で掛金を出して運用し、原則60歳以降に受け取ります。自営業の上限は月6万8千円（国民年金基金と合わせて）で、2026年12月からは7万5千円に上がる予定です。原則60歳まで引き出せません。", link: "/learn/ideco/" } },
+        { v: "kyosai", label: "小規模企業共済",
+          help: { text: "小さな事業主が、廃業・引退のときのために自分で積み立てる退職金の制度です。掛金は月1千円〜7万円で、全額が所得控除の対象。ただし20年未満でやめると、掛金の合計を下回るとされています。" } },
+        { v: "fuka", label: "付加年金",
+          help: { text: "国民年金の保険料に月400円を足して納めると、老齢基礎年金に「200円×納めた月数」が毎年上乗せされます。国民年金基金に入っている人は納められません。" } },
         { v: "none", label: "どれも入っていない" },
         { v: "unknown", label: "わからない" },
       ],
@@ -243,21 +258,32 @@
       ],
     },
     {
-      id: "insured", type: "single", required: true,
-      label: "生命保険や医療保険に入っていますか？",
-      hint: "会社名や商品名は聞きません。保障額は、結果画面の「くわしく入力」で設定できます。",
-      why: "万一のときや働けなくなったときの見通しに、加入中の保険を反映するためです。",
-      options: [{ v: "yes", label: "入っている" }, { v: "no", label: "入っていない" }, { v: "unknown", label: "わからない" }],
-      react: (v) => (v === "yes" ? "ありがとうございます。亡くなったときに出る額を、次でうかがいます。" : null),
+      id: "insured", type: "multi", required: true,
+      label: "入っている保険は、どれですか？",
+      hint: "会社名や商品名は聞きません。当てはまるものをすべて選んでください。",
+      why: "保険は「何が起きたときのお金か」で役割が違うため、種類ごとに見通しへの反映を変えます。",
+      options: [
+        { v: "death", label: "亡くなったときに出る保険（生命保険・収入保障）", short: "死亡保障",
+          help: { text: "亡くなったときに、遺された家族がお金を受け取る保険です。万一のときの不足額から差し引いて計算します。", link: "/learn/shibou-hoshou/" } },
+        { v: "medical", label: "入院・手術のときに出る保険（医療保険・がん保険）", short: "医療・がん",
+          help: { text: "入院や手術をしたときにお金が出る保険です。何も起きなければ、原則としてお金は戻りません（掛け捨ての場合）。公的な高額療養費で、すでにどこまで守られているかとあわせて考えます。", link: "/learn/iryou-hoken/" } },
+        { v: "income", label: "働けなくなったときに出る保険（就業不能・所得補償）", short: "就業不能",
+          help: { text: "病気やけがで働けない間、毎月お金が出る保険です。会社員は傷病手当金があるため、その後の期間をどう埋めるかが論点になります。", link: "/learn/hatarakenai-sonae/" } },
+        { v: "savings", label: "貯まるタイプ（終身・学資・個人年金など）", short: "貯まるタイプ",
+          help: { text: "解約したときや満期のときに、お金が戻ってくるタイプです。同じ保障なら払う額は大きくなります。いまの残高は「くわしく入力」の貯蓄には含めていません。" } },
+        { v: "none", label: "入っていない" },
+        { v: "unknown", label: "わからない" },
+      ],
+      react: (v) => (Array.isArray(v) && v.includes("death")
+        ? "ありがとうございます。亡くなったときに出る額を、次でうかがいます。" : null),
     },
     {
       id: "insuredDeathBand", type: "single", required: true,
       label: "亡くなったときに出る保険金は、だいたいいくらですか？",
       hint: "証券が手元になくても大丈夫です。わからなければ「わからない」を選んでください。",
       why: "この額がわからないと、万一のときに足りるかどうかを出せないからです。",
-      when: (a) => a.insured === "yes",
+      when: (a) => Array.isArray(a.insured) && a.insured.includes("death"),
       options: [
-        { v: "b0", label: "死亡保障はない（医療保険などだけ）", mid: 0 },
         { v: "b1", label: "500万円くらい", mid: 500 },
         { v: "b2", label: "1,000万円くらい", mid: 1000 },
         { v: "b3", label: "2,000万円くらい", mid: 2000 },
@@ -269,7 +295,7 @@
       id: "living", type: "single", required: true,
       label: "毎月の生活費はどのくらいですか？（住居費を除く）",
       why: "将来の支出と、働けなくなったときに不足するお金を計算するためです。",
-      help: { title: "わからないときは", body: "食費・日用品・光熱費・通信費・保険料・お小遣いなどの合計です。家計簿アプリやカードの明細を見ると早くわかります。わからなければ「わからない」で大丈夫です。" },
+      help: { title: "わからないときは", body: "食費・日用品・光熱費・通信費・保険料・お小遣いなどの合計です。家計簿アプリやカードの明細を見ると早くわかります。わからなければ「わからない」で大丈夫です。", link: "/assumptions/", linkText: "「わからない」のときに使う値と、生活費の内訳を見る" },
       options: [
         { v: "l1", label: "10万円未満", mid: 8 },
         { v: "l2", label: "10〜13万円", mid: 11.5 },
@@ -302,7 +328,7 @@
     {
       id: "worries", type: "multi", required: false,
       label: "気になっていることはありますか？（任意）",
-      hint: "当てはまるものがなければ、そのまま進んでください。",
+      hint: "当てはまるものがなければ、そのまま進んでください。選んだものは、結果とPDFの「専門家に聞くこと」に1行ずつ足されます。",
       why: "選んだものが、結果とPDFの「専門家に聞くこと」に1行ずつ足されます。計算する金額は変わりません。",
       options: [
         { v: "death", label: "万一のとき家族が困らないか" },
@@ -352,11 +378,16 @@
     if (q.type === "multi") {
       if (!Array.isArray(v) || !v.length) return "特になし";
       // 選択肢にない値（古い保存データなど）は、そのまま出さずに捨てる
-      const labels = v.map((x) => option(q, x)?.label).filter(Boolean);
+      const labels = v.map((x) => { const o = option(q, x); return o ? (o.short || o.label) : null; }).filter(Boolean);
       return labels.length ? labels.join("、") : "特になし";
     }
     if (q.type === "ages") return (v || []).map((x) => x + "歳").join("・");
     return option(q, v)?.label ?? "";
+  }
+
+  // 配偶者・パートナーがいるか（事実婚も含む）
+  function hasSpouse(answers) {
+    return answers.spouse === "yes" || answers.spouse === "partner";
   }
 
   // 質問文は、回答によって変わることがある（例：住宅ローンの有無で聞き方を変える）
@@ -369,5 +400,5 @@
     return o ? o.mid : undefined;
   }
 
-  window.KSQ = { QUESTIONS, byId, visible, screens, isAnswered, display, option, mid, labelOf, UNKNOWN_REACT };
+  window.KSQ = { QUESTIONS, byId, visible, screens, isAnswered, display, option, mid, labelOf, hasSpouse, UNKNOWN_REACT };
 })();

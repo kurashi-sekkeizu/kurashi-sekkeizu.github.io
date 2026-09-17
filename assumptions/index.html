@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>「わからない」と答えたときに使う値｜くらしの設計図（プロトタイプ）</title>
+<link rel="stylesheet" href="/assets/style.css">
+</head>
+<body>
+<div class="proto-banner">🧪 お試し版です。<b>このページの金額はダミー</b>です。本番では公的な統計に置き換えます。</div>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/">くらしの設計図</a>
+    <nav class="nav" aria-label="メインメニュー">
+      <a href="/learn/">学ぶ</a><a href="/sources/">もっと知る</a><a href="/soudan/">見通しをつくる</a><a href="/about/">このサイトについて</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <h1>「わからない」と答えたときに使う値</h1>
+  <p class="muted">答えられない項目は、<b>一般的な目安で仮に置いて</b>計算しています。どんな値を使っているかを、ここで全部見られます。
+    結果の画面では <span class="badge warn">⚠ 仮</span> の印が付きます。</p>
+
+  <div class="note warn">⚠ <b>この試作版の金額は、すべてダミーです。</b>本番では、公的な統計（総務省「家計調査」など）の値に置き換え、出典と確認日を付けます。</div>
+
+  <section class="section">
+    <h2 class="section-title">生活費の内訳</h2>
+    <p class="small">生活費を「わからない」と答えた場合は、<b>世帯の人数から</b>ひと月の生活費を置きます。
+      金額を答えた場合も、内訳を入力していなければ、下の割合で分けて表示します。</p>
+    <div class="table-wrap">
+      <table class="data text">
+        <caption class="visually-hidden">生活費の内訳に使っている割合</caption>
+        <thead><tr><th>費目</th><th>生活費に占める割合</th><th>月25万円のときの例</th></tr></thead>
+        <tbody id="living-rows"></tbody>
+      </table>
+    </div>
+    <p class="small muted">0.5万円単位に丸め、端数は「その他」で調整して、合計が元の金額と一致するようにしています。</p>
+    <h3 class="section-title" style="font-size:1rem">世帯の人数から置く金額</h3>
+    <div class="table-wrap">
+      <table class="data text">
+        <thead><tr><th>世帯の人数</th><th>ひと月の生活費（仮の値）</th></tr></thead>
+        <tbody id="household-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">住まい・車・教育費</h2>
+    <div class="table-wrap">
+      <table class="data text">
+        <thead><tr><th>項目</th><th>仮に置く値</th></tr></thead>
+        <tbody id="home-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">公的な保障・年金</h2>
+    <div class="table-wrap">
+      <table class="data text">
+        <thead><tr><th>項目</th><th>仮に置く値</th></tr></thead>
+        <tbody id="public-rows"></tbody>
+      </table>
+    </div>
+    <p class="small muted">本番では、日本年金機構・厚生労働省の公表値から計算します。いまの数字は概算です。</p>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">計算の前提</h2>
+    <div class="table-wrap">
+      <table class="data text">
+        <thead><tr><th>項目</th><th>はじめの値</th><th>変えられるか</th></tr></thead>
+        <tbody id="assume-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="section stack">
+    <a class="btn" href="/soudan/">自分の場合を計算する</a>
+    <a class="btn secondary" href="/sources/">公的データの出典を見る</a>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <p><b>くらしの設計図</b><br>運営者は保険代理店・金融機関ではありません。保険や金融商品の販売・勧誘は行いません。<b>広告も掲載していません。</b></p>
+    <p><a href="/about/">このサイトについて</a>　<a href="/sources/">もっと知る</a></p>
+  </div>
+</footer>
+
+<script src="/assets/data.js"></script>
+<script src="/assets/common.js"></script>
+<script src="/assets/questions.js"></script>
+<script src="/assets/calc.js"></script>
+<script>
+(function () {
+  "use strict";
+  const esc = KS.esc, man = KS.man;
+  const D = KSC.DUMMY;
+  const row = (cells) => `<tr>${cells.map((c, i) => (i === 0 ? `<th scope="row">${c}</th>` : `<td>${c}</td>`)).join("")}</tr>`;
+
+  // 生活費の内訳
+  const sample = KSC.splitLiving(25);
+  document.getElementById("living-rows").innerHTML = KSC.LIVING_ITEMS.map((it) =>
+    row([esc(it.label), Math.round(it.ratio * 100) + "%", man(sample[it.key])])).join("");
+
+  // 世帯の人数から置く金額（calc.js と同じ式）
+  document.getElementById("household-rows").innerHTML = [1, 2, 3, 4, 5].map((n) =>
+    row([n + "人", man(Math.min(40, 10 + n * 3.5))])).join("");
+
+  // 住まい・車・教育費
+  const dflt = KSC.detailDefaults({ age: 40, kids: "no", home: "loan", homeType: "house", cars: "1" }, 0);
+  const E = D.edu;
+  document.getElementById("home-rows").innerHTML = [
+    ["家賃（「わからない」のとき）", "回答の帯の真ん中。帯も選んでいなければ " + man(dflt.rent.monthly) + "／月"],
+    ["住宅ローンの返済", "月 " + man(dflt.loan.monthly) + "・" + dflt.loan.endAge + "歳完済・団信あり"],
+    ["戸建ての修繕", "外壁・屋根の塗装 " + man(dflt.house.paintCost) + "（" + dflt.house.paintEvery + "年ごと）／水回り・給湯器 " + man(dflt.house.waterCost) + "（" + dflt.house.waterEvery + "年ごと）"],
+    ["固定資産税など", "戸建て 年 " + man(dflt.house.tax) + "／マンションは管理費・修繕積立金 月 " + man(dflt.mansion.monthly) + "（10年ごとに " + dflt.mansion.raise + "% 上がる前提）"],
+    ["車", "維持費 年 " + man(dflt.cars[0] ? dflt.cars[0].upkeep : 35) + "／" + (dflt.cars[0] ? dflt.cars[0].interval : 10) + "年ごとに " + man(dflt.cars[0] ? dflt.cars[0].budget : 250) + " で買い替え"],
+    ["教育費（幼稚園・3〜5歳）", "公立 年 " + man(E.kinder.public) + "／私立 年 " + man(E.kinder.private) + "（習い事などを含む1年分。文部科学省の調査の水準に合わせています）"],
+    ["保育料（0〜2歳）", "計算に入れていません（自治体と世帯の所得で決まるため）"],
+    ["教育費（小学校）", "公立 年 " + man(E.elem.public) + "／私立 年 " + man(E.elem.private)],
+    ["教育費（中学）", "公立 年 " + man(E.junior.public) + "／私立 年 " + man(E.junior.private)],
+    ["教育費（高校）", "公立 年 " + man(E.high.public) + "／私立 年 " + man(E.high.private)],
+    ["教育費（大学）", "国公立 年 " + man(E.univ.national) + "／私立文系 年 " + man(E.univ.privArts) + "／私立理系 年 " + man(E.univ.privSci) + "（入学時に別途 " + man(E.entrance.national) + "〜" + man(E.entrance.privArts) + "）"],
+    ["下宿・一人暮らしの上乗せ", "年 " + man(E.away)],
+  ].map(row).join("");
+
+  // 公的な保障・年金
+  document.getElementById("public-rows").innerHTML = [
+    ["老齢基礎年金（概算）", "年 " + man(D.pensionBase) + "。会社員・公務員は年収に応じて上乗せ"],
+    ["受け取り開始の年齢", D.pensionAge + "歳"],
+    ["遺族年金（子がいる間・概算）", "年 " + man(D.survivorBase) + "。会社員・公務員は年収に応じて上乗せ"],
+    ["休業中の手当（会社員・公務員）", "月収の約 " + Math.round(D.sickRate * 100) + "%"],
+    ["児童手当（概算）", "年 " + man(D.childAllowance) + "（18歳まで）"],
+    ["育休・産休中の収入", "元の年収の約 " + Math.round(D.leaveRate * 100) + "%・" + D.leaveYears + "年間"],
+    ["額面から手取りへ", "年収に応じて 約72〜84%（年収が高いほど手取りの割合は下がります）"],
+    ["葬儀などの費用", man(D.funeral)],
+    ["計算する年齢の上限", D.endAge + "歳まで"],
+  ].map(row).join("");
+
+  // 計算の前提
+  const empty = KS.empty();
+  document.getElementById("assume-rows").innerHTML = [
+    ["物価の上昇", "年 " + empty.assumptions.inflation + "%", "変えられます（結果の「前提を変える」）"],
+    ["運用の利回り", "年 " + empty.assumptions.ret + "%（＝運用しない）", "変えられます。天気の判定は<b>常に運用しない場合</b>で行います"],
+    ["万一のときの遺族の生活費", "いまの " + empty.assumptions.ratioLow + "〜" + empty.assumptions.ratioHigh + "%", "変えられます"],
+    ["老後の生活費", "現役のときの " + dflt.retire.ratio + "%", "変えられます（くわしく入力）"],
+    ["収入の見込み", "年齢に応じて増減（厚生労働省の統計の形）", "変えられます（くわしく入力）"],
+    ["定年・退職金", dflt.work.retireAge + "歳・退職金なし", "変えられます（くわしく入力）"],
+  ].map(row).join("");
+})();
+</script>
+</body>
+</html>

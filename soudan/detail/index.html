@@ -105,6 +105,32 @@
     if (opt.note) row.appendChild(h("p", "muted small", opt.note));
     return row;
   }
+  // 複数選べる項目（入っている保険など）
+  function checks(label, obj, key, options, section, opt = {}) {
+    const fs = h("fieldset", "field-row");
+    fs.appendChild(h("legend", "detail-legend", label));
+    const wrap = h("div", "radio-row");
+    const cur = () => (Array.isArray(obj[key]) ? obj[key] : []);
+    options.forEach((o) => {
+      const lab = h("label");
+      const i = h("input"); i.type = "checkbox"; i.value = o.v; i.checked = cur().includes(o.v);
+      i.addEventListener("change", () => {
+        const set = new Set(cur());
+        if (i.checked) set.add(o.v); else set.delete(o.v);
+        // 「入っていない」「わからない」は、ほかと同時には選べない
+        if (i.checked && (o.v === "none" || o.v === "unknown")) { set.clear(); set.add(o.v); }
+        else if (i.checked) { set.delete("none"); set.delete("unknown"); }
+        obj[key] = [...set];
+        changed(section, opt.rerender !== false, opt.answers);
+      });
+      lab.append(i, document.createTextNode(o.label));
+      wrap.appendChild(lab);
+    });
+    fs.appendChild(wrap);
+    if (opt.note) fs.appendChild(h("p", "muted small", opt.note));
+    return fs;
+  }
+
   function radios(label, obj, key, options, section, opt = {}) {
     const fs = h("fieldset", "field-row");
     fs.appendChild(h("legend", "detail-legend", label));
@@ -130,7 +156,7 @@
 
   // かんたんの回答を変えたときに、ほかの回答と矛盾しないように整える
   function normalizeAnswers() {
-    if (A.spouse === "yes") {
+    if (KSQ.hasSpouse(A)) {
       if (!A.spouseAge) A.spouseAge = age();
       if (!A.spouseWork) A.spouseWork = "part";
       if (!A.spouseIncome) A.spouseIncome = "fuyo";
@@ -189,7 +215,7 @@
       body: (box) => {
         box.appendChild(select("あなたの年齢", A, "age", range(18, 80, 1, (v) => `${v}歳`), "family", { answers: true }));
         box.appendChild(radios("配偶者・パートナー", A, "spouse", opts("spouse"), "family", { answers: true }));
-        if (A.spouse === "yes") box.appendChild(select("配偶者の年齢", A, "spouseAge", range(18, 80, 1, (v) => `${v}歳`), "family", { answers: true }));
+        if (KSQ.hasSpouse(A)) box.appendChild(select("配偶者の年齢", A, "spouseAge", range(18, 80, 1, (v) => `${v}歳`), "family", { answers: true }));
         box.appendChild(radios("お子さん", A, "kids", [{ v: "yes", label: "いる" }, { v: "no", label: "いない" }, { v: "plan", label: "これから" }], "family", { answers: true }));
         if (A.kids === "yes") {
           box.appendChild(select("人数", A, "kidsCount", range(1, 5, 1, (v) => `${v}人`), "family", { answers: true }));
@@ -242,7 +268,7 @@
       },
     },
     {
-      key: "spouseWork", title: "💼 配偶者の収入", show: () => A.spouse === "yes",
+      key: "spouseWork", title: "💼 配偶者の収入", show: () => KSQ.hasSpouse(A),
       body: (box) => {
         box.appendChild(select("働き方", A, "spouseWork", opts("spouseWork"), "spouseWork", { text: true, answers: true }));
         box.appendChild(select("年収（額面・税込）", A, "spouseIncome", opts("spouseIncome"), "spouseWork", { text: true, answers: true }));
@@ -474,8 +500,8 @@
     {
       key: "insurance", title: "🛡️ 加入中の保険",
       body: (box) => {
-        box.appendChild(radios("生命保険や医療保険に", A, "insured", opts("insured"), "insurance", { answers: true }));
-        if (A.insured === "yes") {
+        box.appendChild(checks("入っている保険（複数選べます）", A, "insured", opts("insured"), "insurance", { answers: true }));
+        if (Array.isArray(A.insured) ? A.insured.some((x) => x !== "none" && x !== "unknown") : A.insured === "yes") {
           box.appendChild(note("会社名や商品名は入力しません。保険証券や、保険会社から毎年届くお知らせで確認できます。団信は「住まい」で設定します。"));
           box.appendChild(select("死亡保障（あなたが亡くなったときに家族が受け取る額の合計）", D.insurance, "death", [{ v: 0, label: "なし・わからない" }].concat(range(100, 5000, 100, (v) => man(v))), "insurance"));
           box.appendChild(radios("医療保険", D.insurance, "medical", [{ v: "yes", label: "入っている" }, { v: "no", label: "入っていない" }, { v: "unknown", label: "わからない" }], "insurance", { rerender: false }));
