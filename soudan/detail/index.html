@@ -47,8 +47,8 @@
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
 <script src="/assets/common.js"></script>
-<script src="/assets/questions.js"></script>
 <script src="/assets/data.js"></script>
+<script src="/assets/questions.js"></script>
 <script src="/assets/calc.js"></script>
 <script>
 (function () {
@@ -124,6 +124,71 @@
         changed(section, opt.rerender !== false, opt.answers);
       });
       lab.append(i, document.createTextNode(o.label));
+      wrap.appendChild(lab);
+    });
+    fs.appendChild(wrap);
+    if (opt.note) fs.appendChild(h("p", "muted small", opt.note));
+    return fs;
+  }
+
+  // 収入の見込みを、線の形を見ながら選ぶ。実際の計算と同じ倍率から線を引くので、絵と計算がずれない
+  function curveSVG(mode, workKind, fromAge, toAge) {
+    const W = 108, H = 44, pad = 4;
+    const pts = [];
+    for (let age = fromAge; age <= toAge; age++) {
+      let f = 1;
+      if (mode === "stat") {
+        const w = window.KSDATA && window.KSDATA.wage;
+        const key = w && w.map ? w.map[workKind] : null;
+        const series = key && w.series ? w.series[key] : null;
+        if (series) {
+          const at = (x) => {
+            const q = series.points;
+            const cap = Math.min(q[q.length - 1].age, Number(w.capAge) || 57);
+            const v = Math.min(Math.max(x, q[0].age), cap);
+            for (let i = 0; i < q.length - 1; i++) {
+              if (v >= q[i].age && v <= q[i + 1].age) {
+                const t = (v - q[i].age) / (q[i + 1].age - q[i].age);
+                return q[i].value + (q[i + 1].value - q[i].value) * t;
+              }
+            }
+            return q[q.length - 1].value;
+          };
+          f = at(age) / at(fromAge);
+        }
+      } else if (mode === "up") f = Math.pow(1.01, age - fromAge);
+      else if (mode === "down") f = Math.pow(0.99, age - fromAge);
+      pts.push(f);
+    }
+    const lo = Math.min(...pts, 1), hi = Math.max(...pts, 1);
+    const span = Math.max(0.0001, hi - lo);
+    const d = pts.map((f, i) => {
+      const x = pad + (i / Math.max(1, pts.length - 1)) * (W - pad * 2);
+      const y = H - pad - ((f - lo) / span) * (H - pad * 2);
+      return (i ? "L" : "M") + x.toFixed(1) + "," + y.toFixed(1);
+    }).join(" ");
+    const pct = Math.round((pts[pts.length - 1] - 1) * 100);
+    return { svg: `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" aria-hidden="true">` +
+      `<path d="${d}" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>`, pct: pct };
+  }
+
+  function curvePicker(label, obj, key, workKind, section, opt = {}) {
+    const fs = h("fieldset", "field-row");
+    fs.appendChild(h("legend", "detail-legend", label));
+    const wrap = h("div", "curve-row");
+    const name = "c" + ++uid;
+    const from = opt.fromAge || age();
+    const to = Math.min(65, Math.max(from + 1, Number(opt.toAge || 60)));
+    [["stat", "年齢に応じて"], ["flat", "いまのまま"], ["up", "上がる"], ["down", "下がる"]].forEach(([v, text]) => {
+      const c = curveSVG(v, workKind, from, to);
+      const lab = h("label", "curve-opt");
+      const i = h("input"); i.type = "radio"; i.name = name; i.value = v; i.checked = String(obj[key]) === v;
+      i.addEventListener("change", () => { obj[key] = v; changed(section, true, opt.answers); });
+      const box = h("span", "curve-box");
+      box.innerHTML = c.svg;
+      const cap = h("span", "curve-cap", text);
+      const num = h("span", "curve-num", c.pct === 0 ? `${from}歳→${to}歳 変わらない` : `${from}歳→${to}歳 ${c.pct > 0 ? "＋" : "−"}${Math.abs(c.pct)}%`);
+      lab.append(i, box, cap, num);
       wrap.appendChild(lab);
     });
     fs.appendChild(wrap);
@@ -248,7 +313,7 @@
       body: (box) => {
         box.appendChild(select("働き方", A, "work", opts("work"), "work", { text: true, answers: true }));
         box.appendChild(select("年収（額面・税込）", A, "income", opts("income"), "work", { text: true, answers: true }));
-        box.appendChild(radios("今後の年収の見込み", D.work, "growth", [{ v: "stat", label: "年齢に応じて" }, { v: "flat", label: "いまのまま" }, { v: "up", label: "上がる" }, { v: "down", label: "下がる" }], "work", { rerender: false, note: "「年齢に応じて」は、厚生労働省の統計の年齢別の賃金の形にならって増減させます（60歳以降は下の定年・再雇用の設定で計算）。上がる／下がる は年1%です" }));
+        box.appendChild(curvePicker("今後の年収の見込み", D.work, "growth", A.work, "work", { toAge: Math.min(60, Number(D.work.retireAge)), note: "線は、実際に計算に使う倍率から引いています。「年齢に応じて」は厚生労働省の統計の年齢別の賃金の形（57歳で頭打ち。60歳以降は下の定年・再雇用の設定で計算）。上がる／下がる は年1%です" }));
         box.appendChild(sub("定年・再雇用・退職金"));
         box.appendChild(select("仕事をやめる（定年の）年齢", D.work, "retireAge", [55, 60, 63, 65, 70, 75].map((v) => ({ v, label: `${v}歳` })), "work", { rerender: true }));
         box.appendChild(select("定年後の働き方（再雇用など）", D.work, "rehire", [{ v: 0, label: "働かない" }, { v: 50, label: "定年前の年収の5割" }, { v: 70, label: "定年前の年収の7割" }, { v: 100, label: "定年前と同じ" }], "work", { rerender: true }));
@@ -272,7 +337,7 @@
       body: (box) => {
         box.appendChild(select("働き方", A, "spouseWork", opts("spouseWork"), "spouseWork", { text: true, answers: true }));
         box.appendChild(select("年収（額面・税込）", A, "spouseIncome", opts("spouseIncome"), "spouseWork", { text: true, answers: true }));
-        box.appendChild(radios("今後の年収の見込み", D.spouseWork, "growth", [{ v: "stat", label: "年齢に応じて" }, { v: "flat", label: "いまのまま" }, { v: "up", label: "上がる" }, { v: "down", label: "下がる" }], "spouseWork", { rerender: false, note: "「年齢に応じて」は、厚生労働省の統計の年齢別の賃金の形にならいます" }));
+        box.appendChild(curvePicker("今後の年収の見込み", D.spouseWork, "growth", A.spouseWork, "spouseWork", { fromAge: Number(A.spouseAge), toAge: Math.min(60, Number(D.spouseWork.retireAge)), note: "線は、実際に計算に使う倍率から引いています" }));
         box.appendChild(select("今後の働き方", D.spouseWork, "plan", [
           { v: "same", label: "今と同じ" }, { v: "leave", label: "一時的に収入が減る（育休・時短など）" },
           { v: "quit", label: "仕事をやめる" }, { v: "return", label: "働き始める・復職する" }], "spouseWork", { text: true, rerender: true }));
@@ -417,6 +482,7 @@
           const k = ages[i];
           if (k === undefined) return;
           box.appendChild(sub(k < 0 ? `${i + 1}人目のお子さん（${-k}年後に生まれる予定）` : `${i + 1}人目のお子さん（いま${k}歳）`));
+          if (k <= 5) box.appendChild(radios("幼稚園（3〜5歳）", kd, "kinder", pubPri, "edu", { rerender: false, note: "0〜2歳の保育料は、自治体と世帯の所得で決まるため入れていません" }));
           if (k <= 11) box.appendChild(radios("小学校", kd, "elem", pubPri, "edu", { rerender: false }));
           if (k <= 14) box.appendChild(radios("中学校", kd, "junior", pubPri, "edu", { rerender: false }));
           if (k <= 17) box.appendChild(radios("高校", kd, "high", pubPri, "edu", { rerender: false }));

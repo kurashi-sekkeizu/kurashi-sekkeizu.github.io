@@ -38,6 +38,7 @@
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
 <script src="/assets/common.js"></script>
+<script src="/assets/data.js"></script>
 <script src="/assets/questions.js"></script>
 <script>
 (function () {
@@ -128,7 +129,7 @@
       if (q.type === "multi") {
         A[q.id] = [...document.querySelectorAll(`input[name="${q.id}"]:checked`)].map((i) => i.value);
       } else if (q.type === "select") {
-        A[q.id] = t.value === "" ? null : Number(t.value);
+        A[q.id] = t.value === "" ? null : (q.text ? t.value : Number(t.value));
       } else {
         A[q.id] = q.id === "kidsCount" ? Number(t.value) : t.value;
         // 人数を変えたら、年齢の欄も同じ数にそろえる（減らしたときに古い値が残って先へ進めなくなる）

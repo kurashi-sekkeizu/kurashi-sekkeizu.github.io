@@ -34,8 +34,8 @@
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
 <script src="/assets/common.js"></script>
-<script src="/assets/questions.js"></script>
 <script src="/assets/data.js"></script>
+<script src="/assets/questions.js"></script>
 <script src="/assets/calc.js"></script>
 <script src="/assets/charts.js"></script>
 <script src="/assets/summary.js"></script>
@@ -56,10 +56,10 @@
   const FIELD_GUIDE = {
     insurance: { label: "保険", to: "estimate", text: "分野別の目安（万一のとき・働けなくなったとき・保険の種類ごとの優先度）" },
     invest: { label: "貯蓄・投資", to: "estimate", text: "分野別の目安（老後の不足額と、積立の目安）" },
-    home: { label: "住まい", to: "costs-block", text: "毎月の支出の「住居費」と、年ごとの表（修繕・固定資産税）" },
-    edu: { label: "子どもの教育費", to: "timeline-block", text: "ライフプラン表（入学の年）と、年ごとの表の「教育費」" },
-    retire: { label: "老後のお金", to: "viz-block", text: "貯蓄残高の推移と、分野別の目安の「老後の不足額」" },
-    fixed: { label: "毎月の固定費", to: "compare-block", text: "家計調査の平均との見比べ" },
+    home: { label: "住まい", to: "costs-block", text: "⑤ 毎月の支出の「住居費」と、年ごとの表（修繕・固定資産税）" },
+    edu: { label: "子どもの教育費", to: "timeline-block", text: "④ ライフプラン表（入学の年）と、年ごとの表の「教育費」" },
+    retire: { label: "老後のお金", to: "viz-block", text: "② 貯蓄残高の推移と、分野別の目安の「老後の不足額」" },
+    fixed: { label: "毎月の固定費", to: "compare-block", text: "⑥ 家計調査の平均との見比べ" },
   };
 
   function fieldsNav(A) {
@@ -155,41 +155,15 @@
 
       ${fieldsNav(A)}
 
-      <section class="section" id="forecast-block">
+<section class="section" id="forecast-block">
         <h2 class="section-title">① 見通し</h2>
         <p class="small muted" style="margin-bottom:8px">言葉がわからないときは <a href="/learn/">やさしく学ぶ</a> で確認できます。</p>
         <div id="forecast"></div>
         <div id="advice" class="section" style="margin-top:12px"></div>
       </section>
 
-      <section class="section" id="costs-block">
-        <h2 class="section-title">② 計算に使っている毎月の支出（いま）</h2>
-        <p class="small">実際と<b>月2万円以上違う項目</b>は、押して「くわしく入力で直す」へ。</p>
-        <div id="costs"></div>
-        <details class="fold" id="cost-table-fold" style="margin-top:12px">
-          <summary>年ごとに見る（費目×年の表）</summary>
-          <div class="body" id="cost-table"></div>
-        </details>
-      </section>
-
-      <section class="section" id="compare-block">
-        <h2 class="section-title">③ 家計調査の平均と見比べる</h2>
-        <p class="small">同じくらいの世帯の平均と並べます。<b>多い・少ないは、良い・悪いではありません。</b></p>
-        <div id="compare"></div>
-      </section>
-
-      <section class="section">
-        <h2 class="section-title">④ まずやること${top3.length ? `　${top3.length}つ` : ""}</h2>
-        ${top3.length ? top3.map(todoCard).join("") : '<p class="card">いま特に急ぐことは見つかりませんでした。</p>'}
-      </section>
-
-      <section class="section" id="timeline-block">
-        <h2 class="section-title">⑤ ライフプラン表</h2>
-        <div id="timeline"></div>
-      </section>
-
-      <section class="section" id="viz-block">
-        <h2 class="section-title">⑥ お金の流れ</h2>
+<section class="section" id="viz-block">
+        <h2 class="section-title">② お金の流れ</h2>
         <p class="small muted" style="margin-bottom:8px">グラフを触る（またはキーボードの矢印キー）と、その年の内訳が出ます。</p>
         <div id="viz"></div>
         <details class="fold" style="margin-top:8px">
@@ -209,7 +183,33 @@
         ${r.incomeCheck && r.incomeCheck.far ? `<p class="note warn small">⚠ いまの年収は、同じ年齢の平均（約${r.incomeCheck.avg}万円）の<b>${r.incomeCheck.ratio}倍</b>です。「年齢に応じて」は<b>平均と同じ増え方の割合</b>を、いまの年収に掛けています（平均の金額に置きかえてはいません）。平均から離れているほど、実際とずれやすくなります。<button type="button" class="linkbtn" data-fix-work>「いまのまま」に変える</button></p>` : ""}
       </section>
 
-      <section class="section" id="notinc-block">
+      <section class="section">
+        <h2 class="section-title">③ まずやること${top3.length ? `　${top3.length}つ` : ""}</h2>
+        ${top3.length ? top3.map(todoCard).join("") : '<p class="card">いま特に急ぐことは見つかりませんでした。</p>'}
+      </section>
+
+<section class="section" id="timeline-block">
+        <h2 class="section-title">④ ライフプラン表</h2>
+        <div id="timeline"></div>
+      </section>
+
+<section class="section" id="costs-block">
+        <h2 class="section-title">⑤ 計算に使っている毎月の支出（いま）</h2>
+        <p class="small">グラフのもとになっている、いまの支出です。実際と<b>月2万円以上違う項目</b>は、押して「くわしく入力で直す」へ。</p>
+        <div id="costs"></div>
+        <details class="fold" id="cost-table-fold" style="margin-top:12px">
+          <summary>年ごとに見る（費目×年の表）</summary>
+          <div class="body" id="cost-table"></div>
+        </details>
+      </section>
+
+<section class="section" id="compare-block">
+        <h2 class="section-title">⑥ 家計調査の平均と見比べる</h2>
+        <p class="small">同じくらいの世帯の平均と並べます。<b>多い・少ないは、良い・悪いではありません。</b></p>
+        <div id="compare"></div>
+      </section>
+
+<section class="section" id="notinc-block">
         <h2 class="section-title">⑦ この計算に入れていないこと</h2>
         <div id="notinc"></div>
       </section>

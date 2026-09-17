@@ -33,6 +33,7 @@
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
 <script src="/assets/common.js"></script>
+<script src="/assets/data.js"></script>
 <script src="/assets/questions.js"></script>
 <script>
 (function () {
@@ -172,7 +173,7 @@
       } else if (q.type === "select") {
         const v = document.getElementById("sel").value;
         if (v === "") return err("選んでください。");
-        commit(q, Number(v));
+        commit(q, q.text ? v : Number(v));
       } else if (q.type === "ages") {
         const n = Number(A.kidsCount) || 0;
         const v = Array.from({ length: n }, (_, i) => document.getElementById("age-" + i).value);

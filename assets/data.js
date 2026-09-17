@@ -304,6 +304,27 @@ window.KSDATA = {
       "url": "https://www.mhlw.go.jp/toukei/itiran/roudou/chingin/kouzou/z2025/index.html",
       "year": "令和7年（2025年）調査・2026年3月24日公表",
       "checked": "2026-09-16"
+    },
+    "soumu_kakei_gaiyou": {
+      "name": "家計調査年報（家計収支編）令和7年 家計調査の概要（地方の分類基準）",
+      "publisher": "総務省統計局",
+      "url": "https://www.stat.go.jp/data/kakei/2025np/pdf/gaiyou.pdf",
+      "year": "令和7年（2025年）",
+      "checked": "2026-09-17"
+    },
+    "soumu_juutaku_2023": {
+      "name": "令和5年住宅・土地統計調査 住宅及び世帯に関する基本集計 第112-2表",
+      "publisher": "総務省統計局",
+      "url": "https://www.e-stat.go.jp/stat-search/files?stat_infid=000040210046",
+      "year": "令和5年（2023年）",
+      "checked": "2026-09-17"
+    },
+    "soumu_bukka_chiiki": {
+      "name": "消費者物価地域差指数（小売物価統計調査 構造編）2024年結果",
+      "publisher": "総務省統計局",
+      "url": "https://www.stat.go.jp/data/kouri/kouzou/pdf/g_2024.pdf",
+      "year": "2024年（令和6年）",
+      "checked": "2026-09-17"
     }
   },
   "figures": {
@@ -1405,5 +1426,350 @@ window.KSDATA = {
       "civil"
     ],
     "_levelCompare_note": "いまの年収が平均からどれくらい離れているかを示してよい働き方。パート・時短・育休は労働時間が違うため水準の比較はしない"
+  },
+  "region": {
+    "_readme": "地域による違い。生活費は家計調査の地方別（都道府県別の集計は存在しない）、家賃は住宅・土地統計調査の都道府県別（民営借家）。",
+    "regionSurvey": {
+      "name": "家計調査（家計収支編）",
+      "year": "2025年（令和7年）平均",
+      "src": "soumu_kakei_2025",
+      "unit": "円/月",
+      "note": "二人以上の世帯。10大費目は用途分類"
+    },
+    "regionDef": {
+      "src": "soumu_kakei_gaiyou",
+      "note": "家計調査の地方の分類基準（10地方）"
+    },
+    "rentSurvey": {
+      "name": "住宅・土地統計調査 住宅及び世帯に関する基本集計 第112-2表",
+      "year": "令和5年（2023年10月1日現在）",
+      "src": "soumu_juutaku_2023",
+      "unit": "円/月",
+      "note": "民営借家（専用住宅）の1か月当たり家賃の平均。家賃0円を含む。共益費・管理費は含まない"
+    },
+    "national": {
+      "total": 314001,
+      "persons": 2.87,
+      "headAge": 60.7,
+      "rent": 64819
+    },
+    "regions": {
+      "hokkaido": {
+        "label": "北海道",
+        "persons": 2.69,
+        "headAge": 60.3,
+        "total": 294154,
+        "items": {
+          "food": 80138,
+          "housing": 20598,
+          "utility": 31558,
+          "furniture": 11522,
+          "clothes": 7775,
+          "medical": 13252,
+          "transport_comm": 46284,
+          "education": 5168,
+          "leisure": 26131,
+          "other": 51727
+        },
+        "ownerRate": 75.1,
+        "rentPayingShare": 24.3
+      },
+      "tohoku": {
+        "label": "東北",
+        "persons": 2.95,
+        "headAge": 61.9,
+        "total": 298991,
+        "items": {
+          "food": 83580,
+          "housing": 14694,
+          "utility": 31279,
+          "furniture": 11888,
+          "clothes": 7130,
+          "medical": 14118,
+          "transport_comm": 49740,
+          "education": 5647,
+          "leisure": 25084,
+          "other": 55832
+        },
+        "ownerRate": 89.5,
+        "rentPayingShare": 10.1
+      },
+      "kanto": {
+        "label": "関東",
+        "persons": 2.86,
+        "headAge": 60.7,
+        "total": 337946,
+        "items": {
+          "food": 96893,
+          "housing": 21178,
+          "utility": 23782,
+          "furniture": 13478,
+          "clothes": 11261,
+          "medical": 18052,
+          "transport_comm": 45760,
+          "education": 15764,
+          "leisure": 36151,
+          "other": 55628
+        },
+        "ownerRate": 88.0,
+        "rentPayingShare": 11.0
+      },
+      "hokuriku": {
+        "label": "北陸",
+        "persons": 2.99,
+        "headAge": 59.9,
+        "total": 330342,
+        "items": {
+          "food": 89083,
+          "housing": 17302,
+          "utility": 30168,
+          "furniture": 14209,
+          "clothes": 8940,
+          "medical": 14828,
+          "transport_comm": 59374,
+          "education": 6638,
+          "leisure": 29027,
+          "other": 60773
+        },
+        "ownerRate": 94.2,
+        "rentPayingShare": 5.5
+      },
+      "tokai": {
+        "label": "東海",
+        "persons": 2.94,
+        "headAge": 59.4,
+        "total": 312195,
+        "items": {
+          "food": 87552,
+          "housing": 15519,
+          "utility": 24158,
+          "furniture": 13221,
+          "clothes": 9873,
+          "medical": 14429,
+          "transport_comm": 48007,
+          "education": 13405,
+          "leisure": 32208,
+          "other": 53825
+        },
+        "ownerRate": 90.7,
+        "rentPayingShare": 9.1
+      },
+      "kinki": {
+        "label": "近畿",
+        "persons": 2.84,
+        "headAge": 61.5,
+        "total": 304226,
+        "items": {
+          "food": 89846,
+          "housing": 18545,
+          "utility": 23254,
+          "furniture": 12485,
+          "clothes": 9305,
+          "medical": 15553,
+          "transport_comm": 40688,
+          "education": 12624,
+          "leisure": 28687,
+          "other": 53240
+        },
+        "ownerRate": 87.8,
+        "rentPayingShare": 11.4
+      },
+      "chugoku": {
+        "label": "中国",
+        "persons": 2.88,
+        "headAge": 60.6,
+        "total": 294540,
+        "items": {
+          "food": 83674,
+          "housing": 16582,
+          "utility": 24518,
+          "furniture": 12145,
+          "clothes": 9586,
+          "medical": 14750,
+          "transport_comm": 43894,
+          "education": 8610,
+          "leisure": 26158,
+          "other": 54623
+        },
+        "ownerRate": 86.3,
+        "rentPayingShare": 11.5
+      },
+      "shikoku": {
+        "label": "四国",
+        "persons": 2.78,
+        "headAge": 61.9,
+        "total": 286138,
+        "items": {
+          "food": 79472,
+          "housing": 11607,
+          "utility": 23178,
+          "furniture": 12794,
+          "clothes": 8575,
+          "medical": 14593,
+          "transport_comm": 45752,
+          "education": 9013,
+          "leisure": 25864,
+          "other": 55289
+        },
+        "ownerRate": 91.1,
+        "rentPayingShare": 9.0
+      },
+      "kyushu": {
+        "label": "九州",
+        "persons": 2.87,
+        "headAge": 60.6,
+        "total": 281569,
+        "items": {
+          "food": 81418,
+          "housing": 18373,
+          "utility": 21173,
+          "furniture": 12294,
+          "clothes": 7862,
+          "medical": 13248,
+          "transport_comm": 43816,
+          "education": 7161,
+          "leisure": 24751,
+          "other": 51473
+        },
+        "ownerRate": 82.6,
+        "rentPayingShare": 14.8
+      },
+      "okinawa": {
+        "label": "沖縄",
+        "persons": 3.01,
+        "headAge": 59.2,
+        "total": 235742,
+        "items": {
+          "food": 77319,
+          "housing": 21822,
+          "utility": 22549,
+          "furniture": 9248,
+          "clothes": 5953,
+          "medical": 10636,
+          "transport_comm": 33057,
+          "education": 4656,
+          "leisure": 13802,
+          "other": 36700
+        },
+        "ownerRate": 61.7,
+        "rentPayingShare": 34.1
+      }
+    },
+    "prefToRegion": {
+      "北海道": "hokkaido",
+      "青森県": "tohoku",
+      "岩手県": "tohoku",
+      "宮城県": "tohoku",
+      "秋田県": "tohoku",
+      "山形県": "tohoku",
+      "福島県": "tohoku",
+      "茨城県": "kanto",
+      "栃木県": "kanto",
+      "群馬県": "kanto",
+      "埼玉県": "kanto",
+      "千葉県": "kanto",
+      "東京都": "kanto",
+      "神奈川県": "kanto",
+      "山梨県": "kanto",
+      "長野県": "kanto",
+      "新潟県": "hokuriku",
+      "富山県": "hokuriku",
+      "石川県": "hokuriku",
+      "福井県": "hokuriku",
+      "岐阜県": "tokai",
+      "静岡県": "tokai",
+      "愛知県": "tokai",
+      "三重県": "tokai",
+      "滋賀県": "kinki",
+      "京都府": "kinki",
+      "大阪府": "kinki",
+      "兵庫県": "kinki",
+      "奈良県": "kinki",
+      "和歌山県": "kinki",
+      "鳥取県": "chugoku",
+      "島根県": "chugoku",
+      "岡山県": "chugoku",
+      "広島県": "chugoku",
+      "山口県": "chugoku",
+      "徳島県": "shikoku",
+      "香川県": "shikoku",
+      "愛媛県": "shikoku",
+      "高知県": "shikoku",
+      "福岡県": "kyushu",
+      "佐賀県": "kyushu",
+      "長崎県": "kyushu",
+      "熊本県": "kyushu",
+      "大分県": "kyushu",
+      "宮崎県": "kyushu",
+      "鹿児島県": "kyushu",
+      "沖縄県": "okinawa"
+    },
+    "rentByPref": {
+      "北海道": 50647,
+      "青森県": 45427,
+      "岩手県": 48300,
+      "宮城県": 56106,
+      "秋田県": 46873,
+      "山形県": 49108,
+      "福島県": 50491,
+      "茨城県": 51905,
+      "栃木県": 50428,
+      "群馬県": 48745,
+      "埼玉県": 65198,
+      "千葉県": 65176,
+      "東京都": 93973,
+      "神奈川県": 75720,
+      "新潟県": 50540,
+      "富山県": 50046,
+      "石川県": 49676,
+      "福井県": 50934,
+      "山梨県": 51102,
+      "長野県": 51579,
+      "岐阜県": 49741,
+      "静岡県": 55791,
+      "愛知県": 60115,
+      "三重県": 51564,
+      "滋賀県": 55295,
+      "京都府": 61585,
+      "大阪府": 63912,
+      "兵庫県": 64495,
+      "奈良県": 56990,
+      "和歌山県": 47806,
+      "鳥取県": 47759,
+      "島根県": 49334,
+      "岡山県": 52073,
+      "広島県": 55774,
+      "山口県": 47797,
+      "徳島県": 48945,
+      "香川県": 49422,
+      "愛媛県": 47120,
+      "高知県": 46865,
+      "福岡県": 55710,
+      "佐賀県": 50991,
+      "長崎県": 49965,
+      "熊本県": 49984,
+      "大分県": 46526,
+      "宮崎県": 45755,
+      "鹿児島県": 45791,
+      "沖縄県": 52718
+    },
+    "caveats": [
+      {
+        "text": "地域による差の大半は、物価の差ではなく暮らし方の差です。純粋な物価の差は、いちばん高い都道府県といちばん低い都道府県で1.08倍にとどまります。",
+        "url": "https://www.stat.go.jp/data/kouri/kouzou/pdf/g_2024.pdf"
+      },
+      {
+        "text": "家計調査には都道府県別の集計がありません（標本の規模が足りないため）。そのため、生活費は10の地方に丸めて見ています。",
+        "url": "https://www.stat.go.jp/data/kakei/search/before.html"
+      },
+      {
+        "text": "家計調査の地方区分は、一般的な感覚と違うことがあります（山梨県・長野県は「関東」、新潟県は「北陸」、三重県は「東海」、沖縄県は九州と別）。",
+        "url": "https://www.stat.go.jp/data/kakei/2025np/pdf/gaiyou.pdf"
+      },
+      {
+        "text": "家賃は令和5年（2023年）の調査で、2年前の水準です。その後の家賃の動きは反映されていません。",
+        "url": "https://www.e-stat.go.jp/stat-search/files?stat_infid=000040210046"
+      }
+    ]
   }
 };

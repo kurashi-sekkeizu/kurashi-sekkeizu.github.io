@@ -57,6 +57,19 @@
   </section>
 
   <section class="section">
+    <h2 class="section-title">住んでいる地域による違い</h2>
+    <p class="small">都道府県を答えると、<b>家賃</b>（住宅・土地統計調査の民営借家の平均）と、<b>生活費の目安</b>（家計調査の地方別の水準）に反映します。
+      <b>地域による差の大半は、物価の差ではなく暮らし方の差です。</b></p>
+    <div class="table-wrap">
+      <table class="data text">
+        <thead><tr><th>地方</th><th>1か月の消費支出（二人以上の世帯）</th><th>全国を1としたときの水準</th></tr></thead>
+        <tbody id="region-rows"></tbody>
+      </table>
+    </div>
+    <p class="small muted" id="region-note"></p>
+  </section>
+
+  <section class="section">
     <h2 class="section-title">公的な保障・年金</h2>
     <div class="table-wrap">
       <table class="data text">
@@ -114,7 +127,7 @@
   const dflt = KSC.detailDefaults({ age: 40, kids: "no", home: "loan", homeType: "house", cars: "1" }, 0);
   const E = D.edu;
   document.getElementById("home-rows").innerHTML = [
-    ["家賃（「わからない」のとき）", "回答の帯の真ん中。帯も選んでいなければ " + man(dflt.rent.monthly) + "／月"],
+    ["家賃（「わからない」のとき）", "回答の帯の真ん中。帯を選んでいなければ<b>お住まいの都道府県の民営借家の平均</b>（答えていなければ全国の目安）"],
     ["住宅ローンの返済", "月 " + man(dflt.loan.monthly) + "・" + dflt.loan.endAge + "歳完済・団信あり"],
     ["戸建ての修繕", "外壁・屋根の塗装 " + man(dflt.house.paintCost) + "（" + dflt.house.paintEvery + "年ごと）／水回り・給湯器 " + man(dflt.house.waterCost) + "（" + dflt.house.waterEvery + "年ごと）"],
     ["固定資産税など", "戸建て 年 " + man(dflt.house.tax) + "／マンションは管理費・修繕積立金 月 " + man(dflt.mansion.monthly) + "（10年ごとに " + dflt.mansion.raise + "% 上がる前提）"],
@@ -140,6 +153,18 @@
     ["葬儀などの費用", man(D.funeral)],
     ["計算する年齢の上限", D.endAge + "歳まで"],
   ].map(row).join("");
+
+  // 住んでいる地域
+  const R = window.KSDATA && window.KSDATA.region;
+  if (R && R.regions) {
+    const nat = R.national.total;
+    document.getElementById("region-rows").innerHTML = Object.values(R.regions)
+      .sort((x, y) => y.total - x.total)
+      .map((g) => row([esc(g.label), g.total.toLocaleString("ja-JP") + "円", (g.total / nat).toFixed(2) + "倍"])).join("")
+      + row(["<b>全国</b>", "<b>" + nat.toLocaleString("ja-JP") + "円</b>", "1.00倍"]);
+    document.getElementById("region-note").textContent =
+      (R.caveats || []).map((c) => c.text).join(" ");
+  }
 
   // 計算の前提
   const empty = KS.empty();

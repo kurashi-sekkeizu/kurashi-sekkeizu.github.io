@@ -144,6 +144,26 @@
     return v === "yes";
   }
 
+  // 住んでいる地域。家賃と生活費の「わからない」のときの目安に使う。
+  // データが無ければ null を返し、全国の目安のままにする（推測しない）
+  function regionOf(answers) {
+    const R = window.KSDATA && window.KSDATA.region;
+    const pref = answers.pref;
+    if (!R || !pref || pref === "unknown") return null;
+    const key = R.prefToRegion ? R.prefToRegion[pref] : null;
+    const g = key && R.regions ? R.regions[key] : null;
+    const rent = R.rentByPref ? R.rentByPref[pref] : null;
+    if (!g && !rent) return null;
+    return {
+      pref: pref,
+      key: key,
+      label: g ? g.label : null,
+      // 全国に対する生活費の水準（1.0 が全国並み）
+      livingFactor: g && R.national && R.national.total ? g.total / R.national.total : 1,
+      rentMan: rent ? Math.round((rent / 10000) * 10) / 10 : null,   // 円/月 → 万円/月
+    };
+  }
+
   function takeHome(income) {
     const y = Number(income) || 0;
     if (y < 200) return 0.84;
@@ -165,6 +185,15 @@
   };
 
   // くわしく入力の初期値（かんたんの回答から作る）
+  // 都道府県から、民営借家の平均家賃（万円/月）を引く
+  function regionRent(answers) {
+    const R = window.KSDATA && window.KSDATA.region;
+    const pref = answers.pref;
+    if (!R || !R.rentByPref || !pref || pref === "unknown") return null;
+    const yen = R.rentByPref[pref];
+    return yen ? Math.round((yen / 10000) * 10) / 10 : null;
+  }
+
   function detailDefaults(a, nPlanned) {
     const plan = EDU_PLAN[a.eduPlan] || EDU_PLAN.unknown;
     const nKids = (a.kids === "yes" ? Number(a.kidsCount) || 0 : 0) + (Number(nPlanned) || 0);
@@ -187,7 +216,7 @@
         monthly: 10, endAge: 65, balance: 2000,
         dansin: "yes", bonus: 0, prepayOn: "no", prepayAge: Number(a.age) + 3, prepayAmount: 100,
       },
-      rent: { monthly: Q.mid("rent", a) ?? 8, renewal: 1 },
+      rent: { monthly: Q.mid("rent", a) ?? regionRent(a) ?? 8, renewal: 1 },
       move: { on: "no", age: Number(a.age) + 5, cost: 100, monthly: 10 },
       assets: { cash: null, invest: null, monthly: 0 },
       loans: [],
@@ -246,10 +275,19 @@
     // 子・配偶者のほかに、生活費をともにしている家族（同居の親など）
     const others = Number(Q.mid("others", a) || 0);
     const household = 1 + (spouse ? 1 : 0) + kidsNow.length + others;
+    const region = regionOf(a);
     let living = Q.mid("living", a);
     let livingSource = "answer";
     if (D.set.living) { living = LIVING_ITEMS.reduce((t, it) => t + Number(D.living[it.key] || 0), 0); livingSource = "detail"; }
-    else if (living == null) { living = Math.min(40, 10 + household * 3.5); provisional.push("毎月の生活費"); livingSource = "provisional"; }
+    else if (living == null) {
+      // 住んでいる地域の水準を掛ける（地域を答えていなければ全国のまま）
+      const base = Math.min(40, 10 + household * 3.5);
+      living = Math.round(base * (region ? region.livingFactor : 1) * 2) / 2;
+      provisional.push(region && region.label
+        ? `毎月の生活費（${region.label}の平均の水準で仮置き）`
+        : "毎月の生活費");
+      livingSource = "provisional";
+    }
     let savings = Q.mid("savings", a);
     const assetsSplit = D.set.assets && D.assets.cash !== null && D.assets.invest !== null;
     if (assetsSplit) savings = Number(D.assets.cash) + Number(D.assets.invest);
@@ -277,7 +315,12 @@
     if (D.cars.length && !D.set.car) provisional.push("車（10年ごと・250万円で買い替え、維持費 年35万円で仮置き）");
     if (!D.set.home) {
       if (home === "loan") provisional.push("住宅ローン（返済 月10万円・65歳完済・団信ありで仮置き）");
-      if (renting && (a.rent === undefined || a.rent === "unknown")) provisional.push("家賃（月8万円で仮置き）");
+      if (renting && (a.rent === undefined || a.rent === "unknown")) {
+        const rr = regionRent(a);
+        provisional.push(rr
+          ? `家賃（${a.pref}の民営借家の平均 月${KS.man(rr)}で仮置き）`
+          : `家賃（月${KS.man(D.rent.monthly)}で仮置き）`);
+      }
       if (owns && homeType === "house") provisional.push("修繕費・固定資産税（築10年・塗装12年ごと120万円、税 年12万円などで仮置き）");
       if (owns && homeType === "mansion") provisional.push("修繕積立金・管理費・固定資産税（月3万円、税 年10万円で仮置き）");
     }
@@ -806,7 +849,7 @@
           : home === "family" ? "answer"
           : renting && a.rent && a.rent !== "unknown" ? "answer"
           : "provisional",
-        note: (home === "loan" ? `住宅ローンの返済（月${KS.man(loanMonthly)}・${loanEndAge}歳まで${Number(D.loan.bonus) > 0 ? "・ボーナス返済を含む" : ""}${loanView ? `。借入${KS.man(D.loan.borrowed)}・${loanView.years}年・金利${D.loan.rate}%から計算` : ""}。返済額は変わらない前提で、金利の上昇や住宅ローン控除は計算に入れていません）＋` : renting ? "家賃" : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
+        note: (home === "loan" ? `住宅ローンの返済（月${KS.man(loanMonthly)}・${loanEndAge}歳まで${Number(D.loan.bonus) > 0 ? "・ボーナス返済を含む" : ""}${loanView ? `。借入${KS.man(D.loan.borrowed)}・${loanView.years}年・金利${D.loan.rate}%から計算` : ""}。返済額は変わらない前提で、金利の上昇や住宅ローン控除は計算に入れていません）＋` : renting ? (region && region.rentMan && (a.rent === undefined || a.rent === "unknown") ? `家賃（${a.pref}の民営借家の平均から）` : "家賃") : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
       },
       edu: { monthly: p0.exp.edu / 12, source: kids.length ? (D.set.edu ? "detail" : a.eduPlan === "unknown" ? "provisional" : "answer") : "none", note: kids.length ? "今年の学年と進学の方針から" : "お子さんなし" },
       car: { monthly: D.cars.reduce((t, c) => t + (age < Number(c.until) ? Number(c.upkeep) : 0), 0) / 12, source: D.cars.length ? (D.set.car ? "detail" : "provisional") : "none", note: D.cars.length ? "維持費（税金・保険・車検・ガソリンなど）。買い替えは年表の時期にまとめて計上" : "車なし" },
@@ -939,7 +982,7 @@
     const wageApplied = W.growth === "stat" && wageFactor(work, age, age + 1) !== null;
     const wageCapped = wageApplied && age >= wageCapAge();
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, loanView, incomeCheck, wageApplied, wageCapped, householdNow, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, loanView, region, incomeCheck, wageApplied, wageCapped, householdNow, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
   }
 
   function round100(n) {

@@ -162,6 +162,16 @@
       react: () => "ありがとうございます。生まれたあとの教育費と児童手当を、年表に入れます。",
     },
     {
+      id: "pref", type: "select", text: true, required: true,
+      label: "お住まいの都道府県は？",
+      hint: "家賃と生活費の目安に使います。市区町村は聞きません。",
+      why: "家賃は地域で2倍以上ちがい、生活費も地域で差があるためです。",
+      help: { title: "何に使いますか？",
+        body: "家賃を「わからない」と答えたときに、その都道府県の民営借家の平均を使います。生活費を「わからない」と答えたときは、家計調査の地方別の水準で調整します。地域による差の大半は物価の差ではなく暮らし方の差なので、目安として見てください。",
+        link: "/assumptions/", linkText: "使っている金額を見る" },
+      options: [],   // 下で都道府県から作る
+    },
+    {
       id: "others", type: "single", required: true,
       label: "ほかに、生活費をともにしている家族はいますか？",
       hint: "同居している親など。配偶者・パートナーとお子さんは、ここには含めません。",
@@ -371,6 +381,17 @@
   ];
 
   const byId = Object.fromEntries(QUESTIONS.map((q) => [q.id, q]));
+
+  // 都道府県の選択肢は data/region.json から作る（コードに直書きしない）
+  (function fillPref() {
+    const q = byId.pref;
+    if (!q) return;
+    const R = window.KSDATA && window.KSDATA.region;
+    const names = R && R.prefToRegion ? Object.keys(R.prefToRegion) : [];
+    q.options = names.map((n) => ({ v: n, label: n })).concat([{ v: "unknown", label: "答えない" }]);
+    if (!names.length) { q.required = false; q.when = () => false; }   // データが無いときは聞かない
+  })();
+
 
   function visible(answers) {
     return QUESTIONS.filter((q) => !q.when || q.when(answers));
