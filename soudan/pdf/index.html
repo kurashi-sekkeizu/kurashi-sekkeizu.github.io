@@ -43,14 +43,16 @@
       </form>
 
       <div class="section stack">
-        <button type="button" class="btn" id="dl">📄 PDFをダウンロード</button>
-        <button type="button" class="btn secondary" id="print">🖨 印刷する</button>
-        <p class="muted small">初回は準備に数秒かかります。</p>
+        <button type="button" class="btn" id="print">📄 PDFで保存する（印刷画面が開きます）</button>
+        <p class="muted small">印刷画面の「送信先」や「プリンタ」で <b>PDF</b> を選ぶと、ファイルとして保存できます。そのまま紙に印刷することもできます。</p>
       </div>
-      <div id="fail" class="note warn section" hidden role="alert">
-        <p><b>⚠ PDFを作れませんでした</b><br>「印刷する」を押し、印刷先で「PDFに保存」を選ぶと保存できます。</p>
-        <p class="small" style="margin:0">（プロトタイプでは、PDFファイルを直接作る機能は未実装です。この表示は失敗時の案内の見本です。）</p>
-      </div>
+      <details class="fold section" id="howto">
+        <summary>端末ごとの保存のしかた</summary>
+        <div class="body">
+          <ul class="small" id="howto-list"></ul>
+          <p class="small muted" style="margin:0">うまくいかないときは、この画面をそのまま相談の場で見せても大丈夫です。<b>内容はこの端末の中だけにあり、どこにも送信されません。</b></p>
+        </div>
+      </details>
 
       <h2 class="section-title section">印刷イメージ（下がPDFになります）</h2>
     </div>
@@ -112,11 +114,21 @@
   }
 
   document.getElementById("print").addEventListener("click", () => window.print());
-  document.getElementById("dl").addEventListener("click", () => {
-    const f = document.getElementById("fail");
-    f.hidden = false;
-    f.scrollIntoView({ behavior: "smooth", block: "center" });
-  });
+
+  // 端末ごとの手順。いま見ている端末のものを先頭に出す（判定を外しても全部読める形にする）
+  const ua = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/.test(ua);
+  const HOWTO = [
+    { key: "ios", label: "iPhone・iPad（Safari）", body: "上のボタン → 表示された画面の右上の <b>共有</b>（□に↑）→「<b>ファイルに保存</b>」。“プリント”の画面から共有を押すとPDFになります。" },
+    { key: "android", label: "Android（Chrome）", body: "上のボタン → 画面上部の「<b>送信先</b>」を押して「<b>PDF形式で保存</b>」を選ぶ → 保存。" },
+    { key: "pc", label: "パソコン（Windows・Mac）", body: "上のボタン → 「送信先」「プリンタ」で「<b>PDFに保存</b>」（Macは左下の「PDF」）を選ぶ → 保存。" },
+  ];
+  const mine = isIOS ? "ios" : isAndroid ? "android" : "pc";
+  document.getElementById("howto-list").innerHTML = HOWTO
+    .sort((a, b) => (a.key === mine ? -1 : b.key === mine ? 1 : 0))
+    .map((h) => `<li><b>${esc(h.label)}</b>${h.key === mine ? "（お使いの端末）" : ""}<br>${h.body}</li>`).join("");
+  document.getElementById("howto").open = true;
 
   renderMemo();
 })();
