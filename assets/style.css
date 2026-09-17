@@ -426,6 +426,10 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 
 .fc-reason { white-space: pre-line; }
 
+/* 選んだ分野への案内 */
+.fields-nav-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .92rem; }
+.fields-nav-list li { line-height: 1.7; }
+
 /* この計算に入れていないこと */
 .ni-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
 .ni-list li { display: flex; gap: 8px; align-items: baseline; font-size: .9rem; line-height: 1.7; }

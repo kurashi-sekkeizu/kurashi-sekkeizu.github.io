@@ -2,7 +2,7 @@
  * 正本は data/*.json です。`python3 scripts/build_data.py` で作り直します。
  */
 window.KSDATA = {
-  "generated": "2026-09-16",
+  "generated": "2026-09-17",
   "sources": {
     "nenkin_izoku_kiso": {
       "name": "遺族基礎年金（受給要件・対象者・年金額）",

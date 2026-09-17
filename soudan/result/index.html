@@ -52,6 +52,29 @@
   app.hidden = false;
   const openState = new Set();
 
+  // 「今日は、どのことを考えたいですか？」で選んだ分野から、見る場所へ案内する
+  const FIELD_GUIDE = {
+    insurance: { label: "保険", to: "estimate", text: "分野別の目安（万一のとき・働けなくなったとき・保険の種類ごとの優先度）" },
+    invest: { label: "貯蓄・投資", to: "estimate", text: "分野別の目安（老後の不足額と、積立の目安）" },
+    home: { label: "住まい", to: "costs-block", text: "毎月の支出の「住居費」と、年ごとの表（修繕・固定資産税）" },
+    edu: { label: "子どもの教育費", to: "timeline-block", text: "ライフプラン表（入学の年）と、年ごとの表の「教育費」" },
+    retire: { label: "老後のお金", to: "viz-block", text: "貯蓄残高の推移と、分野別の目安の「老後の不足額」" },
+    fixed: { label: "毎月の固定費", to: "compare-block", text: "家計調査の平均との見比べ" },
+  };
+
+  function fieldsNav(A) {
+    const chosen = (A.fields || []).filter((f) => FIELD_GUIDE[f]);
+    if (!chosen.length) return "";
+    const items = chosen.map((f) => {
+      const g = FIELD_GUIDE[f];
+      return `<li><b>${esc(g.label)}</b> → <button type="button" class="linkbtn" data-goto="${g.to}">${esc(g.text)}</button></li>`;
+    }).join("");
+    return `<div class="note info" id="fields-nav">
+      <p style="margin:0 0 6px">はじめに選んだことは、次のところで見られます。<b>まずやること</b>も、選んだ分野を先に出しています。</p>
+      <ul class="fields-nav-list">${items}</ul>
+    </div>`;
+  }
+
   // 収入をどう見込んでいるかを、1行で言う
   function incomeAssumption(r) {
     const mode = (r.detail.work && r.detail.work.growth) || "flat";
@@ -129,6 +152,8 @@
       <h1>あなたの設計図</h1>
       <p class="muted" style="margin-bottom:6px">${dateStr}時点の目安</p>
       ${r.provisional.length ? `<p class="note warn">⚠ 仮の値を含みます：${esc(r.provisional.join("、"))}</p>` : ""}
+
+      ${fieldsNav(A)}
 
       <section class="section" id="forecast-block">
         <h2 class="section-title">① 見通し</h2>
@@ -240,6 +265,17 @@
     }));
     app.querySelectorAll("details.fold").forEach((el) => el.addEventListener("toggle", () => {
       el.open ? openState.add(el.dataset.sec) : openState.delete(el.dataset.sec);
+    }));
+    app.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => {
+      const to = b.dataset.goto;
+      if (to === "estimate") {
+        const det = document.querySelector('[data-sec="estimate"]');
+        det.open = true;
+        openState.add("estimate");
+        det.scrollIntoView({ behavior: "smooth", block: "start" });
+      } else {
+        document.getElementById(to)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     }));
     app.querySelectorAll("[data-open-sheet]").forEach((b) => b.addEventListener("click", openSheet));
     app.querySelectorAll("[data-fix-work]").forEach((b) => b.addEventListener("click", () => {

@@ -611,6 +611,18 @@
     }
 
     // やることリスト（一般的な優先順: 生活防衛資金 → 保障 → 教育 → 近い大きな出費 → 老後）
+    // 最後に、利用者が「考えたい」と選んだ分野のものを前に出す（内容は変えず、順番だけ）
+    const FIELD_TODOS = {
+      insurance: ["death", "disability", "loan"],
+      invest: ["retire", "emergency"],
+      home: ["loan", "soon"],
+      edu: ["edu"],
+      retire: ["retire"],
+      fixed: ["cash", "emergency"],
+    };
+    const wanted = new Set();
+    const chosen = a.fields || [];
+    if (!chosen.includes("all")) chosen.forEach((f) => (FIELD_TODOS[f] || []).forEach((k) => wanted.add(k)));
     const todos = [];
     // 「生活費＋住居費」の何か月分か。天気の判定（後述）と同じ定義にそろえる
     const months = savings / Math.max(1, living + housingCost(0).base / 12);
@@ -680,6 +692,11 @@
       { name: "個人賠償責任", level: L2, reason: "自転車事故などで他人にけがをさせた場合の備えです。" },
     ];
 
+    // 選んだ分野のものを前に出す（同じ分野の中では、もとの順番のまま）
+    if (wanted.size) {
+      todos.sort((x, y) => (wanted.has(y.key) ? 1 : 0) - (wanted.has(x.key) ? 1 : 0));
+    }
+
     // 専門家に聞くこと
     const ask = [];
     if (home === "loan") ask.push({ q: "団信の保障内容と、死亡保障の重なり", who: "保険相談員・金融機関" });
@@ -694,7 +711,20 @@
     if (work === "self" && (a.selfPension || []).includes("none")) ask.push({ q: "自営業の上乗せの年金・退職金の代わりになる制度（国民年金基金・iDeCo・小規模企業共済など）", who: "年金事務所・商工会・FP" });
     if (D.loans.some((l) => l.kind === "shougakukin")) ask.push({ q: "奨学金の返還が免除・猶予される場合の条件", who: "日本学生支援機構など貸与元" });
     if (planned.length) ask.push({ q: "出産・育児のときに使える公的な給付", who: "勤務先・自治体" });
-    if ((a.worries || []).includes("cash")) ask.push({ q: "毎月お金が残らない原因の見つけ方", who: "FP" });
+    // 「気になっていること」で選んだものを、聞くことに反映する
+    const WORRY_ASK = {
+      death: { q: "万一のときに必要な保障額の考え方（遺族年金を差し引いたあとの不足分）", who: "保険相談員・FP" },
+      sick: { q: "働けなくなったときに使える公的な制度と、勤務先の制度", who: "勤務先・健康保険の窓口" },
+      edu: { q: "教育費の準備を、いつから・どの方法で始めるか", who: "FP" },
+      loan: { q: "住宅ローンの借り換え・繰り上げ返済を考えるときの判断材料", who: "借入先の金融機関" },
+      retire: { q: "老後の生活費の見積り方と、年金の見込み額の確かめ方", who: "年金事務所・FP" },
+      invest: { q: "積立を始めるときの考え方と、税制優遇（NISA・iDeCo）の使い方", who: "金融機関・FP" },
+      cash: { q: "毎月お金が残らない原因の見つけ方", who: "FP" },
+    };
+    (a.worries || []).forEach((w) => {
+      const item = WORRY_ASK[w];
+      if (item && !ask.some((x) => x.q === item.q)) ask.push(item);
+    });
 
     // 家族の年表（グラフ用）。offset = いまから何年後か
     const selfEvents = [];
