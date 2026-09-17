@@ -37,10 +37,13 @@
       <li><b>④</b>相談で聞くことを、PDFにまとめて持ち帰る</li>
     </ul>
     <div class="pdf-sample">
-      <div class="pdf-frame"><div class="memo" id="pdf-preview" aria-hidden="true">
-        <p class="small muted" style="margin:0">見本を読み込んでいます…</p>
-      </div></div>
-      <p class="small muted">こんなPDFができあがります（A4・2〜4ページ。印刷して相談に持っていけます）。<br>
+      <div class="pdf-pages">
+        <div class="pdf-frame"><div class="memo" id="pdf-preview" aria-hidden="true">
+          <p class="small muted" style="margin:0">見本を読み込んでいます…</p>
+        </div></div>
+        <div class="pdf-frame"><div class="memo" id="pdf-preview2" aria-hidden="true"></div></div>
+      </div>
+      <p class="small muted">こんなPDFができあがります（A4・2〜4ページ。印刷して相談に持っていけます）。左が1ページ目、右がグラフのページです。<br>
         上の見本は、<b>38歳・会社員・配偶者と子ども2人・住宅ローンあり</b>という例で<b>実際に計算した結果</b>です（金額はダミー）。</p>
     </div>
   </section>
@@ -112,9 +115,23 @@
       insured: "yes", insuredDeathBand: "b2",
       living: "l7", savings: "s3", worries: ["edu", "retire"],
     });
-    d.pdf.sections = ["todo"];
+    d.pdf.sections = ["todo", "plan"];   // 年表とグラフのページも見せる
     const r = KSC.compute(d);
-    box.innerHTML = KSM.memoHTML(r, d, d.answers);
+    const html = KSM.memoHTML(r, d, d.answers);
+    box.innerHTML = html;
+    // 2枚目は、グラフが見えるところから表示する
+    const box2 = document.getElementById("pdf-preview2");
+    if (box2) {
+      box2.innerHTML = html;
+      // 縮小して見せているので、ずらす量も縮小率に合わせる
+      setTimeout(() => {
+        const chart = box2.querySelector(".memo-chart-title");
+        if (!chart) { box2.closest(".pdf-frame").hidden = true; return; }
+        const scale = (getComputedStyle(box2).transform.match(/matrix\(([-\d.]+)/) || [, 1])[1];
+        const top = Math.max(0, (chart.offsetTop - 30) * Number(scale));
+        box2.style.marginTop = "-" + Math.round(top) + "px";
+      }, 0);
+    }
   } catch (e) {
     box.innerHTML = '<p class="small muted" style="margin:0">見本を表示できませんでした。</p>';
   }

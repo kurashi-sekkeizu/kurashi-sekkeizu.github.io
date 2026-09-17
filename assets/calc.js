@@ -243,7 +243,9 @@
     const kidsNow = a.kids === "yes" ? (a.kidsAges || []).map(Number) : [];
     const planned = (D.family.planned || []).map((p) => -Number(p.inYears));  // これから生まれる子は、いまの年齢をマイナスで持つ
     const kids = kidsNow.concat(planned);
-    const household = 1 + (spouse ? 1 : 0) + kidsNow.length;
+    // 子・配偶者のほかに、生活費をともにしている家族（同居の親など）
+    const others = Number(Q.mid("others", a) || 0);
+    const household = 1 + (spouse ? 1 : 0) + kidsNow.length + others;
     let living = Q.mid("living", a);
     let livingSource = "answer";
     if (D.set.living) { living = LIVING_ITEMS.reduce((t, it) => t + Number(D.living[it.key] || 0), 0); livingSource = "detail"; }
@@ -728,6 +730,10 @@
     if (work === "self" && (a.selfPension || []).includes("none")) ask.push({ q: "自営業の上乗せの年金・退職金の代わりになる制度（国民年金基金・iDeCo・小規模企業共済など）", who: "年金事務所・商工会・FP" });
     if (D.loans.some((l) => l.kind === "shougakukin")) ask.push({ q: "奨学金の返還が免除・猶予される場合の条件", who: "日本学生支援機構など貸与元" });
     if (planned.length) ask.push({ q: "出産・育児のときに使える公的な給付", who: "勤務先・自治体" });
+    if (others > 0) {
+      ask.push({ q: "同居している家族を、健康保険の扶養や税の扶養に入れられるか（要件と、入れた場合の影響）", who: "勤務先・健康保険の窓口・税務署" });
+    }
+
     // 事実婚のとき、届出をしている場合と扱いが違うところ（公的な整理にもとづく）
     if (a.spouse === "partner") {
       ask.push({ q: "遺族年金を請求するときに必要な、事実婚関係を証明する書類", who: "年金事務所" });
@@ -927,7 +933,7 @@
 
     const kidInfo = kids.map((k, i) => ({ ageNow: k, plan: eduPlanOf(i), independ: independAge(i) }));
     // いま一緒に暮らしている人数。これから生まれる子（年齢がマイナス）と独立した子は数えない
-    const householdNow = 1 + (spouse ? 1 : 0) + kidInfo.filter((k) => k.ageNow >= 0 && k.ageNow <= k.independ).length;
+    const householdNow = 1 + (spouse ? 1 : 0) + kidInfo.filter((k) => k.ageNow >= 0 && k.ageNow <= k.independ).length + others;
 
     const incomeCheck = W.growth === "stat" ? incomeVsAverage(work, age, income) : null;
     const wageApplied = W.growth === "stat" && wageFactor(work, age, age + 1) !== null;

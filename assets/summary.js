@@ -463,6 +463,9 @@
     if (hasLoan || willBuy) list.push({ dir: "worse", text: "変動金利の上昇。返済額は、いま入力した額のままで計算しています" });
     if (hasLoan && D.loan.prepayOn === "yes") list.push({ dir: "better", text: "繰り上げ返済で利息が減る分。期間が短くなる効果だけを見ています" });
     list.push({ dir: "both", text: "税金・社会保険料の細かい計算。手取りは、年収に応じたおおよその割合で出しています" });
+    if (Number(a.others || 0) > 0 || a.others === "1" || a.others === "2" || a.others === "3") {
+      list.push({ dir: "better", text: "同居している家族を扶養に入れた場合の、税の軽減。生活費の人数には入れていますが、税は計算に入れていません" });
+    }
     // 「年齢に応じて」を選んでいても、統計の対象外の働き方（自営業など）では横ばいになる。
     // 実際に使われたかどうかで言い分けないと、画面の中で食い違う
     const mode = (D.work && D.work.growth) || "flat";

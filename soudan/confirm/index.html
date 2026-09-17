@@ -66,6 +66,7 @@
     { th: "あなた", td: [show("age"), show("work"), show("income")].filter(Boolean).join("・"), edit: "age", warn: unk("income") },
     { th: "配偶者・パートナー", td: KSQ.hasSpouse(A) ? [show("spouseAge"), show("spouseWork"), show("spouseIncome")].filter(Boolean).join("・") : "いない", edit: KSQ.hasSpouse(A) ? "spouseAge" : "spouse", warn: KSQ.hasSpouse(A) && unk("spouseIncome") },
     { th: "お子さん", td: A.kids === "yes" ? `${A.kidsCount}人（${show("kidsAges")}）・${show("eduPlan")}` : A.kids === "plan" ? `これから（${show("kidPlanIn")}）` : show("kids"), edit: A.kids === "yes" ? "kidsCount" : "kids", warn: A.kids === "yes" && unk("eduPlan") },
+    { th: "ほかの家族", td: [show("others"), show("othersCare") && `健康保険の扶養 ${show("othersCare")}`].filter(Boolean).join("／"), edit: "others" },
     { th: "住まい", td: [show("home"), show("homeType"), show("rent") && `家賃 ${show("rent")}`].filter(Boolean).join("・"), edit: "home", warn: unk("rent") },
     { th: "車", td: show("cars"), edit: "cars" },
     { th: "借入れ", td: [show("otherLoan"), show("otherLoanLeft") && `残高 ${show("otherLoanLeft")}`].filter(Boolean).join("・"), edit: "otherLoan", warn: unk("otherLoanLeft") },

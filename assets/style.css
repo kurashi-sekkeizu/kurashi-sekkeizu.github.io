@@ -162,10 +162,12 @@ body.has-lock { padding-bottom: 48px; }
 
 /* PDFの見本（作り物ではなく、ある例で実際に計算した結果を縮小して見せる） */
 .pdf-sample { display: flex; gap: 14px; align-items: flex-start; margin-top: 12px; flex-wrap: wrap; }
+.pdf-pages { display: flex; gap: 8px; flex: none; }
 .pdf-frame {
   width: 210px; height: 297px; flex: none; overflow: hidden;
   border: 1px solid #b9b7ad; box-shadow: 2px 2px 0 rgba(0, 0, 0, .06); background: #fff;
 }
+@media (max-width: 560px) { .pdf-pages > .pdf-frame + .pdf-frame { display: none; } }
 .pdf-frame .memo {
   width: 700px; transform: scale(.3); transform-origin: 0 0;
   border: 0; padding: 14px 16px; pointer-events: none;
