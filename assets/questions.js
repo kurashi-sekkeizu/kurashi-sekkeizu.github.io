@@ -451,5 +451,16 @@
     return o ? o.mid : undefined;
   }
 
-  window.KSQ = { QUESTIONS, byId, visible, screens, isAnswered, display, option, mid, labelOf, hasSpouse, UNKNOWN_REACT };
+  // 金額から、いちばん近い帯の選択肢を返す（くわしく入力の合計を、かんたんの答えに反映するため）
+  function bandOf(id, value) {
+    const q = byId[id];
+    if (!q || !q.options || !Number.isFinite(Number(value))) return null;
+    const cands = q.options.filter((o) => typeof o.mid === "number");
+    if (!cands.length) return null;
+    let best = cands[0];
+    cands.forEach((o) => { if (Math.abs(o.mid - value) < Math.abs(best.mid - value)) best = o; });
+    return best.v;
+  }
+
+  window.KSQ = { QUESTIONS, byId, visible, screens, isAnswered, display, option, mid, bandOf, labelOf, hasSpouse, UNKNOWN_REACT };
 })();

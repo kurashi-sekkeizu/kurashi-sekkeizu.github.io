@@ -195,10 +195,18 @@
     d.detail = D;
     KS.save(d);
     afterChange(d);
-    if (section === "living") {
+    if (section === "living" && !answersChanged) {
       const sum = KSC.LIVING_ITEMS.reduce((t, it) => t + Number(D.living[it.key] || 0), 0);
       const el = document.getElementById("living-sum");
-      if (el) el.textContent = `内訳の合計 月${(Math.round(sum * 10) / 10).toLocaleString("ja-JP")}万円`;
+      if (el) el.textContent = `内訳の合計 月${(Math.round(sum * 10) / 10).toLocaleString("ja-JP")}万円で計算しています`;
+      // 内訳を変えたら「生活費（おおまかに）」の帯も合計に合わせる（画面が食い違って見えるため）
+      const band = KSQ.bandOf("living", sum);
+      if (band && A.living !== band) {
+        A.living = band;
+        KS.save(d);
+        const sel = document.getElementById("living-band");
+        if (sel) sel.value = band;
+      }
     }
     if (rerender || answersChanged) renderSections(mounted);
     else document.querySelectorAll(`[data-status="${section}"]`).forEach((b) => { b.textContent = "設定済み"; b.className = "badge set"; });
@@ -304,16 +312,19 @@
     {
       key: "living", title: "🧾 毎月の生活費",
       body: (box) => {
-        box.appendChild(select("生活費（おおまかに）", A, "living", opts("living"), "living", {
+        const bandRow = select("生活費（おおまかに）", A, "living", opts("living"), "living", {
           text: true, answers: true,
           after: () => { delete D.set.living; D.living = KSC.splitLiving(KSQ.mid("living", A) ?? 25); },
-        }));
+          note: "ここを変えると、下の内訳を一般的な割合で入れ直します。",
+        });
+        bandRow.querySelector("select").id = "living-band";
+        box.appendChild(bandRow);
         box.appendChild(sub("内訳"));
-        box.appendChild(note("家計簿やカードの明細を見ながら合わせてください。内訳を変えると、その合計で計算します。住居費・教育費・車は別の分類で設定します。"));
+        box.appendChild(note("家計簿やカードの明細を見ながら合わせてください。内訳を変えると、その合計で計算し、上の「おおまかに」も合計に合わせて動きます。住居費・教育費・車は別の分類で設定します。"));
         const amounts = range(0, 30, 0.5, (v) => `月${v.toLocaleString("ja-JP")}万円`);
         KSC.LIVING_ITEMS.forEach((it) => box.appendChild(select(it.label, D.living, it.key, amounts, "living")));
         const sum = KSC.LIVING_ITEMS.reduce((t, it) => t + Number(D.living[it.key] || 0), 0);
-        const total = h("p", "living-sum", `内訳の合計 月${(Math.round(sum * 10) / 10).toLocaleString("ja-JP")}万円`);
+        const total = h("p", "living-sum", `内訳の合計 月${(Math.round(sum * 10) / 10).toLocaleString("ja-JP")}万円${D.set.living ? "で計算しています" : ""}`);
         total.id = "living-sum";
         box.appendChild(total);
         box.appendChild(sub("老後の生活費"));

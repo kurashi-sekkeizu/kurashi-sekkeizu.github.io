@@ -122,13 +122,15 @@
     const rows = [
       { fix: "living", label: "生活費", data: c.living, breakdown: true,
         note: c.living.source === "answer" ? `回答「${KSQ.display(KSQ.byId.living, answers)}」の真ん中で計算。食費・光熱費・通信費・保険料・おこづかいなどの合計です。` : c.living.source === "detail" ? "くわしく入力した内訳の合計です。" : "「わからない」のため、世帯の人数から仮に置いています。" },
-      { fix: "home", label: "住居費", data: c.housing, note: c.housing.note },
+      { fix: "home", label: "住宅ローンの返済", data: c.homeLoan, note: c.homeLoan.note, skipIfNone: true },
+      { fix: "home", label: "住居費（家賃・税金など）", data: c.housing, note: c.housing.note },
       { fix: "edu", label: "教育費", data: c.edu, note: c.edu.note },
       { fix: "car", label: "車", data: c.car, note: c.car.note },
-      { fix: "loans", label: "借入れ", data: c.loan, note: c.loan.note },
+      { fix: "loans", label: "そのほかの借入れ", data: c.loan, note: c.loan.note },
       { fix: "spend", label: "その他", data: c.other, note: c.other.note },
     ];
     rows.forEach((row) => {
+      if (row.skipIfNone && row.data.source === "none") return;   // 住宅ローンがない人には出さない
       const src = SOURCE[row.data.source] || SOURCE.none;
       const det = h("details", "cost-row");
       const sum = h("summary", "cost-sum");
@@ -202,10 +204,11 @@
     const ROWS = [
       { key: "income", label: "収入（手取り）", get: (p) => p.income, cls: "ct-income" },
       { key: "living", label: "生活費", get: (p) => p.exp.living },
-      { key: "housing", label: "住居費", get: (p) => p.exp.housing },
+      { key: "homeLoan", label: "住宅ローンの返済", get: (p) => p.exp.homeLoan || 0 },
+      { key: "housing", label: "住居費（家賃・税金など）", get: (p) => p.exp.housing - (p.exp.homeLoan || 0) },
       { key: "edu", label: "教育費", get: (p) => p.exp.edu },
       { key: "car", label: "車", get: (p) => p.exp.car },
-      { key: "loan", label: "借入れ", get: (p) => p.exp.loan },
+      { key: "loan", label: "そのほかの借入れ", get: (p) => p.exp.loan },
       { key: "other", label: "その他", get: (p) => p.exp.other },
       { key: "total", label: "支出の合計", get: (p) => p.expense, cls: "ct-total" },
       { key: "flow", label: "収支", get: (p) => p.income - p.expense, cls: "ct-flow" },
@@ -238,6 +241,7 @@
       const tbody = h("tbody");
       ROWS.forEach((row) => {
         if (row.key === "loan" && pts.every((p) => !p.exp.loan)) return;
+        if (row.key === "homeLoan" && pts.every((p) => !p.exp.homeLoan)) return;
         if (row.key === "other" && pts.every((p) => !p.exp.other)) return;
         const tr = h("tr", row.cls || "");
         const th = h("th", "lt-name", row.label + (row.always === "year" ? "（年末）" : ""));

@@ -356,7 +356,7 @@
     // ── 年ごとの出来事（一時的な支出・収入）を先に並べる ──
     const oneTime = {};  // offset -> {housing, car, other, income, repair}
     const lifeEvents = [];  // 年表「くらし」の行
-    const at = (off) => (oneTime[off] = oneTime[off] || { housing: 0, repair: 0, car: 0, other: 0, income: 0 });
+    const at = (off) => (oneTime[off] = oneTime[off] || { housing: 0, homeLoan: 0, repair: 0, car: 0, other: 0, income: 0 });
     const inSpan = (off) => off >= 0 && off <= span;
 
     // 車
@@ -429,6 +429,7 @@
       // 繰り上げ返済が完済後の年齢に設定されていたら、何も起きない
       if (inSpan(prepayOff) && age + prepayOff < loanEndAge) {
         at(prepayOff).housing += Number(D.loan.prepayAmount);
+        at(prepayOff).homeLoan += Number(D.loan.prepayAmount);   // 繰り上げ返済も「住宅ローンの返済」
         // 早まることはあっても、延びることはない
         loanEndAge = Math.min(loanEndAge, Math.max(age + prepayOff, loanEndAge - shorten));
         lifeEvents.push({ offset: prepayOff, short: "繰上", text: `住宅ローンの繰り上げ返済（約${KS.man(D.loan.prepayAmount)}）。完済が約${shorten}年早まる計算`, kind: "home", amount: Number(D.loan.prepayAmount) });
@@ -503,13 +504,14 @@
     };
     const independAge = (i) => { const p = eduPlanOf(i); return p.univ === "none" ? 18 : p.univ === "vocational" ? 20 : 22; };
 
+    // base ＝ 住まいにかかる1年ぶんの合計、うち homeLoan ＝ 住宅ローンの返済ぶん（グラフで分けて出す）
     function housingCost(y) {
       const cur = age + y;
-      let c = 0, fee = 0;
-      if (moveOff !== null && y >= moveOff) return { base: Number(D.move.monthly) * 12, fee: 0 };
-      if (home === "loan" && cur < loanEndAge) c += loanYearly;
+      let c = 0, fee = 0, homeLoan = 0;
+      if (moveOff !== null && y >= moveOff) return { base: Number(D.move.monthly) * 12, fee: 0, homeLoan: 0 };
+      if (home === "loan" && cur < loanEndAge) { c += loanYearly; homeLoan += loanYearly; }
       if (renting && (purchaseOff === null || y < purchaseOff)) c += Number(D.rent.monthly) * (12 + Number(D.rent.renewal) / 2);  // 更新料は2年ごと
-      if (purchaseOff !== null && y >= purchaseOff && y < purchaseOff + purchaseLoanYears) c += purchaseLoan;
+      if (purchaseOff !== null && y >= purchaseOff && y < purchaseOff + purchaseLoanYears) { c += purchaseLoan; homeLoan += purchaseLoan; }
       const ownFrom = owns ? 0 : purchaseOff;
       const ownType = owns ? homeType : P.type;
       if (ownFrom !== null && y >= ownFrom) c += Number(ownType === "mansion" ? D.mansion.tax : D.house.tax);
@@ -518,7 +520,7 @@
         fee = Number(D.mansion.monthly) * 12 * Math.pow(1 + Number(D.mansion.raise) / 100, Math.floor((y - mansionFrom) / 10));
         c += fee;
       }
-      return { base: c, fee };
+      return { base: c, fee, homeLoan };
     }
 
     // 配偶者の今後の働き方による、その年の年収の倍率
@@ -539,7 +541,7 @@
       let shortageAge = null;
       for (let y = 0; y <= span; y++) {
         const cur = age + y;
-        const ev = oneTime[y] || { housing: 0, repair: 0, car: 0, other: 0, income: 0 };
+        const ev = oneTime[y] || { housing: 0, homeLoan: 0, repair: 0, car: 0, other: 0, income: 0 };
         const afterChange = changeOff !== null && y >= changeOff;
         const rawIncome = afterChange ? changedIncome : income;
         const refAge = afterChange ? Number(W.changeAge) : age;
@@ -574,6 +576,8 @@
         const expLiving = living * 12 * Math.pow(1 + inf, y) * (cur >= DUMMY.pensionAge ? retireRatio : 1);
         const hc = housingCost(y);
         const expHousing = hc.base + ev.housing + ev.repair;
+        // 住宅ローンの返済ぶんは、グラフと表で分けて出す（住居費の内数）
+        const expHomeLoan = hc.homeLoan + ev.homeLoan;
         let expEdu = 0;
         kids.forEach((k, i) => { expEdu += eduCost(i, k + y); });
         let expCar = ev.car;
@@ -597,7 +601,7 @@
         points.push({
           age: cur, year: year0 + y, balance: Math.round(balance), income: Math.round(inc), expense: Math.round(exp),
           inc: { work: incWork, spouse: incSpouse, pension: incPension, allowance: incAllowance, lump: incOther },
-          exp: { living: expLiving, housing: expHousing, repair: ev.repair, edu: expEdu, car: expCar, loan: expLoan, other: expOther },
+          exp: { living: expLiving, housing: expHousing, homeLoan: expHomeLoan, repair: ev.repair, edu: expEdu, car: expCar, loan: expLoan, other: expOther },
         });
         if (shortageAge === null && balance < 0) shortageAge = cur;
       }
@@ -845,21 +849,29 @@
     const hc0 = housingCost(0);
     const current = {
       living: { monthly: living, source: livingSource, items: livingItems },
+      // 住宅ローンの返済は、家賃・税金・修繕とは別の行にする（借入れの返済であることが分かるように）
+      homeLoan: {
+        monthly: hc0.homeLoan / 12,
+        source: hc0.homeLoan ? (D.set.loan ? "detail" : "provisional") : "none",
+        note: home === "loan"
+          ? `月${KS.man(loanMonthly)}・${loanEndAge}歳まで${!loanView && Number(D.loan.bonus) > 0 ? "・ボーナス返済を含む" : ""}${loanView ? `。借入${KS.man(D.loan.borrowed)}・${loanView.years}年・金利${D.loan.rate}%から計算` : ""}。返済額は変わらない前提で、金利の上昇や住宅ローン控除は計算に入れていません`
+          : "住宅ローンなし",
+      },
       housing: {
-        monthly: hc0.base / 12,
+        monthly: (hc0.base - hc0.homeLoan) / 12,
         source: D.set.home ? "detail"
           : home === "family" ? "answer"
           : renting && a.rent && a.rent !== "unknown" ? "answer"
           : "provisional",
-        note: (home === "loan" ? `住宅ローンの返済（月${KS.man(loanMonthly)}・${loanEndAge}歳まで${!loanView && Number(D.loan.bonus) > 0 ? "・ボーナス返済を含む" : ""}${loanView ? `。借入${KS.man(D.loan.borrowed)}・${loanView.years}年・金利${D.loan.rate}%から計算` : ""}。返済額は変わらない前提で、金利の上昇や住宅ローン控除は計算に入れていません）＋` : renting ? (region && region.rentMan && (a.rent === undefined || a.rent === "unknown") ? `家賃（${a.pref}の民営借家の平均から）` : "家賃") : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
+        note: (renting ? (region && region.rentMan && (a.rent === undefined || a.rent === "unknown") ? `家賃（${a.pref}の民営借家の平均から）` : "家賃") : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : "") || "住宅ローンの返済のほかにかかるもの",
       },
       edu: { monthly: p0.exp.edu / 12, source: kids.length ? (D.set.edu ? "detail" : a.eduPlan === "unknown" ? "provisional" : "answer") : "none", note: kids.length ? "今年の学年と進学の方針から" : "お子さんなし" },
       car: { monthly: D.cars.reduce((t, c) => t + (age < Number(c.until) ? Number(c.upkeep) : 0), 0) / 12, source: D.cars.length ? (D.set.car ? "detail" : "provisional") : "none", note: D.cars.length ? "維持費（税金・保険・車検・ガソリンなど）。買い替えは年表の時期にまとめて計上" : "車なし" },
-      loan: { monthly: D.loans.reduce((t, l) => t + (age < Number(l.endAge) ? Number(l.monthly) : 0), 0), source: D.loans.length ? "detail" : a.otherLoan === "yes" ? "provisional" : "none", note: D.loans.length ? "奨学金・自動車ローンなどの毎月の返済" : a.otherLoan === "yes" ? "「ある」と答えていますが、未入力です" : "住宅ローン以外の借入れなし" },
+      loan: { monthly: D.loans.reduce((t, l) => t + (age < Number(l.endAge) ? Number(l.monthly) : 0), 0), source: D.loans.length ? "detail" : a.otherLoan === "yes" ? "provisional" : "none", note: D.loans.length ? "奨学金・自動車ローンなどの毎月の返済（住宅ローンは上の行）" : a.otherLoan === "yes" ? "「ある」と答えていますが、未入力です" : "住宅ローン以外の借入れなし" },
       other: { monthly: (Number(D.spend.travel) > 0 ? Number(D.spend.travel) : 0) / 12 + (D.care.on === "yes" && Number(D.care.startAge) <= age ? Number(D.care.monthly) : 0), source: D.set.spend || D.set.care ? "detail" : "none", note: "旅行・介護など（くわしく入力で設定）" },
       incomeMonthly: p0.income / 12,
     };
-    current.total = ["living", "housing", "edu", "car", "loan", "other"].reduce((t, k) => t + current[k].monthly, 0);
+    current.total = ["living", "homeLoan", "housing", "edu", "car", "loan", "other"].reduce((t, k) => t + current[k].monthly, 0);
 
     const insurancePending = hasInsurance(a, "death") && !D.set.insurance && (bandDeath === null || bandDeath === undefined);
 

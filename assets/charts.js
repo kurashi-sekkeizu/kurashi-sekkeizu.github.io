@@ -13,7 +13,8 @@
     edu: "#1baf7a",      // カテゴリ3 青緑
     car: "#eda100",      // カテゴリ4 黄
     other: "#e87ba4",    // カテゴリ5 マゼンタ
-    loan: "#008300",     // カテゴリ6 緑
+    homeLoan: "#8a4bd3", // カテゴリ6 紫（住宅ローンの返済。借入れの緑の隣に置く）
+    loan: "#008300",     // カテゴリ7 緑
     income: "#0b0b0b",   // 収入の線（主インク）
     balance: "#2a78d6",
     scenario: "#52514e",
@@ -100,6 +101,17 @@
     };
   }
 
+  // 支出の積み上げの並び（下から）。住宅ローンの返済は、そのほかの借入れの隣に置く
+  const SEGS = [
+    { key: "living", label: "生活費", color: COLOR.living, get: (p) => p.exp.living },
+    { key: "housing", label: "住居費（家賃・税金・修繕）", color: COLOR.housing, get: (p) => p.exp.housing - (p.exp.homeLoan || 0) },
+    { key: "edu", label: "教育費", color: COLOR.edu, get: (p) => p.exp.edu },
+    { key: "car", label: "車", color: COLOR.car, get: (p) => p.exp.car },
+    { key: "other", label: "その他の予定出費", color: COLOR.other, get: (p) => p.exp.other },
+    { key: "homeLoan", label: "住宅ローンの返済", color: COLOR.homeLoan, get: (p) => p.exp.homeLoan || 0 },
+    { key: "loan", label: "そのほかの借入れの返済", color: COLOR.loan, get: (p) => p.exp.loan },
+  ];
+
   // ② 収入と支出の推移
   function flowChart(r, W) {
     const pts = r.sim0.points, n = pts.length, fr = frame(n, W);
@@ -108,7 +120,7 @@
     const regular = (p) => p.income - Math.round(p.inc.lump || 0);
     const maxV = Math.max(100, ...pts.map((p) => Math.max(regular(p), p.expense)));
     const ys = yScale(0, maxV, T, H - B);
-    const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "収入と支出の推移のグラフ。支出は生活費・住居費・教育費の積み上げ、収入は線。数字は下の表でも確認できます。" });
+    const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "収入と支出の推移のグラフ。支出は下から生活費・住居費・教育費・車・その他・住宅ローンの返済・そのほかの借入れの積み上げ、収入は線。数字は下の表でも確認できます。" });
     drawYGrid(svg, fr, ys);
 
     // 支出が収入を上回った年（貯蓄が減る年）に、薄い帯を敷く
@@ -119,10 +131,11 @@
     const bw = Math.max(1, Math.min(24, fr.band - 2));
     const rad = Math.min(4, bw / 2);
     pts.forEach((p, i) => {
-      const segs = [["living", COLOR.living], ["housing", COLOR.housing], ["edu", COLOR.edu], ["car", COLOR.car], ["other", COLOR.other], ["loan", COLOR.loan]].filter(([k]) => p.exp[k] > 0);
+      const segs = SEGS.filter((s) => s.get(p) > 0);
       let base = 0;
-      segs.forEach(([k, c], si) => {
-        const v = p.exp[k];
+      segs.forEach((s, si) => {
+        const c = s.color;
+        const v = s.get(p);
         const yTop = ys.f(base + v), yBot = ys.f(base);
         const gap = si > 0 ? 2 : 0;
         const hh = yBot - yTop - gap;
@@ -221,8 +234,9 @@
       if (p.inc[k] > 0) row({ type: "none" }, l, man(p.inc[k]), "sub");
     });
     row({ type: "none" }, "支出", man(p.expense));
-    [["living", "生活費"], ["housing", "住居費"], ["edu", "教育費"], ["car", "車"], ["other", "その他の予定出費"], ["loan", "借入れの返済"]].forEach(([k, l]) => {
-      if (p.exp[k] > 0) row({ type: "rect", color: COLOR[k] }, l + (k === "housing" && p.exp.repair > 0 ? `（うち修繕 ${man(p.exp.repair)}）` : ""), man(p.exp[k]), "sub");
+    SEGS.forEach((s) => {
+      const v = s.get(p);
+      if (v > 0) row({ type: "rect", color: s.color }, s.label + (s.key === "housing" && p.exp.repair > 0 ? `（うち修繕 ${man(p.exp.repair)}）` : ""), man(v), "sub");
     });
     const flow = p.income - p.expense;
     row({ type: "none" }, flow >= 0 ? "その年の収支（黒字）" : "その年の収支（赤字）", (flow >= 0 ? "＋" : "−") + man(Math.abs(flow)), "flow");
@@ -259,7 +273,9 @@
     const defs = [
       {
         title: "収入と支出の推移", sub: "1年あたり（万円）。棒＝支出の内訳、線＝収入", build: flowChart,
-        legend: [{ type: "line", color: COLOR.income, label: "収入（手取り）" }, { type: "rect", color: COLOR.living, label: "生活費" }, { type: "rect", color: COLOR.housing, label: "住居費（修繕含む）" }, { type: "rect", color: COLOR.edu, label: "教育費" }, { type: "rect", color: COLOR.car, label: "車" }, { type: "rect", color: COLOR.other, label: "その他の予定出費" }, { type: "rect", color: COLOR.loan, label: "借入れの返済" }, { type: "band", color: COLOR.critical, label: "支出が収入を上回る年（貯蓄が減る）" }],
+        legend: [{ type: "line", color: COLOR.income, label: "収入（手取り）" }]
+          .concat(SEGS.map((s) => ({ type: "rect", color: s.color, label: s.key === "housing" ? "住居費（家賃・税金・修繕）" : s.label })))
+          .concat([{ type: "band", color: COLOR.critical, label: "支出が収入を上回る年（貯蓄が減る）" }]),
       },
       {
         title: "貯蓄残高の推移", sub: "各年の終わりの残高（万円）", build: balanceChart,
@@ -356,7 +372,7 @@
   // PDF（印刷）用：操作なしのグラフ
   function staticHTML(r, W) {
     const wrap = document.createElement("div");
-    [["収入と支出の推移（1年あたり・万円）　線＝収入（手取り）／棒＝支出（下から生活費・住居費・教育費・車・その他）", flowChart], ["貯蓄残高の推移（万円）" + (r.simR ? `　実線＝運用しない場合／点線＝年${r.ret}%（保証されません）` : ""), balanceChart]].forEach(([title, build]) => {
+    [["収入と支出の推移（1年あたり・万円）　線＝収入（手取り）／棒＝支出（下から生活費・住居費・教育費・車・その他・住宅ローンの返済・そのほかの借入れ）", flowChart], ["貯蓄残高の推移（万円）" + (r.simR ? `　実線＝運用しない場合／点線＝年${r.ret}%（保証されません）` : ""), balanceChart]].forEach(([title, build]) => {
       wrap.appendChild(h("p", "memo-chart-title", title));
       wrap.appendChild(build(r, W).svg);
     });
