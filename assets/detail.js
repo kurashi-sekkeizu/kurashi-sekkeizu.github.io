@@ -346,8 +346,10 @@
             box.appendChild(select("毎月の返済額", D.loan, "monthly", range(3, 25, 1, (v) => `月${man(v)}`), "home"));
             box.appendChild(select("完済する年齢", D.loan, "endAge", range(Math.max(age() + 1, 40), 85, 1, (v) => `${v}歳`), "home"));
             box.appendChild(select("いまの残高", D.loan, "balance", range(100, 6000, 100, (v) => man(v)), "home"));
+            // ボーナス返済は「毎月の返済額」と別に払っているぶん。
+            // 借りたときの内容から計算する場合は、月々の返済額がすでに借入額の全部を返す額なので聞かない（二重に数えてしまう）
+            box.appendChild(select("ボーナス返済（年2回の合計）", D.loan, "bonus", [0, 10, 20, 30, 40, 60, 80, 100].map((v) => ({ v, label: v ? `年${man(v)}` : "なし" })), "home"));
           }
-          box.appendChild(select("ボーナス返済（年2回の合計）", D.loan, "bonus", [0, 10, 20, 30, 40, 60, 80, 100].map((v) => ({ v, label: v ? `年${man(v)}` : "なし" })), "home"));
           box.appendChild(radios("団体信用生命保険（団信）", D.loan, "dansin", [{ v: "yes", label: "入っている" }, { v: "no", label: "入っていない" }, { v: "unknown", label: "わからない" }], "home", { rerender: false, note: "団信に入っていれば、万一のときにローンの残りがなくなります" }));
           // 残高・返済額・完済年齢の食い違いを知らせる
           const mism = KSC.compute(d).loanMismatch;

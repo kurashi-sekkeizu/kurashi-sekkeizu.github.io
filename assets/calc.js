@@ -418,7 +418,9 @@
     const loanView = home === "loan" && D.loan.input !== "current" ? loanFromOrigin(D.loan, age) : null;
     const loanMonthly = home === "loan" ? Number(loanView ? loanView.monthly : D.loan.monthly) : 0;
     const loanBalance = home === "loan" ? Number(loanView ? loanView.balance : D.loan.balance) : 0;
-    const loanYearly = home === "loan" ? loanMonthly * 12 + Number(D.loan.bonus || 0) : 0;
+    // 借りたときの内容から計算した月々の返済額は、借入額の全部を返す額。
+    // そこへボーナス返済を足すと、元本を二重に数えてしまうので足さない
+    const loanYearly = home === "loan" ? loanMonthly * 12 + (loanView ? 0 : Number(D.loan.bonus || 0)) : 0;
     let loanEndAge = home === "loan" ? Number(loanView ? loanView.endAge : D.loan.endAge) : null;
     let prepayOff = null;
     if (home === "loan" && D.loan.prepayOn === "yes") {
@@ -849,7 +851,7 @@
           : home === "family" ? "answer"
           : renting && a.rent && a.rent !== "unknown" ? "answer"
           : "provisional",
-        note: (home === "loan" ? `住宅ローンの返済（月${KS.man(loanMonthly)}・${loanEndAge}歳まで${Number(D.loan.bonus) > 0 ? "・ボーナス返済を含む" : ""}${loanView ? `。借入${KS.man(D.loan.borrowed)}・${loanView.years}年・金利${D.loan.rate}%から計算` : ""}。返済額は変わらない前提で、金利の上昇や住宅ローン控除は計算に入れていません）＋` : renting ? (region && region.rentMan && (a.rent === undefined || a.rent === "unknown") ? `家賃（${a.pref}の民営借家の平均から）` : "家賃") : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
+        note: (home === "loan" ? `住宅ローンの返済（月${KS.man(loanMonthly)}・${loanEndAge}歳まで${!loanView && Number(D.loan.bonus) > 0 ? "・ボーナス返済を含む" : ""}${loanView ? `。借入${KS.man(D.loan.borrowed)}・${loanView.years}年・金利${D.loan.rate}%から計算` : ""}。返済額は変わらない前提で、金利の上昇や住宅ローン控除は計算に入れていません）＋` : renting ? (region && region.rentMan && (a.rent === undefined || a.rent === "unknown") ? `家賃（${a.pref}の民営借家の平均から）` : "家賃") : "") + (owns ? (homeType === "mansion" ? "修繕積立金・管理費＋固定資産税" : "固定資産税（戸建ての修繕は年表の時期にまとめて計上）") : home === "family" ? "住居費なし（実家など）" : ""),
       },
       edu: { monthly: p0.exp.edu / 12, source: kids.length ? (D.set.edu ? "detail" : a.eduPlan === "unknown" ? "provisional" : "answer") : "none", note: kids.length ? "今年の学年と進学の方針から" : "お子さんなし" },
       car: { monthly: D.cars.reduce((t, c) => t + (age < Number(c.until) ? Number(c.upkeep) : 0), 0) / 12, source: D.cars.length ? (D.set.car ? "detail" : "provisional") : "none", note: D.cars.length ? "維持費（税金・保険・車検・ガソリンなど）。買い替えは年表の時期にまとめて計上" : "車なし" },
