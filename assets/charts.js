@@ -373,8 +373,12 @@
   function staticHTML(r, W) {
     const wrap = document.createElement("div");
     [["収入と支出の推移（1年あたり・万円）　線＝収入（手取り）／棒＝支出（下から生活費・住居費・教育費・車・その他・住宅ローンの返済・そのほかの借入れ）", flowChart], ["貯蓄残高の推移（万円）" + (r.simR ? `　実線＝運用しない場合／点線＝年${r.ret}%（保証されません）` : ""), balanceChart]].forEach(([title, build]) => {
-      wrap.appendChild(h("p", "memo-chart-title", title));
-      wrap.appendChild(build(r, W).svg);
+      // 印刷でページの境目に割れないよう、1枚ずつ figure にまとめる
+      const fig = document.createElement("figure");
+      fig.className = "memo-chart";
+      fig.appendChild(h("figcaption", "memo-chart-title", title));
+      fig.appendChild(build(r, W).svg);
+      wrap.appendChild(fig);
     });
     return wrap.innerHTML;
   }

@@ -29,7 +29,7 @@
       <form id="opts" onsubmit="event.preventDefault()">
         <fieldset>
           <legend>PDFに入れる内容</legend>
-          <p class="q-hint">見通し（天気予報）・毎月の支出・この計算に入れていないこと・出典は、<b>いつも入ります</b>。下の項目は選べます。</p>
+          <p class="q-hint">見通し（天気予報）・<b>お金の流れのグラフ</b>・毎月の支出・この計算に入れていないこと・出典は、<b>いつも入ります</b>。下の項目は選べます。</p>
           <div class="options" id="secs"></div>
         </fieldset>
 
@@ -88,7 +88,7 @@
 
   const SECS = [
     { id: "todo", label: "まずやること・やることリスト" },
-    { id: "plan", label: "年表・家計の見通し" },
+    { id: "plan", label: "これからの出来事（年表）" },
     { id: "estimate", label: "分野別の目安" },
     { id: "review", label: "見直せるかもしれない支出" },
     { id: "ask", label: "専門家に聞くこと" },

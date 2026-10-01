@@ -28,6 +28,9 @@
       <h2>見通し（天気予報）</h2>
       <table><tbody>${r.forecast.map((f) => { const w = KSR.WEATHER[f.weather]; return `<tr><th style="width:26%">${esc(f.title)}</th><td style="width:22%;white-space:nowrap"><b>${w.icon} ${esc(w.name)}</b></td><td>${esc(f.reason)}${f.note ? `<br>※${esc(f.note)}` : ""}</td></tr>`; }).join("")}</tbody></table>
       <p>☀晴れ＝今の前提では心配は小さい見込み／⛅くもり＝注意して確認を／☔雨＝対策を考える価値あり</p>
+      <h2 class="page-break">お金の流れと、貯蓄の見通し</h2>
+      ${KSV.staticHTML(r, 680)}
+      <p>前提：物価上昇 年${d.assumptions.inflation}%／運用 年${d.assumptions.ret}%${r.sim0.shortageAge !== null ? `／<b>${r.sim0.shortageAge}歳ごろ、貯蓄が底をつく見込み</b>` : "／90歳まで貯蓄はプラスの見込み"}</p>
       <h2>計算に使っている毎月の支出（いま）</h2>
       <table><tbody>${[["生活費", r.current.living], ["住宅ローンの返済", r.current.homeLoan], ["住居費（家賃・税金など）", r.current.housing], ["教育費", r.current.edu], ["車", r.current.car], ["そのほかの借入れ", r.current.loan], ["その他", r.current.other]].filter(([, c]) => c.source !== "none" || c.monthly > 0).map(([l, c]) => `<tr><th style="width:26%">${l}</th><td style="width:22%">${(Math.round(c.monthly * 10) / 10).toLocaleString()}万円</td><td>${{ answer: "あなたの回答", detail: "くわしく入力の値", provisional: "仮の値（一般的な目安）", none: "—" }[c.source]}</td></tr>`).join("")}<tr><th>合計</th><td>${(Math.round(r.current.total * 10) / 10).toLocaleString("ja-JP")}万円</td><td>いまの手取り収入 月${(Math.round(r.current.incomeMonthly * 10) / 10).toLocaleString()}万円</td></tr></tbody></table>`;
     if (has("todo")) {
@@ -36,8 +39,7 @@
         `</tbody></table><p>★＝まずやること</p>`;
     }
     if (has("plan")) {
-      html += `<h2 class="page-break">これからの出来事</h2><table><thead><tr><th style="width:16%">年</th><th style="width:28%">家族の年齢</th><th>出来事</th><th style="width:14%">金額の目安</th></tr></thead><tbody>${r.timeline.map((t) => `<tr><td>${t.year}年</td><td>${esc(t.ages.map((a) => `${a.who}${a.age}`).join("・"))}</td><td>${t.items.map((it) => esc(it.icon + " " + it.text)).join("<br>")}</td><td>${t.items.map((it) => (it.amount >= 30 ? man(it.amount) : "")).join("<br>")}</td></tr>`).join("")}</tbody></table>` +
-        `<h2>将来の見通し</h2>${KSV.staticHTML(r, 680)}<p>前提：物価上昇 年${d.assumptions.inflation}%／運用 年${d.assumptions.ret}%</p>`;
+      html += `<h2 class="page-break">これからの出来事</h2><table><thead><tr><th style="width:16%">年</th><th style="width:28%">家族の年齢</th><th>出来事</th><th style="width:14%">金額の目安</th></tr></thead><tbody>${r.timeline.map((t) => `<tr><td>${t.year}年</td><td>${esc(t.ages.map((a) => `${a.who}${a.age}`).join("・"))}</td><td>${t.items.map((it) => esc(it.icon + " " + it.text)).join("<br>")}</td><td>${t.items.map((it) => (it.amount >= 30 ? man(it.amount) : "")).join("<br>")}</td></tr>`).join("")}</tbody></table>`;
     }
     if (has("estimate")) {
       html += `<h2 class="page-break">分野別の目安</h2><table><tbody>` +

@@ -170,7 +170,13 @@ body.has-lock { padding-bottom: 48px; }
   width: 210px; height: 297px; flex: none; overflow: hidden;
   border: 1px solid #b9b7ad; box-shadow: none; background: #fff;
 }
-@media (max-width: 560px) { .pdf-pages > .pdf-frame + .pdf-frame { display: none; } }
+/* せまい画面でも2枚とも見せる。グラフのページがいちばん伝わるため、消さない */
+@media (max-width: 560px) {
+  .pdf-pages { gap: 10px; }
+  .pdf-frame { width: 150px; height: 212px; }
+  .pdf-frame .memo { transform: scale(.214); }
+}
+.pdf-frame figcaption { display: none; }
 .pdf-frame .memo {
   width: 700px; transform: scale(.3); transform-origin: 0 0;
   border: 0; padding: 14px 16px; pointer-events: none;
@@ -578,6 +584,9 @@ details.fold > summary .badge { margin-left: 6px; }
 .memo .write-line { border-bottom: 1px solid #000; height: 28px; }
 .memo .check::before { content: "□ "; }
 .memo .page-break { break-before: page; }
+/* グラフは1枚ずつ、ページの境目で割らない */
+.memo .memo-chart { margin: 0 0 10px; break-inside: avoid; page-break-inside: avoid; }
+.memo .memo-chart svg { width: 100%; height: auto; }
 .memo .foot { font-size: 11px; color: #333; margin-top: 16px; border-top: 1px solid #555; padding-top: 4px; }
 
 @media print {
