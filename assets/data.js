@@ -2,7 +2,7 @@
  * 正本は data/*.json です。`python3 scripts/build_data.py` で作り直します。
  */
 window.KSDATA = {
-  "generated": "2026-09-17",
+  "generated": "2026-10-01",
   "sources": {
     "nenkin_izoku_kiso": {
       "name": "遺族基礎年金（受給要件・対象者・年金額）",
@@ -496,28 +496,68 @@ window.KSDATA = {
       "note": "報告書の本文にある試算です。元になった家計の統計は毎年変わります。",
       "src": "fsa2019"
     },
-    "kyouiku.you": {
-      "label": "幼稚園の1年あたりの学習費総額",
-      "value": "公立 184,646円／私立 347,338円",
-      "note": "授業料などの学校教育費、給食費、塾や習い事の費用を合わせた額です。",
+    "kyouiku.you.pub": {
+      "label": "幼稚園の1年あたりの学習費総額（公立）",
+      "value": "184,646円",
+      "num": 184646,
+      "unit": "円",
+      "note": "授業料などの学校教育費、給食費、塾や習い事の費用を合わせた額です。（公立・私立の内訳は kyouiku.you と同じ調査です）",
       "src": "mext_gakushuhi_r5"
     },
-    "kyouiku.shou": {
-      "label": "小学校の1年あたりの学習費総額",
-      "value": "公立 366,599円／私立 1,741,516円",
-      "note": "公立は、学校外の活動費（塾・習い事）が7割を占めています。",
+    "kyouiku.you.priv": {
+      "label": "幼稚園の1年あたりの学習費総額（私立）",
+      "value": "347,338円",
+      "num": 347338,
+      "unit": "円",
+      "note": "授業料などの学校教育費、給食費、塾や習い事の費用を合わせた額です。（公立・私立の内訳は kyouiku.you と同じ調査です）",
       "src": "mext_gakushuhi_r5"
     },
-    "kyouiku.chu": {
-      "label": "中学校の1年あたりの学習費総額",
-      "value": "公立 542,450円／私立 1,560,359円",
-      "note": "—",
+    "kyouiku.shou.pub": {
+      "label": "小学校の1年あたりの学習費総額（公立）",
+      "value": "366,599円",
+      "num": 366599,
+      "unit": "円",
+      "note": "公立は、学校外の活動費（塾・習い事）が7割を占めています。（公立・私立の内訳は kyouiku.shou と同じ調査です）",
       "src": "mext_gakushuhi_r5"
     },
-    "kyouiku.kou": {
-      "label": "高等学校（全日制）の1年あたりの学習費総額",
-      "value": "公立 596,954円／私立 1,179,261円",
-      "note": "調査時点の制度による金額です。令和8年度からの就学支援金の拡充は反映されていません。",
+    "kyouiku.shou.priv": {
+      "label": "小学校の1年あたりの学習費総額（私立）",
+      "value": "1,741,516円",
+      "num": 1741516,
+      "unit": "円",
+      "note": "公立は、学校外の活動費（塾・習い事）が7割を占めています。（公立・私立の内訳は kyouiku.shou と同じ調査です）",
+      "src": "mext_gakushuhi_r5"
+    },
+    "kyouiku.chu.pub": {
+      "label": "中学校の1年あたりの学習費総額（公立）",
+      "value": "542,450円",
+      "num": 542450,
+      "unit": "円",
+      "note": "—（公立・私立の内訳は kyouiku.chu と同じ調査です）",
+      "src": "mext_gakushuhi_r5"
+    },
+    "kyouiku.chu.priv": {
+      "label": "中学校の1年あたりの学習費総額（私立）",
+      "value": "1,560,359円",
+      "num": 1560359,
+      "unit": "円",
+      "note": "—（公立・私立の内訳は kyouiku.chu と同じ調査です）",
+      "src": "mext_gakushuhi_r5"
+    },
+    "kyouiku.kou.pub": {
+      "label": "高等学校の1年あたりの学習費総額（公立）",
+      "value": "596,954円",
+      "num": 596954,
+      "unit": "円",
+      "note": "調査時点の制度による金額です。令和8年度からの就学支援金の拡充は反映されていません。（公立・私立の内訳は kyouiku.kou と同じ調査です）",
+      "src": "mext_gakushuhi_r5"
+    },
+    "kyouiku.kou.priv": {
+      "label": "高等学校の1年あたりの学習費総額（私立）",
+      "value": "1,179,261円",
+      "num": 1179261,
+      "unit": "円",
+      "note": "調査時点の制度による金額です。令和8年度からの就学支援金の拡充は反映されていません。（公立・私立の内訳は kyouiku.kou と同じ調査です）",
       "src": "mext_gakushuhi_r5"
     },
     "kyouiku.15nen": {

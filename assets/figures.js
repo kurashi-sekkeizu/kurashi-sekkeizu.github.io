@@ -64,11 +64,29 @@
     return ul;
   }
 
+  // 横棒の図：data/figures.json の num から、棒の長さを出す。
+  // 同じ図の中でいちばん大きい数を100%にする（本文に数字を書かずに大小を見せるため）
+  function drawBars(root) {
+    root.querySelectorAll("[data-barscale]").forEach((g) => {
+      const fills = [...g.querySelectorAll("[data-fignum]")];
+      const vals = fills.map((el) => {
+        const f = FIGURES[el.dataset.fignum];
+        return f && typeof f.num === "number" ? f.num : null;
+      });
+      const max = Math.max(...vals.filter((v) => v !== null), 0);
+      if (!max) { g.querySelectorAll(".track").forEach((t) => (t.hidden = true)); return; }
+      fills.forEach((el, i) => {
+        el.style.width = vals[i] === null ? "0" : `${Math.max(2, (vals[i] / max) * 100)}%`;
+      });
+    });
+  }
+
   // 記事ページの共通処理：数字の差し込みと出典欄の生成
   function initArticle() {
     const body = document.querySelector("[data-article]");
     if (!body) return;
     const used = apply(body);
+    drawBars(body);
     const slot = document.getElementById("article-sources");
     if (!slot) return;
     if (!loaded()) {
@@ -85,6 +103,6 @@
     slot.appendChild(note);
   }
 
-  window.KSF = { FIGURES, SOURCES, apply, sourceList, loaded };
+  window.KSF = { FIGURES, SOURCES, apply, drawBars, sourceList, loaded };
   document.addEventListener("DOMContentLoaded", initArticle);
 })();

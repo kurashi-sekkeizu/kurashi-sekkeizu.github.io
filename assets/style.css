@@ -584,3 +584,128 @@ details.fold > summary .badge { margin-left: 6px; }
   main.wrap { max-width: none; padding: 0; }
   .memo { border: none; padding: 0; }
 }
+
+/* ───────── 解説記事の図解・強調（やさしく学ぶ） ─────────
+ * 色は3つまで。主役＝アクセント（緑）／注意＝黄／対比の相手＝青。
+ * 文字の大きさで「どこを読めばいいか」が分かるようにする。
+ */
+.lead-note { background: var(--accent-weak); border-radius: var(--radius); padding: 12px 16px; font-size: .95rem; }
+
+/* 冒頭の「この記事でわかること」 */
+.art-takeaways { background: var(--card); border: 2px solid var(--accent); border-radius: var(--radius); padding: 16px 18px; margin: 16px 0 4px; }
+.art-takeaways > b { display: block; color: var(--accent); font-size: .9rem; letter-spacing: .04em; margin-bottom: 8px; }
+.art-takeaways ol { margin: 0; padding-left: 1.25em; }
+.art-takeaways li { font-size: 1.05rem; font-weight: 700; line-height: 1.6; margin-bottom: 6px; }
+.art-takeaways li:last-child { margin-bottom: 0; }
+
+/* 記事の書き出し（1段落だけ大きく） */
+.article .art-lead { font-size: 1.12rem; line-height: 1.85; }
+
+/* 大きな数字のカード */
+.art-nums { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 12px 0; }
+.art-num { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--accent); border-radius: 10px; padding: 12px 14px; }
+.art-num .l { display: block; font-size: .82rem; color: var(--muted); line-height: 1.5; }
+.art-num .v { display: block; font-size: 1.3rem; font-weight: 700; line-height: 1.45; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.art-num .v .fig, .art-bar .amt .fig { background: none; padding: 0; }
+.art-num .n { display: block; font-size: .8rem; color: var(--muted); margin-top: 4px; }
+
+/* 横棒で大小を比べる図 */
+.art-bars { margin: 12px 0; }
+.art-bars .cap { font-size: .9rem; font-weight: 700; margin-bottom: 8px; }
+.art-bar { display: grid; grid-template-columns: minmax(5.5em, 8em) 1fr; gap: 4px 10px; align-items: center; margin-bottom: 8px; }
+.art-bar .l { font-size: .85rem; line-height: 1.4; }
+.art-bar .track { display: block; background: #ecebe5; border-radius: 4px; height: 26px; position: relative; overflow: hidden; }
+.art-bar .fill { display: block; background: var(--accent); height: 100%; border-radius: 4px; min-width: 3px; }
+.art-bar.alt .fill { background: #2a78d6; }
+.art-bar .amt { font-size: .85rem; font-weight: 700; margin-left: 8px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.art-bar .row { display: flex; align-items: center; min-width: 0; }
+.art-bar .row .track { flex: 1; }
+
+/* 段階を追う図（階段・順番） */
+.art-steps { counter-reset: s; margin: 12px 0; display: grid; gap: 8px; }
+.art-step { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px 12px 50px; position: relative; }
+.art-step::before { counter-increment: s; content: counter(s); position: absolute; left: 12px; top: 12px; width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: .9rem; display: grid; place-items: center; }
+.art-step > b { display: block; font-size: 1.02rem; }
+.art-step .d { font-size: .88rem; color: var(--muted); }
+
+/* 2つを見比べる図 */
+.art-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; align-items: stretch; }
+.art-vs > div { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+.art-vs > div:first-child { border-top: 4px solid #2a78d6; }
+.art-vs > div:last-child { border-top: 4px solid var(--accent); }
+.art-vs > div > b { display: block; margin-bottom: 6px; font-size: 1.02rem; }
+.art-vs ul { margin: 0; padding-left: 1.2em; font-size: .9rem; }
+@media (max-width: 520px) { .art-vs { grid-template-columns: 1fr; } }
+
+/* 時の流れ（いつ何が起きるか） */
+.art-time { margin: 12px 0; border-left: 3px solid var(--line); padding-left: 16px; }
+.art-time .t { position: relative; padding: 0 0 14px; }
+.art-time .t::before { content: ""; position: absolute; left: -22px; top: 8px; width: 11px; height: 11px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+.art-time .t.end::before { background: var(--muted); }
+.art-time .w { font-size: .82rem; color: var(--accent); font-weight: 700; }
+.art-time .t.end .w { color: var(--muted); }
+
+/* ポイント／注意／勘違い のボックス */
+.art-box { border-radius: var(--radius); padding: 12px 16px; margin: 12px 0; }
+.art-box > b { display: block; margin-bottom: 4px; }
+.art-box.point { background: var(--accent-weak); border-left: 5px solid var(--accent); }
+.art-box.caution { background: #f1f0ea; border-left: 5px solid #9a988f; }
+.art-box.note { background: var(--card); border: 1px solid var(--line); border-left: 5px solid var(--line); }
+
+/* よくある勘違い（✗→◯の対で見せる） */
+.art-myth { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+.art-myth .x { display: block; color: var(--danger); font-weight: 700; }
+.art-myth .x::before { content: "✗ "; }
+.art-myth .o { display: block; margin-top: 6px; padding-top: 6px; border-top: 1px dotted var(--line); }
+.art-myth .o::before { content: "◯ "; color: var(--accent); font-weight: 700; }
+
+/* 最後のまとめ */
+.art-wrapup { background: var(--accent); color: var(--accent-ink); border-radius: var(--radius); padding: 16px 18px; margin-top: 20px; }
+.art-wrapup > b { display: block; margin-bottom: 6px; }
+.art-wrapup ul { margin: 0; padding-left: 1.2em; }
+.art-wrapup a { color: #fff; }
+
+/* 本文の読みやすさ */
+.article em, .art-takeaways em { font-style: normal; font-weight: 700; }   /* 文中の要点：太字のみ */
+.article strong { font-weight: 700; color: #7a2d1f; }                      /* 用語の初出：色つき太字 */
+.art-wrapup strong, .art-box strong { color: inherit; }
+.article p { margin: 0 0 .9em; }
+
+/* 冒頭の要約（散文）と、連番つきの目次 */
+.art-point { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; margin: 16px 0; }
+.art-point > b { display: inline-block; background: var(--accent); color: #fff; font-size: .78rem; letter-spacing: .12em; padding: 2px 10px; border-radius: 4px; margin-bottom: 8px; }
+.art-point p { margin: 0; font-size: 1.05rem; line-height: 1.85; }
+.art-toc { background: #f1f0ea; border-radius: var(--radius); padding: 16px 18px; margin: 16px 0 24px; }
+.art-toc > b { display: block; font-size: .9rem; margin-bottom: 8px; }
+.art-toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+.art-toc li { counter-increment: toc; padding: 5px 0; border-bottom: 1px dashed #d4d2c8; }
+.art-toc li:last-child { border-bottom: none; }
+.art-toc li::before { content: counter(toc); display: inline-grid; place-items: center; width: 22px; height: 22px; background: var(--ink); color: #fff; font-size: .78rem; border-radius: 3px; margin-right: 8px; vertical-align: -4px; }
+.article h2 .no { display: inline-grid; place-items: center; width: 26px; height: 26px; background: var(--ink); color: #fff; font-size: .82rem; border-radius: 3px; margin-right: 8px; vertical-align: -3px; }
+
+/* 比べる表（行＝読者の疑問、列＝制度）。列の色は見出し・行頭まで通す */
+.art-matrix { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: .92rem; }
+.art-matrix th, .art-matrix td { border: 1px solid var(--line); padding: 8px 10px; vertical-align: top; text-align: left; }
+.art-matrix thead th { color: #fff; font-size: .95rem; }
+.art-matrix thead th:first-child { background: #8d8b80; }
+.art-matrix thead th.a { background: #1d6d7a; }
+.art-matrix thead th.b { background: var(--accent); }
+.art-matrix tbody th { background: #f1f0ea; font-weight: 700; width: 28%; }
+.art-matrix td ul { margin: 0; padding-left: 1.1em; }
+.art-matrix td.a li::marker { color: #1d6d7a; }
+.art-matrix td.b li::marker { color: var(--accent); }
+.art-matrix tr.both td { background: #faf9f5; }
+.art-matrix .big { font-size: 1.05rem; font-weight: 700; }
+.art-matrix-wrap { overflow-x: auto; }
+.art-read { font-size: .9rem; margin-top: -4px; }
+
+/* 記事の扉の写真 */
+.art-hero { margin: 12px 0 18px; }
+.art-hero img { display: block; width: 100%; height: auto; aspect-ratio: 1000 / 340; object-fit: cover; border-radius: var(--radius); background: #e7e5dd; }
+.art-hero figcaption { font-size: .74rem; color: var(--muted); margin-top: 4px; text-align: right; }
+/* 一覧ページのカードにも小さく出す */
+.learn-list { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.learn-list li { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+.learn-list .thumb { display: block; width: 100%; height: 104px; object-fit: cover; background: #e7e5dd; }
+.learn-list .txt { display: block; padding: 10px 14px; }
+.learn-list .txt a { display: block; }
