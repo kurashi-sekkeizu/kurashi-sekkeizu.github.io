@@ -18,7 +18,7 @@
     return Boolean(DATA && DATA.figures && DATA.sources);
   }
 
-  // 記事の中の <span data-fig="..."> を、値に置き換える。使った出典を集めて返す
+  // 記事の中の <span data-fig="...">を、値に置き換える。使った出典を集めて返す
   function apply(root) {
     const used = new Set();
     root.querySelectorAll("[data-fig]").forEach((el) => {

@@ -6,7 +6,7 @@
   "use strict";
 
   const WEATHER = {
-    sun: { icon: "☀️", name: "晴れ", label: "今の前提では、心配は小さい見込み", rank: 0 },
+    sun: { icon: "☀", name: "晴れ", label: "今の前提では、心配は小さい見込み", rank: 0 },
     cloud: { icon: "⛅", name: "くもり", label: "注意して確認を", rank: 1 },
     rain: { icon: "☔", name: "雨", label: "対策を考える価値あり", rank: 2 },
   };
@@ -522,8 +522,8 @@
   }
 
   // ── ライフプラン表（縦＝人、横＝年） ──
-  const ICON = { car: "🚗", repair: "🔧", home: "🏠", care: "👵", spend: "✈️", work: "💼" };
-  const SHORT_ICON = { 誕生: "👶", 小学校: "🎒", 中学: "🏫", 高校: "🏫", 大学: "🎓", 専門: "🎓", 独立: "🌱", 定年: "👔", 年金: "💴", 完済: "🏠" };
+  const ICON = { car: "", repair: "", home: "", care: "", spend: "", work: "" };
+  const SHORT_ICON = { 誕生: "", 小学校: "", 中学: "", 高校: "", 大学: "", 専門: "", 独立: "", 定年: "", 年金: "", 完済: "" };
   const iconOf = (e) => ICON[e.kind] || SHORT_ICON[e.short] || "●";
 
   function stageOf(kid, kidAge) {
@@ -546,7 +546,7 @@
     const box = h("div", "lt-box");
 
     const legend = h("div", "lt-legend");
-    [["👶", "誕生"], ["🎒🏫🎓", "入学"], ["🌱", "独立"], ["👔", "定年"], ["💴", "年金"], ["💼", "働き方"], ["🚗", "車"], ["🔧", "修繕"], ["🏠", "住まい"], ["👵", "介護"], ["✈️", "出費"]].forEach(([i, t]) => legend.appendChild(h("span", null, `${i} ${t}`)));
+    [["", "誕生"], ["", "入学"], ["", "独立"], ["", "定年"], ["", "年金"], ["", "働き方"], ["", "車"], ["", "修繕"], ["", "住まい"], ["", "介護"], ["", "出費"]].forEach(([i, t]) => legend.appendChild(h("span", null, `${i} ${t}`)));
     box.appendChild(legend);
 
     // 行の定義：レーン（あなた・配偶者・子…・くらし）＋貯蓄残高

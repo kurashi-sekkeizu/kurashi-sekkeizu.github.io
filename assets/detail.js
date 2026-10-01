@@ -234,7 +234,7 @@
   // ── 分類（くわしく入力＝全項目の正本）──
   const SECTIONS = [
     {
-      key: "family", title: "👪 家族",
+      key: "family", title: "家族",
       body: (box) => {
         box.appendChild(select("あなたの年齢", A, "age", range(18, 80, 1, (v) => `${v}歳`), "family", { answers: true }));
         box.appendChild(radios("配偶者・パートナー", A, "spouse", opts("spouse"), "family", { answers: true }));
@@ -267,7 +267,7 @@
       },
     },
     {
-      key: "work", title: "💼 あなたの収入",
+      key: "work", title: "あなたの収入",
       body: (box) => {
         box.appendChild(select("働き方", A, "work", opts("work"), "work", { text: true, answers: true }));
         box.appendChild(select("年収（額面・税込）", A, "income", opts("income"), "work", { text: true, answers: true }));
@@ -291,7 +291,7 @@
       },
     },
     {
-      key: "spouseWork", title: "💼 配偶者の収入", show: () => KSQ.hasSpouse(A),
+      key: "spouseWork", title: "配偶者の収入", show: () => KSQ.hasSpouse(A),
       body: (box) => {
         box.appendChild(select("働き方", A, "spouseWork", opts("spouseWork"), "spouseWork", { text: true, answers: true }));
         box.appendChild(select("年収（額面・税込）", A, "spouseIncome", opts("spouseIncome"), "spouseWork", { text: true, answers: true }));
@@ -310,7 +310,7 @@
       },
     },
     {
-      key: "living", title: "🧾 毎月の生活費",
+      key: "living", title: "毎月の生活費",
       body: (box) => {
         const bandRow = select("生活費（おおまかに）", A, "living", opts("living"), "living", {
           text: true, answers: true,
@@ -332,7 +332,7 @@
       },
     },
     {
-      key: "home", title: "🏠 住まい",
+      key: "home", title: "住まい",
       body: (box) => {
         box.appendChild(select("お住まい", A, "home", opts("home"), "home", { text: true, answers: true }));
         if (owns()) box.appendChild(radios("戸建て／マンション", A, "homeType", opts("homeType"), "home", { answers: true }));
@@ -430,7 +430,7 @@
       },
     },
     {
-      key: "edu", title: "🎓 教育", show: () => A.kids === "yes" || D.family.planned.length > 0,
+      key: "edu", title: "教育", show: () => A.kids === "yes" || D.family.planned.length > 0,
       body: (box) => {
         if (A.kids === "yes") {
           box.appendChild(select("進学の方針（おおまかに）", A, "eduPlan", opts("eduPlan"), "edu", {
@@ -462,7 +462,7 @@
       },
     },
     {
-      key: "car", title: "🚗 車",
+      key: "car", title: "車",
       body: (box) => {
         const count = { n: D.cars.length };
         box.appendChild(select("車の台数（これから買う予定を含む）", count, "n", [{ v: 0, label: "持たない" }, { v: 1, label: "1台" }, { v: 2, label: "2台" }], "car", {
@@ -485,7 +485,7 @@
       },
     },
     {
-      key: "loans", title: "💳 借入れ（住宅ローン以外）",
+      key: "loans", title: "借入れ（住宅ローン以外）",
       body: (box) => {
         box.appendChild(note("奨学金・自動車ローン・教育ローンなど。住宅ローンは「住まい」で設定します。"));
         const KINDS = [{ v: "shougakukin", label: "奨学金" }, { v: "car", label: "自動車ローン" }, { v: "edu", label: "教育ローン" }, { v: "other", label: "そのほか（カードローンなど）" }];
@@ -510,7 +510,7 @@
       },
     },
     {
-      key: "assets", title: "💰 貯蓄・投資",
+      key: "assets", title: "貯蓄・投資",
       body: (box) => {
         box.appendChild(select("貯蓄の合計（おおまかに）", A, "savings", opts("savings"), "assets", {
           text: true, answers: true, after: () => { D.assets.cash = null; D.assets.invest = null; delete D.set.assets; },
@@ -527,7 +527,7 @@
       },
     },
     {
-      key: "insurance", title: "🛡️ 加入中の保険",
+      key: "insurance", title: "加入中の保険",
       body: (box) => {
         box.appendChild(checks("入っている保険（複数選べます）", A, "insured", opts("insured"), "insurance", { answers: true }));
         if (Array.isArray(A.insured) ? A.insured.some((x) => x !== "none" && x !== "unknown") : A.insured === "yes") {
@@ -539,7 +539,7 @@
       },
     },
     {
-      key: "spend", title: "✈️ 旅行・大きな出費",
+      key: "spend", title: "旅行・大きな出費",
       body: (box) => {
         box.appendChild(select("毎年の旅行・レジャー", D.spend, "travel", [0, 10, 20, 30, 50, 80, 100].map((v) => ({ v, label: v ? `年${man(v)}` : "特に見込まない" })), "spend", { rerender: true }));
         if (Number(D.spend.travel) > 0) box.appendChild(select("何歳まで", D.spend, "travelUntil", range(60, 85, 5, (v) => `${v}歳まで`), "spend"));
@@ -563,7 +563,7 @@
       },
     },
     {
-      key: "assumptions", title: "⚙️ 計算の前提",
+      key: "assumptions", title: "計算の前提",
       body: (box) => {
         const as = d.assumptions;
         box.appendChild(radios("物価の上昇率（年）", as, "inflation", [0, 1, 2].map((v) => ({ v, label: `${v}%` })), "assumptions", { rerender: false }));
@@ -622,7 +622,7 @@
     const items = [
       [`${at65.age}歳時点の貯蓄`, man(at65.balance)],
       ["貯蓄が底をつく時期", r.sim0.shortageAge !== null ? `⚠ ${r.sim0.shortageAge}歳ごろ` : "90歳までプラス"],
-      ["天気", `☔${counts.rain} ⛅${counts.cloud} ☀️${counts.sun}`],
+      ["天気", `☔${counts.rain} ⛅${counts.cloud} ☀${counts.sun}`],
     ];
     const box = document.getElementById("preview");
     box.replaceChildren();

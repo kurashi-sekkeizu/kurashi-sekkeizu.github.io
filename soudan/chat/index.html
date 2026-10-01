@@ -13,7 +13,7 @@
   <div class="wrap">
     <button type="button" class="linkbtn" id="undo">← 1つ戻す</button>
     <span class="title" id="count"></span>
-    <button type="button" class="linkbtn danger" data-delete>🗑 削除</button>
+    <button type="button" class="linkbtn danger" data-delete>削除</button>
   </div>
   <div class="progress" aria-hidden="true"><div id="bar" style="width:0"></div></div>
 </header>
@@ -26,7 +26,7 @@
 </main>
 <footer class="app-footer no-print">
   <div class="wrap">
-    <a class="linkbtn" href="/">🏠 くらしの設計図のトップへ</a>
+    <a class="linkbtn" href="/">くらしの設計図のトップへ</a>
     <span class="small muted">答えた内容は、この端末の中だけにあります</span>
   </div>
 </footer>
@@ -113,7 +113,7 @@
 
   function panel(q) {
     const p = document.getElementById("panel");
-    const switcher = `<p style="margin:10px 0 0"><button type="button" class="linkbtn" id="to-step">📋 1問ずつの形式に切り替える</button></p>`;
+    const switcher = `<p style="margin:10px 0 0"><button type="button" class="linkbtn" id="to-step">1問ずつの形式に切り替える</button></p>`;
     if (!q) {
       p.innerHTML = `<a class="btn" href="/soudan/confirm/">回答の確認へ</a>` + switcher;
       bindSwitch();

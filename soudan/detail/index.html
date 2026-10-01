@@ -13,7 +13,7 @@
   <div class="wrap">
     <a class="linkbtn" href="/soudan/result/">← 結果に戻る</a>
     <span class="title">くわしく入力</span>
-    <button type="button" class="linkbtn danger" data-delete>🗑 削除</button>
+    <button type="button" class="linkbtn danger" data-delete>削除</button>
   </div>
 </header>
 
@@ -40,7 +40,7 @@
 </main>
 <footer class="app-footer no-print">
   <div class="wrap">
-    <a class="linkbtn" href="/">🏠 くらしの設計図のトップへ</a>
+    <a class="linkbtn" href="/">くらしの設計図のトップへ</a>
     <span class="small muted">答えた内容は、この端末の中だけにあります</span>
   </div>
 </footer>
@@ -80,7 +80,7 @@
     const items = [
       [`${at65.age}歳時点の貯蓄`, KS.man(at65.balance)],
       ["貯蓄が底をつく時期", r.sim0.shortageAge !== null ? `⚠ ${r.sim0.shortageAge}歳ごろ` : "90歳までプラス"],
-      ["天気", `☔${counts.rain} ⛅${counts.cloud} ☀️${counts.sun}`],
+      ["天気", `☔${counts.rain} ⛅${counts.cloud} ☀${counts.sun}`],
     ];
     const box = document.getElementById("preview");
     box.replaceChildren();

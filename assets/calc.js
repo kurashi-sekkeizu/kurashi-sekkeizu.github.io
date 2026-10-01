@@ -972,15 +972,15 @@
     events.sort((x, y) => x.year - y.year);
 
     // 年表（行ごと）：年・家族の年齢・出来事（アイコン・金額）
-    const ICON = { car: "🚗", repair: "🔧", home: "🏠", care: "👵", spend: "✈️", work: "💼", loan: "💳" };
-    const SHORT_ICON = { 誕生: "👶", 小学校: "🎒", 中学: "🏫", 高校: "🏫", 大学: "🎓", 専門: "🎓", 独立: "🌱", 定年: "👔", 年金: "💴", 完済: "🏠" };
+    const ICON = { car: "", repair: "", home: "", care: "", spend: "", work: "", loan: "" };
+    const SHORT_ICON = { 誕生: "", 小学校: "", 中学: "", 高校: "", 大学: "", 専門: "", 独立: "", 定年: "", 年金: "", 完済: "" };
     const rowsByOff = {};
     const addRow = (off, item) => { (rowsByOff[off] = rowsByOff[off] || []).push(item); };
     lanes.forEach((lane) => lane.events.forEach((e) => {
       const pt = sim0.points[e.offset];
       addRow(e.offset, { icon: ICON[e.kind] || SHORT_ICON[e.short] || "●", text: e.text.replace(/（約[^）]*）/, ""), amount: e.amount || (e.short === "大学" || e.short === "専門" ? Math.round(pt ? pt.exp.edu : 0) : 0), kind: e.kind || (["小学校", "中学", "高校", "大学", "専門", "独立"].includes(e.short) ? "edu" : "life") });
     }));
-    if (sim0.shortageAge !== null) addRow(sim0.shortageAge - age, { icon: "⚠️", text: "貯蓄が底をつく見込み（運用しない場合）", amount: 0, kind: "alert" });
+    if (sim0.shortageAge !== null) addRow(sim0.shortageAge - age, { icon: "⚠", text: "貯蓄が底をつく見込み（運用しない場合）", amount: 0, kind: "alert" });
     const timeline = Object.keys(rowsByOff).map(Number).sort((x, y) => x - y).map((off) => ({
       year: year0 + off, offset: off,
       ages: [{ who: "あなた", age: age + off }].concat(spouse ? [{ who: "配偶者", age: spouseAge + off }] : [], kids.map((k, i) => ({ who: `子${kids.length > 1 ? i + 1 : ""}`, age: k + off, gone: k + off > independAge(i) || k + off < 0 })).filter((x) => !x.gone)),
