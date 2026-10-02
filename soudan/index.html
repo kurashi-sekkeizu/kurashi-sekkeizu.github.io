@@ -36,6 +36,15 @@
 
   <form id="start" class="section" style="margin-top:20px">
     <fieldset>
+      <legend>どこまで答えますか</legend>
+      <div class="mode-grid" style="margin-top:8px">
+        <label class="mode-card"><input type="radio" name="depth" value="simple" checked><span class="face"><b>かんたん（約5分）</b><br><span class="muted">家族・収入・住まいの質問に答えます（<b>5画面・15〜23問</b>）。<br>答えなかったところは、公的な統計の目安で計算します</span></span></label>
+        <label class="mode-card"><input type="radio" name="depth" value="detail"><span class="face"><b>くわしく（約15分）</b><br><span class="muted">同じ質問に加えて、<b>住宅ローン・修繕・車・保険</b>など<b>12の条件</b>も入れます。<br>目安で置いた数字が、自分の数字に変わります</span></span></label>
+      </div>
+      <p class="muted" style="margin-top:6px">あとからでも足せます。「かんたん」で始めて、気になるところだけ開く、という進め方でもかまいません。</p>
+    </fieldset>
+
+    <fieldset class="section">
       <legend>答え方を選んでください</legend>
       <div class="mode-grid" style="margin-top:8px">
         <label class="mode-card"><input type="radio" name="mode" value="step" checked><span class="face"><span class="icon" aria-hidden="true"></span><b>1問ずつ答える</b><br><span class="muted">質問に順番に答えます</span></span></label>
@@ -105,6 +114,13 @@
   if (saved.meta && saved.meta.mode === "chat") {
     document.querySelector('input[name="mode"][value="chat"]').checked = true;
   }
+  // トップからの指定（?d=simple / ?d=detail）を初期選択にする。
+  // これは「どこまで答えるか」の進め方であって、入力内容ではない（CLAUDE.md §3）
+  const want = new URLSearchParams(location.search).get("d");
+  const depth = want === "detail" || want === "simple" ? want
+    : (saved.meta && saved.meta.depth) || "simple";
+  const dEl = document.querySelector(`input[name="depth"][value="${depth}"]`);
+  if (dEl) dEl.checked = true;
 
   document.getElementById("start").addEventListener("submit", (e) => {
     e.preventDefault();
@@ -112,6 +128,8 @@
     // 「はじめる」は常に最初から。前回の続きは、上の「前回の続きから」を使う
     const d = KS.empty();
     d.meta.mode = f.get("mode");
+    // くわしく＝質問画面の「詳しい条件」を開いた状態で始める
+    d.meta.depth = f.get("depth") || "simple";
     d.meta.persist = f.get("persist") || "session";
     KS.save(d);
     location.href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";

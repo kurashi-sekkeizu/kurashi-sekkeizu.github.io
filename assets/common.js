@@ -25,7 +25,7 @@
   function empty() {
     return {
       version: VERSION,
-      meta: { mode: "step", persist: "session", pos: null, done: [] },
+      meta: { mode: "step", depth: "simple", persist: "session", pos: null, done: [] },
       answers: {},
       assumptions: { inflation: 1, ret: 0, ratioLow: 70, ratioHigh: 80 },
       pdf: { sections: ["todo", "plan", "estimate", "review", "ask"], note: "" },

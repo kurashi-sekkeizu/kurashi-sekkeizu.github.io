@@ -1,52 +1,81 @@
-/* プロトタイプ用の「仮の計算」
- * ⚠ 画面の見た目と操作を確認するためのダミーです。公的制度・教育費・修繕費などの金額は正式な値ではありません。
- *   本番の試算ロジックは設計工程で、出典・適用年度・確認日つきのデータファイルと手計算テストで作ります。
+/* 見通しの計算
+ * 数字は **コードに書かない**。すべて data/*.json を正本とし、
+ * `scripts/build_data.py` が作る assets/data.js から読む（CLAUDE.md §5）。
+ * 読み込めないときは、古い値や推測で計算せず、例外を投げて試算を止める。
  */
 (function () {
   "use strict";
   const Q = window.KSQ;
 
-  const DUMMY = {
-    takeHomeRate: 0.78,      // 額面→手取りの概算（既定。年収に応じて takeHome() で変える）
-    pensionBase: 80,         // 老齢基礎年金の概算（年・万円）
-    pensionEmployeeRate: 0.18,
-    pensionAge: 65,
-    survivorBase: 100,       // 遺族年金（子がいる間）の概算
-    survivorEmployeeRate: 0.15,
-    sickRate: 0.67,          // 休業中の手当の概算（会社員・公務員）
-    disabilityMonthly: 6.5,
-    funeral: 200,
-    childAllowance: 15,      // 児童手当の概算（18歳まで・年額）
-    leaveRate: 0.5,          // 育休・産休中の収入の概算（元の年収に対する割合）
-    leaveYears: 2,           // 育休・産休が続く年数の仮置き
-    endAge: 90,
-    // 教育費（年額・万円）
-    edu: {
-      // 幼稚園（3〜5歳）。文部科学省「子供の学習費調査」の学習費総額に合わせた目安（無償化のあとの実負担）
-      kinder: { public: 18.5, private: 34.5 },
-      elem: { public: 35, private: 170 },    // 6〜11歳
-      junior: { public: 55, private: 145 },  // 12〜14歳
-      high: { public: 50, private: 105 },    // 15〜17歳
-      univ: { national: 110, privArts: 150, privSci: 185, vocational: 130 },
-      entrance: { national: 30, privArts: 25, privSci: 25, vocational: 20 },
-      away: 100,                             // 下宿・一人暮らしの上乗せ
-    },
-  };
+  // 前提データ（公的な数字・そこから計算した値・公的な数字が無い前提）を読む
+  const A_ = (window.KSDATA && window.KSDATA.assumptions) || null;
+  function need(group, key) {
+    const g = A_ && A_[group];
+    const v = g && g[key];
+    if (!v || typeof v.value !== "number") {
+      throw new Error(`前提『${group}.${key}』が読み込めません。data/assumptions.json と build_data.py を確認してください`);
+    }
+    return v.value;
+  }
+  function dataReady() {
+    return Boolean(A_ && A_.public && A_.estimate && A_.defaults && A_.derived);
+  }
 
-  // 生活費（住居費・教育費・車を除く）の内訳の目安。⚠ ダミーの割合（本番は総務省「家計調査」を出典にする）
-  const LIVING_ITEMS = [
-    { key: "food", label: "食費", ratio: 0.30 },
-    { key: "utility", label: "水道・光熱費", ratio: 0.09 },
-    { key: "comm", label: "通信費（スマホ・ネット）", ratio: 0.05 },
-    { key: "daily", label: "日用品・家具・家電", ratio: 0.05 },
-    { key: "clothes", label: "被服・美容", ratio: 0.05 },
-    { key: "medical", label: "医療・健康", ratio: 0.05 },
-    { key: "transport", label: "交通費（車以外）", ratio: 0.04 },
-    { key: "insurance", label: "保険料（生命保険など）", ratio: 0.07 },
-    { key: "leisure", label: "趣味・娯楽", ratio: 0.10 },
-    { key: "allowance", label: "おこづかい・交際費", ratio: 0.12 },
-    { key: "other", label: "その他", ratio: 0.08 },
+  // 以前は DUMMY という名前でコードに直書きしていた。いまは正本データから組み立てる
+  const DUMMY = dataReady() ? {
+    takeHomeRate: need("estimate", "takeHomeRate"),
+    pensionBase: need("public", "pensionBase"),
+    pensionEmployeeRate: need("estimate", "pensionEmployeeRate"),
+    pensionAge: need("estimate", "pensionAge"),
+    survivorBase: need("public", "survivorBase") + need("public", "survivorKidAdd"),
+    survivorEmployeeRate: need("estimate", "survivorEmployeeRate"),
+    sickRate: need("estimate", "sickRate"),
+    disabilityMonthly: need("estimate", "disabilityMonthly"),
+    funeral: need("estimate", "funeral"),
+    childAllowance: need("public", "childAllowanceO3"),
+    childAllowanceU3: need("public", "childAllowanceU3"),
+    leaveRate: need("estimate", "leaveRate"),
+    leaveYears: need("estimate", "leaveYears"),
+    endAge: need("estimate", "endAge"),
+    edu: {
+      kinder: { public: need("public", "eduKinderPublic") / 10000, private: need("public", "eduKinderPrivate") / 10000 },
+      elem: { public: need("public", "eduElemPublic") / 10000, private: need("public", "eduElemPrivate") / 10000 },
+      junior: { public: need("public", "eduJuniorPublic") / 10000, private: need("public", "eduJuniorPrivate") / 10000 },
+      high: { public: need("public", "eduHighPublic") / 10000, private: need("public", "eduHighPrivate") / 10000 },
+      univ: {
+        national: need("public", "eduUnivNational"),
+        privArts: need("public", "eduUnivPrivate"),
+        privSci: need("public", "eduUnivPrivSci"),
+        vocational: need("estimate", "eduUnivVocational"),
+      },
+      entrance: {
+        national: need("public", "eduEntranceNational"),
+        privArts: need("estimate", "eduEntrancePrivate"),
+        privSci: need("estimate", "eduEntrancePrivate"),
+        vocational: need("estimate", "eduEntrancePrivate"),
+      },
+      away: need("estimate", "eduAway"),
+    },
+  } : null;
+
+  // 児童手当は年齢で額が変わる（3歳未満と、3歳〜高校生年代）
+  function childAllowanceAt(age) {
+    if (age < 0 || age >= 18) return 0;
+    return age < 3 ? DUMMY.childAllowanceU3 : DUMMY.childAllowance;
+  }
+
+  // 生活費（住居費・教育費・車を除く）の内訳。
+  // 割合は家計調査から出す（build_data.py が計算して data.js に書き出す）
+  const LIVING_LABELS = [
+    ["food", "食費"], ["utility", "水道・光熱費"], ["comm", "通信費（スマホ・ネット）"],
+    ["daily", "日用品・家具・家電"], ["clothes", "被服・美容"], ["medical", "医療・健康"],
+    ["transport", "交通費（車以外）"], ["insurance", "保険料（生命保険など）"],
+    ["leisure", "趣味・娯楽"], ["allowance", "おこづかい・交際費"], ["other", "その他"],
   ];
+  const LIVING_RATIO = (A_ && A_.derived && A_.derived.livingRatio && A_.derived.livingRatio.ratio) || null;
+  const LIVING_ITEMS = LIVING_RATIO
+    ? LIVING_LABELS.map(([key, label]) => ({ key, label, ratio: LIVING_RATIO[key] || 0 }))
+    : null;
 
   // 生活費を内訳に分ける。0.5万円単位で丸め、端数は「その他」で調整して合計を元の金額と一致させる
   function splitLiving(total) {
@@ -195,41 +224,61 @@
   }
 
   function detailDefaults(a, nPlanned) {
+    // 初期値はすべて data/assumptions.json の defaults から読む（コードに直書きしない）
+    const V = (k) => need("defaults", k);
     const plan = EDU_PLAN[a.eduPlan] || EDU_PLAN.unknown;
     const nKids = (a.kids === "yes" ? Number(a.kidsCount) || 0 : 0) + (Number(nPlanned) || 0);
     const nCars = Number(a.cars) || 0;
     const livingMid = Q.mid("living", a);
+    const age = Number(a.age);
     return {
       set: {},
       family: { planned: a.kids === "plan" && a.kidPlanIn !== undefined ? [{ inYears: Number(a.kidPlanIn) || 3 }] : [] },
-      living: splitLiving(livingMid == null ? 25 : livingMid),
-      retire: { ratio: 85 },
-      kids: Array.from({ length: nKids }, () => Object.assign({ away: "home", lessons: 0, lessonsUntil: 18 }, plan)),
-      cars: Array.from({ length: nCars }, (_, i) => ({ nextIn: i === 0 ? 5 : 8, budget: 250, interval: 10, upkeep: 35, until: Math.max(75, Number(a.age) + 10) })),
+      living: splitLiving(livingMid == null ? V("livingDefault") : livingMid),
+      retire: { ratio: V("retireRatio") },
+      kids: Array.from({ length: nKids }, () => Object.assign({ away: "home", lessons: 0, lessonsUntil: V("lessonsUntil") }, plan)),
+      cars: Array.from({ length: nCars }, (_, i) => ({
+        nextIn: i === 0 ? V("carNextFirst") : V("carNextOther"),
+        budget: V("carBudget"), interval: V("carInterval"), upkeep: V("carUpkeep"),
+        until: Math.max(V("carUntilAge"), age + 10),
+      })),
       // 住宅ローンは「借りたときの内容」から入れられるようにする（残高は覚えていないことが多いため）
       loan: {
         input: "origin",           // origin＝借りたときの内容から計算／current＝いまの返済額と残高を直接入れる
-        borrowed: 3000,            // 借りた金額（万円）
-        years: 35,                 // 借りた期間（年）
-        startedAgo: 5,             // 何年前から返済しているか
-        rate: 1,                   // 金利（年%）
-        monthly: 10, endAge: 65, balance: 2000,
-        dansin: "yes", bonus: 0, prepayOn: "no", prepayAge: Number(a.age) + 3, prepayAmount: 100,
+        borrowed: V("loanBorrowed"), years: V("loanYears"),
+        startedAgo: V("loanStartedAgo"), rate: V("loanRate"),
+        monthly: V("loanMonthly"), endAge: V("retireAge"), balance: V("loanBalance"),
+        dansin: "yes", bonus: 0, prepayOn: "no",
+        prepayAge: age + V("prepayAfter"), prepayAmount: V("prepayAmount"),
       },
-      rent: { monthly: Q.mid("rent", a) ?? regionRent(a) ?? 8, renewal: 1 },
-      move: { on: "no", age: Number(a.age) + 5, cost: 100, monthly: 10 },
+      rent: { monthly: Q.mid("rent", a) ?? regionRent(a) ?? V("rentDefault"), renewal: V("rentRenewal") },
+      move: { on: "no", age: age + V("moveAfter"), cost: V("moveCost"), monthly: V("moveMonthly") },
       assets: { cash: null, invest: null, monthly: 0 },
       loans: [],
       // かんたん入力で答えた死亡保障の帯を、くわしく入力の初期値にする（答えていなければ0）
       insurance: { death: Number(Q.mid("insuredDeathBand", a) || 0), medical: "unknown", disability: 0 },
-      house: { built: 10, paintEvery: 12, paintCost: 120, waterEvery: 15, waterCost: 60, tax: 12 },
-      mansion: { built: 10, monthly: 3, raise: 20, tax: 10 },
-      purchase: { on: "no", age: Math.max(30, Number(a.age) + 3), type: "house", price: 4000, down: 400, years: 35, rate: 1, cost: 280 },
-      rebuild: { on: "no", age: Math.max(55, Number(a.age) + 15), budget: 1000 },
-      care: { on: "no", startAge: Math.max(50, Number(a.age) + 10), years: 5, monthly: 5 },
-      spend: { travel: 0, travelUntil: 75, items: [] },
-      work: { retireAge: 65, rehire: 0, rehireUntil: 65, allowance: 0, change: "no", changeAge: Number(a.age) + 5, changeIncome: "i3", growth: "stat", pension: 0, side: 0, sideUntil: 65 },
-      spouseWork: { growth: "stat", plan: "same", planFrom: 1, planYears: 2, planRate: 50, returnIncome: "i2", retireAge: 65, pension: 0 },
+      house: {
+        built: V("houseBuilt"), paintEvery: V("housePaintEvery"), paintCost: V("housePaintCost"),
+        waterEvery: V("houseWaterEvery"), waterCost: V("houseWaterCost"), tax: V("houseTax"),
+      },
+      mansion: { built: V("mansionBuilt"), monthly: V("mansionFeeDefault"), raise: V("mansionRaise"), tax: V("mansionTax") },
+      purchase: {
+        on: "no", age: Math.max(30, age + V("purchaseAfter")), type: "house",
+        price: V("purchasePrice"), down: V("purchaseDown"), years: V("loanYears"),
+        rate: V("loanRate"), cost: V("purchaseCost"),
+      },
+      rebuild: { on: "no", age: Math.max(55, age + V("rebuildAfter")), budget: V("rebuildBudget") },
+      care: { on: "no", startAge: Math.max(50, age + V("careAfter")), years: V("careYears"), monthly: V("careMonthlyDefault") },
+      spend: { travel: 0, travelUntil: V("travelUntil"), items: [] },
+      work: {
+        retireAge: V("retireAge"), rehire: 0, rehireUntil: V("retireAge"), allowance: 0,
+        change: "no", changeAge: age + 5, changeIncome: "i3", growth: "stat",
+        pension: 0, side: 0, sideUntil: V("retireAge"),
+      },
+      spouseWork: {
+        growth: "stat", plan: "same", planFrom: 1, planYears: V("spousePlanYears"),
+        planRate: V("spouseLeaveRate"), returnIncome: "i2", retireAge: V("retireAge"), pension: 0,
+      },
     };
   }
 
@@ -253,6 +302,10 @@
   }
 
   function compute(data) {
+    // 公的データが読めないときは、古い値や推測で計算しない（CLAUDE.md §5）
+    if (!DUMMY || !LIVING_ITEMS) {
+      throw new Error("公的データを読み込めませんでした。試算は行いません。");
+    }
     const a = data.answers;
     const as = data.assumptions;
     const D = detailOf(data);
@@ -567,7 +620,7 @@
           if (sAge >= DUMMY.pensionAge) incPension += pensionSpouse;
         }
         let incAllowance = 0;
-        kids.forEach((k) => { if (k + y >= 0 && k + y < 18) incAllowance += DUMMY.childAllowance; });
+        kids.forEach((k) => { incAllowance += childAllowanceAt(k + y); });
         const incOther = ev.income;
         const inc = incWork + incPension + incSpouse + incAllowance + incOther;
 
@@ -1003,5 +1056,5 @@
     return Math.round(n / 100) * 100;
   }
 
-  window.KSC = { compute, detailOf, detailDefaults, splitLiving, loanFromOrigin, DUMMY, LIVING_ITEMS, EDU_PLAN };
+  window.KSC = { compute, detailOf, detailDefaults, splitLiving, loanFromOrigin, DUMMY, LIVING_ITEMS, EDU_PLAN, dataReady };
 })();

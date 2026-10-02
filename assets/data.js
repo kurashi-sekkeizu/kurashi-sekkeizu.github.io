@@ -332,13 +332,17 @@ window.KSDATA = {
       "label": "遺族基礎年金（子のある配偶者）",
       "value": "年 847,300円 ＋ 子の加算額",
       "note": "昭和31年4月1日以前生まれの方は年 844,900円です。",
-      "src": "nenkin_izoku_kiso"
+      "src": "nenkin_izoku_kiso",
+      "num": 84.73,
+      "unit": "万円/年"
     },
     "izoku.kasan": {
       "label": "遺族基礎年金 子の加算（1人目・2人目）",
       "value": "1人につき 年 243,800円",
       "note": "子のある配偶者が受け取る額に加算されます。",
-      "src": "nenkin_izoku_kiso"
+      "src": "nenkin_izoku_kiso",
+      "num": 24.38,
+      "unit": "万円/年"
     },
     "izoku.kasan3": {
       "label": "遺族基礎年金 子の加算（3人目以降）",
@@ -428,19 +432,25 @@ window.KSDATA = {
       "label": "児童手当（3歳未満）",
       "value": "月 15,000円",
       "note": "第3子以降は月 30,000円です。",
-      "src": "cfa_jidouteate"
+      "src": "cfa_jidouteate",
+      "num": 18.0,
+      "unit": "万円/年"
     },
     "jidou.o3": {
       "label": "児童手当（3歳〜高校生年代）",
       "value": "月 10,000円",
       "note": "第3子以降は月 30,000円です。",
-      "src": "cfa_jidouteate"
+      "src": "cfa_jidouteate",
+      "num": 12.0,
+      "unit": "万円/年"
     },
     "jidou.third": {
       "label": "児童手当（第3子以降）",
       "value": "月 30,000円",
       "note": "第3子の数え方は、22歳になる年度の末日までの子から数えます。",
-      "src": "cfa_jidouteate"
+      "src": "cfa_jidouteate",
+      "num": 36.0,
+      "unit": "万円/年"
     },
     "jidou.until": {
       "label": "児童手当を受け取れる期間",
@@ -464,7 +474,9 @@ window.KSDATA = {
       "label": "老齢基礎年金の満額（40年納めた場合）",
       "value": "年 847,300円（月 70,608円）",
       "note": "昭和31年4月1日以前生まれの方は年 844,900円です。受給資格期間は10年以上必要です。",
-      "src": "nenkin_rourei_kiso"
+      "src": "nenkin_rourei_kiso",
+      "num": 84.73,
+      "unit": "万円/年"
     },
     "rourei.model": {
       "label": "標準的な年金額（モデル年金・夫婦2人分）",
@@ -572,16 +584,50 @@ window.KSDATA = {
       "note": "省令で定められた標準額です。特別の事情があるときは、各大学が標準額の120%まで設定できます。",
       "src": "mext_shourei_kokuritsu"
     },
+    "kyouiku.kokudai.nyugaku": {
+      "label": "国立大学の入学料（標準額）",
+      "value": "282,000円",
+      "num": 28.2,
+      "unit": "万円",
+      "note": "入学時に1回だけかかります（kyouiku.kokudai と同じ告示による標準額）。",
+      "src": "mext_shourei_kokuritsu"
+    },
+    "kyouiku.kokudai.jugyou": {
+      "label": "国立大学の授業料（標準額・年）",
+      "value": "年 535,800円",
+      "num": 53.58,
+      "unit": "万円/年",
+      "note": "毎年かかります（kyouiku.kokudai と同じ告示による標準額）。",
+      "src": "mext_shourei_kokuritsu"
+    },
     "kyouiku.shidai": {
       "label": "私立大学（学部）の初年度納付金の平均",
       "value": "1,507,647円",
       "note": "授業料 968,069円、入学料 240,365円、施設設備費 172,550円などの合計です。",
-      "src": "mext_shidai_r7"
+      "src": "mext_shidai_r7",
+      "num": 150.76,
+      "unit": "万円/年"
     },
     "kyouiku.shidai.keitou": {
       "label": "私立大学 学部系統別の初年度（授業料・入学料・施設設備費の合計）",
       "value": "文科系 1,212,235円／理科系 1,602,053円／医歯系 4,779,143円",
       "note": "実験実習料などは含まない3項目の合計です。初年度納付金の平均とは集計の範囲が違います。",
+      "src": "mext_shidai_r7"
+    },
+    "kyouiku.shidai.keitou.arts": {
+      "label": "私立大学 文科系の初年度納付金",
+      "value": "1,212,235円",
+      "num": 121.22,
+      "unit": "万円",
+      "note": "入学金を含む初年度の納付金です。2年目以降は入学金のぶん少なくなります。",
+      "src": "mext_shidai_r7"
+    },
+    "kyouiku.shidai.keitou.sci": {
+      "label": "私立大学 理科系の初年度納付金",
+      "value": "1,602,053円",
+      "num": 160.21,
+      "unit": "万円",
+      "note": "入学金を含む初年度の納付金です。2年目以降は入学金のぶん少なくなります。",
       "src": "mext_shidai_r7"
     },
     "mushouka.pub": {
@@ -793,14 +839,18 @@ window.KSDATA = {
       "value": "平均 13,054円",
       "note": "駐車場使用料などからの充当分を除いた、区分所有者が実際に払う額に近い数字です。",
       "src": "mlit_mansion_survey",
-      "raw": 13054
+      "raw": 13054,
+      "num": 1.31,
+      "unit": "万円/月"
     },
     "kotei.zeiritsu": {
       "label": "固定資産税の標準税率",
       "value": "1.4%",
       "note": "課税標準は「固定資産税評価額」です。評価替えは3年ごとで、賦課期日は1月1日です。",
       "src": "soumu_kotei",
-      "raw": 1.4
+      "raw": 1.4,
+      "num": 1.4,
+      "unit": "%"
     },
     "kotei.toshikeikaku": {
       "label": "都市計画税の制限税率",
@@ -820,21 +870,27 @@ window.KSDATA = {
       "value": "55.0か月（4年7か月）",
       "note": "4年を超えて介護した人が約4割います。介護が終わっていない人も含む調査です。",
       "src": "jili_kaigo",
-      "raw": 55.0
+      "raw": 55.0,
+      "num": 55.0,
+      "unit": "か月"
     },
     "kaigo.monthly": {
       "label": "介護に毎月かかった費用の平均",
       "value": "月 約9.0万円（在宅 約5.3万円／施設 約13.8万円）",
       "note": "公的介護保険サービスの自己負担分を含みます。",
       "src": "jili_kaigo",
-      "raw": 90000
+      "raw": 90000,
+      "num": 9.0,
+      "unit": "万円/月"
     },
     "kaigo.ichiji": {
       "label": "介護で初めにかかった費用の平均",
       "value": "約47.2万円",
       "note": "住宅の改造や介護用ベッドの購入など、一時的にかかった費用の合計です。",
       "src": "jili_kaigo",
-      "raw": 472000
+      "raw": 472000,
+      "num": 47.2,
+      "unit": "万円"
     },
     "kaigo.futan": {
       "label": "公的介護保険の自己負担と、月の上限",
@@ -1811,5 +1867,570 @@ window.KSDATA = {
         "url": "https://www.e-stat.go.jp/stat-search/files?stat_infid=000040210046"
       }
     ]
+  },
+  "assumptions": {
+    "public": {
+      "pensionBase": {
+        "value": 84.73,
+        "unit": "万円/年",
+        "label": "老齢基礎年金の満額（年）",
+        "from": "rourei.mangaku",
+        "src": "nenkin_rourei_kiso"
+      },
+      "survivorBase": {
+        "value": 84.73,
+        "unit": "万円/年",
+        "label": "遺族基礎年金（子のある配偶者・年）",
+        "from": "izoku.kiso",
+        "src": "nenkin_izoku_kiso"
+      },
+      "survivorKidAdd": {
+        "value": 24.38,
+        "unit": "万円/年",
+        "label": "遺族基礎年金の子の加算（1人あたり・年）",
+        "from": "izoku.kasan",
+        "src": "nenkin_izoku_kiso"
+      },
+      "childAllowanceU3": {
+        "value": 18.0,
+        "unit": "万円/年",
+        "label": "児童手当（3歳未満・年）",
+        "from": "jidou.u3",
+        "src": "cfa_jidouteate"
+      },
+      "childAllowanceO3": {
+        "value": 12.0,
+        "unit": "万円/年",
+        "label": "児童手当（3歳〜高校生年代・年）",
+        "from": "jidou.o3",
+        "src": "cfa_jidouteate"
+      },
+      "childAllowanceThird": {
+        "value": 36.0,
+        "unit": "万円/年",
+        "label": "児童手当（第3子以降・年）",
+        "from": "jidou.third",
+        "src": "cfa_jidouteate"
+      },
+      "eduKinderPublic": {
+        "value": 184646,
+        "unit": "円",
+        "label": "幼稚園・公立（年）",
+        "from": "kyouiku.you.pub",
+        "src": "mext_gakushuhi_r5"
+      },
+      "eduKinderPrivate": {
+        "value": 347338,
+        "unit": "円",
+        "label": "幼稚園・私立（年）",
+        "from": "kyouiku.you.priv",
+        "src": "mext_gakushuhi_r5"
+      },
+      "eduElemPublic": {
+        "value": 366599,
+        "unit": "円",
+        "label": "小学校・公立（年）",
+        "from": "kyouiku.shou.pub",
+        "src": "mext_gakushuhi_r5"
+      },
+      "eduElemPrivate": {
+        "value": 1741516,
+        "unit": "円",
+        "label": "小学校・私立（年）",
+        "from": "kyouiku.shou.priv",
+        "src": "mext_gakushuhi_r5"
+      },
+      "eduJuniorPublic": {
+        "value": 542450,
+        "unit": "円",
+        "label": "中学校・公立（年）",
+        "from": "kyouiku.chu.pub",
+        "src": "mext_gakushuhi_r5"
+      },
+      "eduJuniorPrivate": {
+        "value": 1560359,
+        "unit": "円",
+        "label": "中学校・私立（年）",
+        "from": "kyouiku.chu.priv",
+        "src": "mext_gakushuhi_r5"
+      },
+      "eduHighPublic": {
+        "value": 596954,
+        "unit": "円",
+        "label": "高等学校・公立（年）",
+        "from": "kyouiku.kou.pub",
+        "src": "mext_gakushuhi_r5"
+      },
+      "eduHighPrivate": {
+        "value": 1179261,
+        "unit": "円",
+        "label": "高等学校・私立（年）",
+        "from": "kyouiku.kou.priv",
+        "src": "mext_gakushuhi_r5"
+      },
+      "eduUnivNational": {
+        "value": 53.58,
+        "unit": "万円/年",
+        "label": "国立大学の授業料（年）",
+        "from": "kyouiku.kokudai.jugyou",
+        "src": "mext_shourei_kokuritsu"
+      },
+      "eduUnivPrivate": {
+        "value": 121.22,
+        "unit": "万円",
+        "label": "私立大学・文科系（初年度納付金）",
+        "from": "kyouiku.shidai.keitou.arts",
+        "src": "mext_shidai_r7"
+      },
+      "careMonthly": {
+        "value": 9.0,
+        "unit": "万円/月",
+        "label": "介護の月々の費用",
+        "from": "kaigo.monthly",
+        "src": "jili_kaigo"
+      },
+      "careOnce": {
+        "value": 47.2,
+        "unit": "万円",
+        "label": "介護で最初にかかる費用",
+        "from": "kaigo.ichiji",
+        "src": "jili_kaigo"
+      },
+      "careMonths": {
+        "value": 55.0,
+        "unit": "か月",
+        "label": "介護をした期間（平均）",
+        "from": "kaigo.months",
+        "src": "jili_kaigo"
+      },
+      "mansionFee": {
+        "value": 1.31,
+        "unit": "万円/月",
+        "label": "マンションの修繕積立金（月）",
+        "from": "mansion.actual",
+        "src": "mlit_mansion_survey"
+      },
+      "koteiRate": {
+        "value": 1.4,
+        "unit": "%",
+        "label": "固定資産税の標準税率",
+        "from": "kotei.zeiritsu",
+        "src": "soumu_kotei"
+      },
+      "eduUnivPrivSci": {
+        "value": 160.21,
+        "unit": "万円",
+        "label": "私立大学・理科系（初年度納付金）",
+        "from": "kyouiku.shidai.keitou.sci",
+        "src": "mext_shidai_r7"
+      },
+      "eduEntranceNational": {
+        "value": 28.2,
+        "unit": "万円",
+        "label": "国立大学の入学料",
+        "from": "kyouiku.kokudai.nyugaku",
+        "src": "mext_shourei_kokuritsu"
+      }
+    },
+    "derived": {
+      "livingRatio": {
+        "ratio": {
+          "food": 0.2839,
+          "utility": 0.0812,
+          "daily": 0.0414,
+          "clothes": 0.026,
+          "medical": 0.0583,
+          "comm": 0.0594,
+          "transport": 0.082,
+          "leisure": 0.1017,
+          "allowance": 0.1118,
+          "other": 0.0843,
+          "insurance": 0.07
+        },
+        "basis": "家計調査の二人以上の世帯の消費支出から、このサイトで別に扱う「住居」と「教育」を除いた額に対する割合。scripts/build_data.py が計算して書き出す。",
+        "src": "soumu_kakei_2025",
+        "note": "生命保険料は家計調査の消費支出の外にあり、割合を統計から出せない。利用者が答える『毎月の生活費』には保険料が含まれていることが多いため、内訳として置いている。くわしく入力で実額に直せる。"
+      }
+    },
+    "estimate": {
+      "takeHomeRate": {
+        "value": 0.78,
+        "unit": "倍",
+        "label": "額面から手取りへの割合（既定）",
+        "basis": "所得税・住民税・社会保険料をまとめた概算。年収帯に応じて 72〜84% の範囲で変える。個別の税額は計算しない（CLAUDE.md §1・禁止10）。"
+      },
+      "pensionEmployeeRate": {
+        "value": 0.18,
+        "unit": "倍",
+        "label": "老齢厚生年金の上乗せ（年収に対する割合）",
+        "basis": "報酬比例部分は加入期間と報酬で決まるため、年収からの概算で置いている。正確な額はねんきん定期便の値を『くわしく入力』に入れると、そちらを優先して計算する。"
+      },
+      "survivorEmployeeRate": {
+        "value": 0.15,
+        "unit": "倍",
+        "label": "遺族厚生年金の上乗せ（年収に対する割合）",
+        "basis": "老齢厚生年金の報酬比例部分の4分の3という決まりを、年収からの概算に置き換えたもの。"
+      },
+      "sickRate": {
+        "value": 0.6667,
+        "unit": "倍",
+        "label": "傷病手当金（給与に対する割合）",
+        "basis": "標準報酬日額の3分の2という制度の決まりによる（data/figures.json の shoubyou.amount）。"
+      },
+      "leaveRate": {
+        "value": 0.5,
+        "unit": "倍",
+        "label": "育休・産休中の収入（元の年収に対する割合）",
+        "basis": "育児休業給付は開始から180日までが67%、その後50%。期間をならして控えめに50%で置いている。"
+      },
+      "leaveYears": {
+        "value": 2,
+        "unit": "年",
+        "label": "育休・産休が続く年数",
+        "basis": "制度上の上限ではなく、見通しを立てるための仮置き。くわしく入力で変えられる。",
+        "editable": true
+      },
+      "disabilityMonthly": {
+        "value": 6.5,
+        "unit": "万円/月",
+        "label": "障害年金の概算（月）",
+        "basis": "等級の判断は人によって違い、金額を一つに決められない。障害基礎年金2級の水準をもとにした目安。"
+      },
+      "funeral": {
+        "value": 200,
+        "unit": "万円",
+        "label": "葬儀などの費用",
+        "basis": "公的な統計がない。民間調査では地域と形式で大きく幅があるため、見通しを立てるための仮置き。くわしく入力で変えられる。",
+        "editable": true
+      },
+      "endAge": {
+        "value": 90,
+        "unit": "歳",
+        "label": "計算する年齢の上限",
+        "basis": "平均寿命より長めに取り、長生きした場合も見られるようにしている。"
+      },
+      "pensionAge": {
+        "value": 65,
+        "unit": "歳",
+        "label": "年金を受け取り始める年齢（既定）",
+        "basis": "原則の受給開始年齢（data/figures.json の rourei.age）。繰上げ・繰下げはくわしく入力で変えられる。",
+        "editable": true
+      },
+      "eduUnivVocational": {
+        "value": 130,
+        "unit": "万円/年",
+        "label": "専門学校（年）",
+        "basis": "公的な統計が分野ごとに分かれており、ひとつの代表値が取れない。見通しを立てるための仮置き。"
+      },
+      "eduEntrancePrivate": {
+        "value": 0,
+        "unit": "万円",
+        "label": "入学時の費用（私立）",
+        "basis": "私立の年額には初年度納付金（入学金を含む）を使っているため、入学時に重ねて足さない。2年目以降は入学金のぶん多めに出る＝厳しめの見積りになる。"
+      },
+      "eduAway": {
+        "value": 100,
+        "unit": "万円/年",
+        "label": "下宿・一人暮らしの上乗せ（年）",
+        "basis": "住む地域と住まいで大きく変わる。見通しを立てるための仮置き。くわしく入力で変えられる。",
+        "editable": true
+      }
+    },
+    "defaults": {
+      "retireRatio": {
+        "value": 85,
+        "unit": "%",
+        "label": "老後の生活費（現役のころに対する割合）",
+        "basis": "子が独立し、仕事に関わる支出が減るぶんを見込んだ仮置き。"
+      },
+      "retireAge": {
+        "value": 65,
+        "unit": "歳",
+        "label": "定年の年齢",
+        "basis": "よくある定年の年齢。勤務先の制度で変わる。"
+      },
+      "housePaintEvery": {
+        "value": 12,
+        "unit": "年",
+        "label": "外壁・屋根の塗装の間隔",
+        "basis": "戸建ての修繕について、周期と費用をセットで示した公的資料がない。一般に言われる目安。"
+      },
+      "housePaintCost": {
+        "value": 120,
+        "unit": "万円",
+        "label": "外壁・屋根の塗装の費用",
+        "basis": "同上。建物の大きさと仕様で大きく変わるため、見積りで置き換えてほしい。"
+      },
+      "houseWaterEvery": {
+        "value": 15,
+        "unit": "年",
+        "label": "水回り・給湯器の更新の間隔",
+        "basis": "同上。"
+      },
+      "houseWaterCost": {
+        "value": 60,
+        "unit": "万円",
+        "label": "水回り・給湯器の更新の費用",
+        "basis": "同上。"
+      },
+      "houseTax": {
+        "value": 12,
+        "unit": "万円/年",
+        "label": "戸建ての固定資産税",
+        "basis": "評価額で決まるため一律に出せない。納税通知書の額に直してほしい。"
+      },
+      "mansionTax": {
+        "value": 10,
+        "unit": "万円/年",
+        "label": "マンションの固定資産税",
+        "basis": "同上。"
+      },
+      "mansionRaise": {
+        "value": 20,
+        "unit": "%",
+        "label": "修繕積立金の引き上げ幅（10年ごと）",
+        "basis": "段階増額積立方式では引き上げが前提になる。長期修繕計画の値に直してほしい。"
+      },
+      "carUpkeep": {
+        "value": 35,
+        "unit": "万円/年",
+        "label": "車の維持費",
+        "basis": "税・保険・車検・燃料・駐車場の合計。車種と地域で大きく変わる。"
+      },
+      "carBudget": {
+        "value": 250,
+        "unit": "万円",
+        "label": "車の買い替えの予算",
+        "basis": "買う車で決まるため、仮置き。"
+      },
+      "carInterval": {
+        "value": 10,
+        "unit": "年",
+        "label": "車の買い替えの間隔",
+        "basis": "仮置き。"
+      },
+      "carUntilAge": {
+        "value": 75,
+        "unit": "歳",
+        "label": "車に乗る年齢の上限",
+        "basis": "仮置き。"
+      },
+      "loanRate": {
+        "value": 1.0,
+        "unit": "%",
+        "label": "住宅ローンの金利（初期値）",
+        "basis": "返済予定表の金利に直してほしい。商品の金利を示すものではない。"
+      },
+      "loanYears": {
+        "value": 35,
+        "unit": "年",
+        "label": "住宅ローンの期間（初期値）",
+        "basis": "返済予定表の内容に直してほしい。"
+      },
+      "rentRenewal": {
+        "value": 1,
+        "unit": "か月",
+        "label": "更新料（2年ごと）",
+        "basis": "地域と契約で異なる。"
+      },
+      "inflation": {
+        "value": 1,
+        "unit": "%",
+        "label": "物価の上昇（初期値）",
+        "basis": "利用者が選ぶ前提。結果には運用しない場合を必ず併記する（CLAUDE.md §5）。"
+      },
+      "ret": {
+        "value": 0,
+        "unit": "%",
+        "label": "運用の利回り（初期値）",
+        "basis": "初期値は0%（運用しない）。天気の判定は常に運用しない場合で行う。"
+      },
+      "ratioLow": {
+        "value": 70,
+        "unit": "%",
+        "label": "万一のときの遺族の生活費（低いほう）",
+        "basis": "人数が減るぶんを見込んだ幅の下側。"
+      },
+      "ratioHigh": {
+        "value": 80,
+        "unit": "%",
+        "label": "万一のときの遺族の生活費（高いほう）",
+        "basis": "家事や育児を外に頼む場合を見込んだ幅の上側。"
+      },
+      "loanBorrowed": {
+        "value": 3000,
+        "unit": "万円",
+        "label": "住宅ローンの借入額（初期値）",
+        "basis": "返済予定表の額に直してほしい。公的な標準値ではない。"
+      },
+      "loanStartedAgo": {
+        "value": 5,
+        "unit": "年",
+        "label": "住宅ローンを返し始めてからの年数（初期値）",
+        "basis": "仮置き。"
+      },
+      "loanMonthly": {
+        "value": 10,
+        "unit": "万円/月",
+        "label": "住宅ローンの返済額（初期値）",
+        "basis": "返済予定表の額に直してほしい。"
+      },
+      "loanBalance": {
+        "value": 2000,
+        "unit": "万円",
+        "label": "住宅ローンの残高（初期値）",
+        "basis": "返済予定表の額に直してほしい。"
+      },
+      "prepayAmount": {
+        "value": 100,
+        "unit": "万円",
+        "label": "繰り上げ返済の金額（初期値）",
+        "basis": "仮置き。"
+      },
+      "prepayAfter": {
+        "value": 3,
+        "unit": "年",
+        "label": "繰り上げ返済をする時期（いまから・初期値）",
+        "basis": "仮置き。"
+      },
+      "rentDefault": {
+        "value": 8,
+        "unit": "万円/月",
+        "label": "家賃（地域も答えていないときの初期値）",
+        "basis": "都道府県を答えると、民営借家の平均に置き換わる。"
+      },
+      "moveCost": {
+        "value": 100,
+        "unit": "万円",
+        "label": "住み替えの費用（初期値）",
+        "basis": "仮置き。"
+      },
+      "moveMonthly": {
+        "value": 10,
+        "unit": "万円/月",
+        "label": "住み替えたあとの住居費（初期値）",
+        "basis": "仮置き。"
+      },
+      "moveAfter": {
+        "value": 5,
+        "unit": "年",
+        "label": "住み替えの時期（いまから・初期値）",
+        "basis": "仮置き。"
+      },
+      "houseBuilt": {
+        "value": 10,
+        "unit": "年",
+        "label": "築年数の初期値",
+        "basis": "仮置き。"
+      },
+      "mansionBuilt": {
+        "value": 10,
+        "unit": "年",
+        "label": "マンションの築年数の初期値",
+        "basis": "仮置き。"
+      },
+      "purchasePrice": {
+        "value": 4000,
+        "unit": "万円",
+        "label": "住宅の購入価格（初期値）",
+        "basis": "住宅金融支援機構の調査の水準を参考にした仮置き。買う物件で決まる。"
+      },
+      "purchaseDown": {
+        "value": 400,
+        "unit": "万円",
+        "label": "頭金（初期値）",
+        "basis": "仮置き。"
+      },
+      "purchaseCost": {
+        "value": 280,
+        "unit": "万円",
+        "label": "購入の諸費用（初期値）",
+        "basis": "仮置き。物件価格の1割弱を目安にしている。"
+      },
+      "purchaseAfter": {
+        "value": 3,
+        "unit": "年",
+        "label": "住宅を買う時期（いまから・初期値）",
+        "basis": "仮置き。"
+      },
+      "rebuildBudget": {
+        "value": 1000,
+        "unit": "万円",
+        "label": "建て替え・大規模リフォームの予算（初期値）",
+        "basis": "仮置き。"
+      },
+      "rebuildAfter": {
+        "value": 15,
+        "unit": "年",
+        "label": "建て替えの時期（いまから・初期値）",
+        "basis": "仮置き。"
+      },
+      "careYears": {
+        "value": 5,
+        "unit": "年",
+        "label": "介護が続く年数（初期値）",
+        "basis": "家計調査ではなく生命保険文化センターの調査による平均（kaigo.months）を年に直した仮置き。"
+      },
+      "careMonthlyDefault": {
+        "value": 5,
+        "unit": "万円/月",
+        "label": "介護の月々の費用（初期値）",
+        "basis": "公的介護保険を使った場合の自己負担を見込んだ仮置き。くわしく入力で変えられる。"
+      },
+      "careAfter": {
+        "value": 10,
+        "unit": "年",
+        "label": "介護が始まる時期（いまから・初期値）",
+        "basis": "仮置き。"
+      },
+      "carNextFirst": {
+        "value": 5,
+        "unit": "年",
+        "label": "1台目の買い替えまでの年数（初期値）",
+        "basis": "仮置き。"
+      },
+      "carNextOther": {
+        "value": 8,
+        "unit": "年",
+        "label": "2台目以降の買い替えまでの年数（初期値）",
+        "basis": "仮置き。"
+      },
+      "travelUntil": {
+        "value": 75,
+        "unit": "歳",
+        "label": "旅行などの出費を見込む年齢の上限",
+        "basis": "仮置き。"
+      },
+      "lessonsUntil": {
+        "value": 18,
+        "unit": "歳",
+        "label": "習い事を見込む年齢の上限",
+        "basis": "仮置き。"
+      },
+      "livingDefault": {
+        "value": 25,
+        "unit": "万円/月",
+        "label": "生活費（答えていないときの初期値）",
+        "basis": "世帯人数から置く式の中央あたり。人数を答えていれば人数から置く。"
+      },
+      "mansionFeeDefault": {
+        "value": 3,
+        "unit": "万円/月",
+        "label": "管理費と修繕積立金の合計（初期値）",
+        "basis": "修繕積立金の実際の平均（mansion.actual）に管理費を足した仮置き。"
+      },
+      "spouseLeaveRate": {
+        "value": 50,
+        "unit": "%",
+        "label": "配偶者が働き方を変えたときの年収（元に対する割合・初期値）",
+        "basis": "仮置き。くわしく入力で変えられる。"
+      },
+      "spousePlanYears": {
+        "value": 2,
+        "unit": "年",
+        "label": "配偶者が働き方を変える期間（初期値）",
+        "basis": "仮置き。"
+      }
+    }
   }
 };

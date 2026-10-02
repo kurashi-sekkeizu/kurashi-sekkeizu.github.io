@@ -132,7 +132,8 @@
     slot.appendChild(det);
     KSD.build(d, { only: keys, onChange: () => { /* 保存は KSD 側で行う */ } }).mount(body);
   }
-  const moreOpen = new Set();
+  // 「くわしく」で始めた人は、詳しい条件を開いた状態にする
+  const moreOpen = new Set(d.meta.depth === "detail" ? Object.keys(DETAIL_OF_GROUP) : []);
 
   function render(focus) {
     const s = screens[idx];

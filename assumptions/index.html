@@ -23,7 +23,7 @@
   <p class="muted">答えられない項目は、<b>一般的な目安で仮に置いて</b>計算しています。どんな値を使っているかを、ここで全部見られます。
     結果の画面では <span class="badge warn">⚠ 仮</span> の印が付きます。</p>
 
-  <div class="note warn">⚠ <b>この試作版の金額は、すべてダミーです。</b>本番では、公的な統計（総務省「家計調査」など）の値に置き換え、出典と確認日を付けます。</div>
+  <div class="note info">計算に使う数字は、<b>すべて data/ のデータファイルを正本</b>にしています。公的な統計から取っているものは出典・適用年度・確認日つきで、<a href="/sources/">もっと知る</a>に一覧があります。公的な統計が無いものは、下の「公的な統計が無い前提」に根拠とともに並べています。</div>
 
   <section class="section">
     <h2 class="section-title">生活費の内訳</h2>
@@ -86,6 +86,18 @@
       <table class="data text">
         <thead><tr><th>項目</th><th>はじめの値</th><th>変えられるか</th></tr></thead>
         <tbody id="assume-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">公的な統計が無い前提</h2>
+    <p class="small">公的な数字が存在しない、または統計から直接は取れないものです。<b>どう置いたかの根拠を、ひとつずつ書いています。</b>
+      「変えられる」ものは、くわしく入力で自分の数字に直せます。</p>
+    <div class="table-wrap">
+      <table class="data text">
+        <thead><tr><th>項目</th><th>置いている値</th><th>根拠</th><th>変えられる</th></tr></thead>
+        <tbody id="estimate-rows"></tbody>
       </table>
     </div>
   </section>
@@ -165,6 +177,19 @@
     document.getElementById("region-note").textContent =
       (R.caveats || []).map((c) => c.text).join(" ");
   }
+
+  // 公的な統計が無い前提（estimate と defaults）を、根拠つきで並べる
+  const AS = (window.KSDATA && window.KSDATA.assumptions) || {};
+  const rows2 = [];
+  ["estimate", "defaults"].forEach((g) => {
+    Object.entries(AS[g] || {}).forEach(([k, v]) => {
+      rows2.push(row([esc(v.label || k),
+        `${v.value}${esc(v.unit || "")}`,
+        `<span class="small">${esc(v.basis || "")}</span>`,
+        v.editable || g === "defaults" ? "変えられる" : "—"]));
+    });
+  });
+  document.getElementById("estimate-rows").innerHTML = rows2.join("");
 
   // 計算の前提
   const empty = KS.empty();
