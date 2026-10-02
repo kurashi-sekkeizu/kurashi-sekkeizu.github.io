@@ -585,6 +585,123 @@
     };
     const returnIncome = Q.option(Q.byId.spouseIncome, SW.returnIncome)?.mid ?? 100;
 
+    // 育休・産休の年は、収入にこの割合を掛ける
+    const leaveFactor = (w, yy) => (w === "leave" && yy < DUMMY.leaveYears ? DUMMY.leaveRate : 1);
+
+    // ───── 年ごとの収入と支出を、部品に分ける ─────
+    // 1つの関数の中で足し引きしていたものを、役割ごとに切り出した。
+    // ①どれか1つだけを取り出して検算できる ②足し忘れ・二重計上に気づきやすい
+    // という2つの理由による（過去の不具合 R1・R5・R6・R14 はすべてこの型だった）。
+    // 各部品は「その年の金額（万円）」を返す。副作用を持たない。
+
+    /** その年の一時的な出来事（買い替え・修繕・繰り上げ返済など） */
+    function eventsAt(y) {
+      return oneTime[y] || { housing: 0, homeLoan: 0, repair: 0, car: 0, other: 0, income: 0 };
+    }
+
+    /** 本人の仕事の収入（手取り） */
+    function incomeWorkAt(y) {
+      const cur = age + y;
+      const afterChange = changeOff !== null && y >= changeOff;
+      const rawIncome = afterChange ? changedIncome : income;
+      const refAge = afterChange ? Number(W.changeAge) : age;
+      // 転職後は、転職した年を起点に数える（今からの年数だと初年度に数年分の昇給が乗る）
+      const growthYears = afterChange ? y - changeOff : y;
+      const workYears = Math.min(growthYears, Math.max(0, retireAge - age));
+      const base = rawIncome * incomeFactor(W.growth, work, refAge, Math.min(cur, retireAge), workYears);
+      let v = 0;
+      if (cur < retireAge) {
+        v = base * leaveFactor(work, y) * takeHome(base);
+      } else if (Number(W.rehire) > 0 && cur < rehireUntil) {
+        const rate = Number(W.rehire) / 100;
+        v = base * rate * takeHome(base * rate);
+      }
+      if (Number(W.side) > 0 && cur < Number(W.sideUntil)) v += Number(W.side);
+      return v;
+    }
+
+    /** 配偶者の仕事の収入（手取り） */
+    function incomeSpouseAt(y) {
+      if (!spouse) return 0;
+      const sAge = spouseAge + y;
+      if (sAge >= Number(SW.retireAge)) return 0;
+      const backToWork = SW.plan === "return" && y >= Number(SW.planFrom);
+      const sRefAge = backToWork ? spouseAge + Number(SW.planFrom) : spouseAge;
+      const sYears = backToWork ? y - Number(SW.planFrom) : y;
+      const sBase = (backToWork ? returnIncome : spouseIncome)
+        * incomeFactor(SW.growth, a.spouseWork, sRefAge, Math.min(sAge, Number(SW.retireAge)), sYears);
+      return sBase * spouseFactor(y) * leaveFactor(a.spouseWork, y) * takeHome(sBase);
+    }
+
+    /** 年金（本人＋配偶者） */
+    function incomePensionAt(y) {
+      let v = age + y >= DUMMY.pensionAge ? pensionSelf : 0;
+      if (spouse && spouseAge + y >= DUMMY.pensionAge) v += pensionSpouse;
+      return v;
+    }
+
+    /** 児童手当（子の年齢で額が変わる） */
+    function incomeAllowanceAt(y) {
+      return kids.reduce((t, k) => t + childAllowanceAt(k + y), 0);
+    }
+
+    /** 生活費（物価上昇を掛ける。年金の年齢からは老後の割合を掛ける） */
+    function expenseLivingAt(y) {
+      const cur = age + y;
+      // すでに年金の年齢に達している人は「いまの生活費」を答えているので、老後の圧縮率は掛けない
+      const retireRatio = age >= DUMMY.pensionAge ? 1 : Number(D.retire.ratio) / 100;
+      return living * 12 * Math.pow(1 + inf, y) * (cur >= DUMMY.pensionAge ? retireRatio : 1);
+    }
+
+    /** 教育費（子ごとに、その年の学年で出す） */
+    function expenseEduAt(y) {
+      return kids.reduce((t, k, i) => t + eduCost(i, k + y), 0);
+    }
+
+    /** 車の維持費（買い替えは一時的な出来事のほうに入っている） */
+    function expenseCarUpkeepAt(y) {
+      const cur = age + y;
+      return D.cars.reduce((t, c) => t + (cur < Number(c.until) ? Number(c.upkeep) : 0), 0);
+    }
+
+    /** 住宅ローン以外の借入れの返済 */
+    function expenseOtherLoanAt(y) {
+      const cur = age + y;
+      return D.loans.reduce((t, l) => t + (cur < Number(l.endAge) ? Number(l.monthly) * 12 : 0), 0);
+    }
+
+    /** 旅行など、予定している出費 */
+    function expenseTravelAt(y) {
+      const cur = age + y;
+      return Number(D.spend.travel) > 0 && cur < Number(D.spend.travelUntil) ? Number(D.spend.travel) : 0;
+    }
+
+    /** その年の収入と支出を、ぜんぶ組み立てる */
+    function yearOf(y) {
+      const ev = eventsAt(y);
+      const hc = housingCost(y);
+      const inc = {
+        work: incomeWorkAt(y),
+        spouse: incomeSpouseAt(y),
+        pension: incomePensionAt(y),
+        allowance: incomeAllowanceAt(y),
+        lump: ev.income,
+      };
+      const exp = {
+        living: expenseLivingAt(y),
+        housing: hc.base + ev.housing + ev.repair,
+        homeLoan: hc.homeLoan + ev.homeLoan,   // 住居費の内数。合計には足さない
+        repair: ev.repair,
+        edu: expenseEduAt(y),
+        car: expenseCarUpkeepAt(y) + ev.car,
+        loan: expenseOtherLoanAt(y),
+        other: expenseTravelAt(y) + ev.other,
+      };
+      // 合計に入れるのはこの5つ。homeLoan と repair は housing に含まれているので足さない
+      const total = exp.living + exp.housing + exp.edu + exp.car + exp.loan + exp.other;
+      return { inc, exp, income: inc.work + inc.spouse + inc.pension + inc.allowance + inc.lump, expense: total };
+    }
+
     function simulate(r) {
       // 貯蓄の内訳を入れた場合は「預貯金（運用しない）」と「投資（利回りで増える）」に分ける
       let cash = assetsSplit ? Number(D.assets.cash) : 0;
@@ -594,67 +711,20 @@
       let shortageAge = null;
       for (let y = 0; y <= span; y++) {
         const cur = age + y;
-        const ev = oneTime[y] || { housing: 0, homeLoan: 0, repair: 0, car: 0, other: 0, income: 0 };
-        const afterChange = changeOff !== null && y >= changeOff;
-        const rawIncome = afterChange ? changedIncome : income;
-        const refAge = afterChange ? Number(W.changeAge) : age;
-        // 転職後は、転職した年を起点に数える（今からの年数だと初年度に数年分の昇給が乗る）
-        const growthYears = afterChange ? y - changeOff : y;
-        const workYears = Math.min(growthYears, Math.max(0, retireAge - age));
-        const baseIncome = rawIncome * incomeFactor(W.growth, work, refAge, Math.min(cur, retireAge), workYears);
-        const leaveFactor = (w, yy) => (w === "leave" && yy < DUMMY.leaveYears ? DUMMY.leaveRate : 1);
-        let incWork = 0;
-        if (cur < retireAge) incWork = baseIncome * leaveFactor(work, y) * takeHome(baseIncome);
-        else if (Number(W.rehire) > 0 && cur < rehireUntil) incWork = baseIncome * (Number(W.rehire) / 100) * takeHome(baseIncome * (Number(W.rehire) / 100));
-        if (Number(W.side) > 0 && cur < Number(W.sideUntil)) incWork += Number(W.side);
-        let incPension = cur >= DUMMY.pensionAge ? pensionSelf : 0;
-        let incSpouse = 0;
-        if (spouse) {
-          const sAge = spouseAge + y;
-          const backToWork = SW.plan === "return" && y >= Number(SW.planFrom);
-          const sRefAge = backToWork ? spouseAge + Number(SW.planFrom) : spouseAge;
-          const sYears = backToWork ? y - Number(SW.planFrom) : y;
-          const sBase = (backToWork ? returnIncome : spouseIncome)
-            * incomeFactor(SW.growth, a.spouseWork, sRefAge, Math.min(sAge, Number(SW.retireAge)), sYears);
-          if (sAge < Number(SW.retireAge)) incSpouse = sBase * spouseFactor(y) * leaveFactor(a.spouseWork, y) * takeHome(sBase);
-          if (sAge >= DUMMY.pensionAge) incPension += pensionSpouse;
-        }
-        let incAllowance = 0;
-        kids.forEach((k) => { incAllowance += childAllowanceAt(k + y); });
-        const incOther = ev.income;
-        const inc = incWork + incPension + incSpouse + incAllowance + incOther;
+        const { inc, exp, income: incTotal, expense: expTotal } = yearOf(y);
 
-        // すでに年金の年齢に達している人は「いまの生活費」を答えているので、老後の圧縮率は掛けない
-        const retireRatio = age >= DUMMY.pensionAge ? 1 : Number(D.retire.ratio) / 100;
-        const expLiving = living * 12 * Math.pow(1 + inf, y) * (cur >= DUMMY.pensionAge ? retireRatio : 1);
-        const hc = housingCost(y);
-        const expHousing = hc.base + ev.housing + ev.repair;
-        // 住宅ローンの返済ぶんは、グラフと表で分けて出す（住居費の内数）
-        const expHomeLoan = hc.homeLoan + ev.homeLoan;
-        let expEdu = 0;
-        kids.forEach((k, i) => { expEdu += eduCost(i, k + y); });
-        let expCar = ev.car;
-        D.cars.forEach((c) => { if (cur < Number(c.until)) expCar += Number(c.upkeep); });
-        let expLoan = 0;
-        D.loans.forEach((l) => { if (cur < Number(l.endAge)) expLoan += Number(l.monthly) * 12; });
-        let expOther = ev.other;
-        if (Number(D.spend.travel) > 0 && cur < Number(D.spend.travelUntil)) expOther += Number(D.spend.travel);
-        const exp = expLiving + expHousing + expEdu + expCar + expLoan + expOther;
-
-        {
-          if (assetsSplit) {
-            const c = cur <= DUMMY.pensionAge ? contrib : 0;
-            cash += inc - exp - c;
-            inv = (inv + c) * (inv > 0 ? 1 + r : 1);
-          } else {
-            inv = inv * (inv > 0 ? 1 + r : 1) + inc - exp;
-          }
+        if (assetsSplit) {
+          const c = cur <= DUMMY.pensionAge ? contrib : 0;
+          cash += incTotal - expTotal - c;
+          inv = (inv + c) * (inv > 0 ? 1 + r : 1);
+        } else {
+          inv = inv * (inv > 0 ? 1 + r : 1) + incTotal - expTotal;
         }
         const balance = cash + inv;
         points.push({
-          age: cur, year: year0 + y, balance: Math.round(balance), income: Math.round(inc), expense: Math.round(exp),
-          inc: { work: incWork, spouse: incSpouse, pension: incPension, allowance: incAllowance, lump: incOther },
-          exp: { living: expLiving, housing: expHousing, homeLoan: expHomeLoan, repair: ev.repair, edu: expEdu, car: expCar, loan: expLoan, other: expOther },
+          age: cur, year: year0 + y,
+          balance: Math.round(balance), income: Math.round(incTotal), expense: Math.round(expTotal),
+          inc: inc, exp: exp,
         });
         if (shortageAge === null && balance < 0) shortageAge = cur;
       }
