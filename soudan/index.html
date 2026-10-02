@@ -37,10 +37,18 @@
   <form id="start" class="section" style="margin-top:20px">
     <fieldset>
       <legend>どこまで答えますか</legend>
+      <!-- 札の中は名前と所要時間だけにする。説明は下にまとめて置く
+           （2026-10-03 利用者の指示。中身の長さが違うと札の高さがそろわず、字も詰まる） -->
       <div class="mode-grid" style="margin-top:8px">
-        <label class="mode-card"><input type="radio" name="depth" value="simple" checked><span class="face"><b>かんたん（約5分）</b><br><span class="muted">家族・収入・住まいについて、<b>5つの画面</b>でお聞きします。<br>答えなかったところは、公的な統計の目安で計算します</span></span></label>
-        <label class="mode-card"><input type="radio" name="depth" value="detail"><span class="face"><b>くわしく（約15分）</b><br><span class="muted">同じ質問に加えて、<b>住宅ローンの借入額・期間・金利、修繕、車の買い替え、保険</b>なども入れます。<br>目安で置いた数字が、自分の数字に変わります</span></span></label>
+        <label class="mode-card"><input type="radio" name="depth" value="simple" checked><span class="face"><b>かんたん（約5分）</b></span></label>
+        <label class="mode-card"><input type="radio" name="depth" value="detail"><span class="face"><b>くわしく（約15分）</b></span></label>
       </div>
+      <dl class="mode-note">
+        <dt>かんたん</dt>
+        <dd>家族・収入・住まいについて、<b>5つの画面</b>でお聞きします。答えなかったところは、公的な統計の目安で計算します。</dd>
+        <dt>くわしく</dt>
+        <dd>同じ質問に加えて、<b>住宅ローンの借入額・期間・金利、修繕、車の買い替え、保険</b>なども入れます。目安で置いた数字が、自分の数字に変わります。</dd>
+      </dl>
       <p class="muted" style="margin-top:6px">あとからでも足せます。「かんたん」で始めて、気になるところだけ開く、という進め方でもかまいません。</p>
     </fieldset>
 
