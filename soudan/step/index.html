@@ -130,7 +130,8 @@
     det.addEventListener("toggle", () => { if (det.open) moreOpen.add(groupKey); else moreOpen.delete(groupKey); });
     det.open = moreOpen.has(groupKey);
     slot.appendChild(det);
-    KSD.build(d, { only: keys, onChange: () => { /* 保存は KSD 側で行う */ } }).mount(body);
+    KSD.build(d, { only: keys, openAll: d.meta.depth === "detail",
+      onChange: () => { /* 保存は KSD 側で行う */ } }).mount(body);
   }
   // 「くわしく」で始めた人は、詳しい条件を開いた状態にする
   const moreOpen = new Set(d.meta.depth === "detail" ? Object.keys(DETAIL_OF_GROUP) : []);

@@ -13,6 +13,9 @@
     const openState = cfg.openState || new Set();
     let jumpTo = cfg.jumpTo || null;
     if (jumpTo) openState.add(jumpTo);
+    // 「くわしく」で始めた人には、節を開いた状態で見せる。
+    // 閉じたままだと、見出しだけが並んで「質問されなかった」と受け取られるため
+    const openAll = Boolean(cfg.openAll);
     const afterChange = cfg.onChange || function () {};
     const only = cfg.only || null;   // 指定したセクションだけを出す
 
@@ -581,7 +584,7 @@
     SECTIONS.filter((s) => (!s.show || s.show()) && (!only || only.includes(s.key))).forEach((s) => {
       const det = h("details", "fold");
       det.dataset.key = s.key;
-      det.open = openState.has(s.key);
+      det.open = openAll || openState.has(s.key);
       det.addEventListener("toggle", () => { det.open ? openState.add(s.key) : openState.delete(s.key); });
       const sum = h("summary");
       const t = h("span", null, s.title + " ");
