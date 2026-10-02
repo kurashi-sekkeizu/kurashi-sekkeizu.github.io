@@ -622,7 +622,7 @@
     const items = [
       [`${at65.age}歳時点の貯蓄`, man(at65.balance)],
       ["貯蓄が底をつく時期", r.sim0.shortageAge !== null ? `⚠ ${r.sim0.shortageAge}歳ごろ` : "90歳までプラス"],
-      ["天気", `☔${counts.rain} ⛅${counts.cloud} ☀${counts.sun}`],
+      ["天気", `☔${counts.rain} ⛅${counts.cloud} ☀️${counts.sun}`],
     ];
     const box = document.getElementById("preview");
     box.replaceChildren();

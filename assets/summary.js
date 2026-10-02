@@ -6,7 +6,7 @@
   "use strict";
 
   const WEATHER = {
-    sun: { icon: "☀", name: "晴れ", label: "今の前提では、心配は小さい見込み", rank: 0 },
+    sun: { icon: "☀️", name: "晴れ", label: "今の前提では、心配は小さい見込み", rank: 0 },
     cloud: { icon: "⛅", name: "くもり", label: "注意して確認を", rank: 1 },
     rain: { icon: "☔", name: "雨", label: "対策を考える価値あり", rank: 2 },
   };

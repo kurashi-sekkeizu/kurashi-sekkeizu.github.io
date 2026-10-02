@@ -27,7 +27,7 @@
       ${r.provisional.length ? `<p>※仮の値：${esc(r.provisional.join("、"))}</p>` : ""}
       <h2>見通し（天気予報）</h2>
       <table><tbody>${r.forecast.map((f) => { const w = KSR.WEATHER[f.weather]; return `<tr><th style="width:26%">${esc(f.title)}</th><td style="width:22%;white-space:nowrap"><b>${w.icon} ${esc(w.name)}</b></td><td>${esc(f.reason)}${f.note ? `<br>※${esc(f.note)}` : ""}</td></tr>`; }).join("")}</tbody></table>
-      <p>☀晴れ＝今の前提では心配は小さい見込み／⛅くもり＝注意して確認を／☔雨＝対策を考える価値あり</p>
+      <p>☀️晴れ＝今の前提では心配は小さい見込み／⛅くもり＝注意して確認を／☔雨＝対策を考える価値あり</p>
       <h2 class="page-break">お金の流れと、貯蓄の見通し</h2>
       ${KSV.staticHTML(r, 680)}
       <p>前提：物価上昇 年${d.assumptions.inflation}%／運用 年${d.assumptions.ret}%${r.sim0.shortageAge !== null ? `／<b>${r.sim0.shortageAge}歳ごろ、貯蓄が底をつく見込み</b>` : "／90歳まで貯蓄はプラスの見込み"}</p>
