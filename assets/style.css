@@ -486,8 +486,11 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .curve-num { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 /* 選択肢のとなりの「？」 */
-.option-row { display: flex; align-items: flex-start; gap: 6px; }
-.option-row > .option { flex: 1; min-width: 0; }
+/* flex-wrap が無いと、開いた「？」が幅100%を要求したときに折り返せず、
+   選択肢（min-width:0）が1文字幅まで潰れて文字が縦1列になる。
+   スマホの幅で実際に起きていた（652px → 31px。2026-10-03 利用者の指摘） */
+.option-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 6px; }
+.option-row > .option { flex: 1 1 auto; min-width: 0; }
 .opt-help { flex: none; }
 .opt-help > summary {
   list-style: none; cursor: pointer; width: 30px; height: 30px; margin-top: 8px;
