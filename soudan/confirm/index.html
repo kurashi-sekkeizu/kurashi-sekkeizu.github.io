@@ -49,13 +49,13 @@
   const missing = vis.find((q) => q.required && !KSQ.isAnswered(q, A));
 
   document.getElementById("back").addEventListener("click", () => {
-    location.href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";
+    location.href = "/soudan/step/";
   });
 
   if (missing) {
     d.meta.pos = missing.id;
     KS.save(d);
-    document.getElementById("resume-link").href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";
+    document.getElementById("resume-link").href = "/soudan/step/";
   document.getElementById("incomplete").hidden = false;
     return;
   }
@@ -89,7 +89,7 @@
     d.meta.pos = b.dataset.edit;
     d.meta.from = "confirm";  // 直したらこの画面へ戻す
     KS.save(d);
-    location.href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";
+    location.href = "/soudan/step/";
   }));
 })();
 </script>

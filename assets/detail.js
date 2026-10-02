@@ -709,38 +709,6 @@
       mount(root) { mounted = root; renderSections(root); return root; },
       refresh() { if (mounted) renderSections(mounted); },
       data() { return d; },
-      // チャット用：節の中身を「1問ずつ」に切り分ける。
-      // **画面の中で作らず、ここで作る。** こうすると 1問ずつの画面とチャットが
-      // 同じ質問定義から作られ、同じ回答なら同じ結果になる（CLAUDE.md §7）
-      chatFields(sectionKey) {
-        const s = SECTIONS.find((x) => x.key === sectionKey);
-        if (!s || (s.show && !s.show())) return [];
-        const box = document.createElement("div");
-        try {
-          s.body(box);
-        } catch (e) {
-          return [];   // 回答が揃う前は組み立てられない節がある。そのときは聞かない
-        }
-        const out = [];
-        let heading = s.title;
-        const seen = {};
-        [...box.children].forEach((node) => {
-          if (node.classList.contains("detail-sub")) { heading = node.textContent; return; }
-          if (node.classList.contains("field-row")) {
-            // かんたんの質問と重なる欄は、チャットでも聞かない（すでに聞いている）
-            if (node.hidden) return;
-            const lab = node.querySelector("label, legend");
-            const label = (lab && lab.textContent || "").trim();
-            // 同じ見出しの欄が同じ節に複数ある（「予定」など）ので、何番目かを足して見分ける
-            const n = (seen[label] = (seen[label] || 0) + 1);
-            out.push({ id: sectionKey + ":" + label + ":" + n, label, heading, el: node, extras: [] });
-            return;
-          }
-          // 欄の直後に続く注記（「この内容だと、毎月の返済は約…」など）は、その質問に付ける
-          if (out.length) out[out.length - 1].extras.push(node);
-        });
-        return out;
-      },
       // 画面の流れを組み立てる側が、どの節をいくつ出すかを知るために使う。
       // **中身が空になる節は返さない。** hideAnswers でかんたんの質問だけの節は空になり、
       // そのままだと「何も入れる欄がない画面」が流れに挟まってしまう

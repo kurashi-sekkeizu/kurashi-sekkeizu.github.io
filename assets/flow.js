@@ -42,36 +42,6 @@
     return out;
   }
 
-  /** チャットの「並び」。**1問ずつの画面とまったく同じ順番**を、1問単位にほどいたもの。
-   *
-   *  かんたんの質問を全部聞いてから詳しい条件をまとめて聞くと、
-   *  「お仕事のしかたは？」と「仕事をやめる年齢」が遠く離れてしまう。
-   *  build() が作る画面の並び（まとまりの質問 → そのまとまりの詳しい条件）を
-   *  そのままほどけば、関連する質問が隣り合う（2026-10-03 利用者の指摘）。
-   */
-  function chatFlow(d) {
-    const out = [];
-    build(d).forEach((e) => {
-      if (e.kind === "q") {
-        e.qs.forEach((q) => out.push({ kind: "q", id: q.id, q: q, group: e.group, groupTitle: e.title }));
-        return;
-      }
-      KSD.build(d, { only: e.keys, hideAnswers: true }).chatFields(e.keys[0]).forEach((f) => {
-        out.push(Object.assign({ kind: "detail", section: e.keys[0], sectionTitle: e.title, group: e.group }, f));
-      });
-    });
-    // 同じ見出しの欄が流れの中に何度も出るもの（「予定」が転職・繰り上げ返済・建て替え・
-    // 住み替えで4回）は、それだけ聞かれても何のことか分からない。小見出しを付けて区別する
-    const count = {};
-    out.forEach((it) => { if (it.kind === "detail") count[it.label] = (count[it.label] || 0) + 1; });
-    out.forEach((it) => {
-      if (it.kind !== "detail") return;
-      it.ask = (count[it.label] > 1 && it.heading && it.heading !== it.label)
-        ? it.heading + "の" + it.label : it.label;
-    });
-    return out;
-  }
-
   /** くわしくで聞く「詳しい条件」の節を、質問の順に並べたもの（まとまりの順 → 節の順） */
   function detailSections(d) {
     const out = [];
@@ -81,19 +51,5 @@
     return out;
   }
 
-  /** チャット用：詳しい条件を「1問ずつ」に切り分けて、節をまたいで一列に並べる。
-   *  1問ずつの画面と同じ定義（detail.js の SECTIONS）から作る（CLAUDE.md §7）。 */
-  function detailQuestions(d) {
-    // **かんたんでは1問も出さない。** 呼ぶ側の条件分岐に任せると、
-    // どこか1か所で忘れた瞬間に、かんたんの人に詳しい条件が出てしまう
-    if (d.meta.depth !== "detail") return [];
-    const out = [];
-    detailSections(d).forEach((sec) => {
-      KSD.build(d, { only: [sec.key], hideAnswers: true }).chatFields(sec.key)
-        .forEach((f) => out.push(Object.assign({ section: sec.key, sectionTitle: sec.title }, f)));
-    });
-    return out;
-  }
-
-  window.KSF = { build, DETAIL_OF_GROUP, chatFlow, detailSections, detailQuestions };
+  window.KSF = { build, DETAIL_OF_GROUP, detailSections };
 })();

@@ -26,7 +26,6 @@
     <p id="err" class="error" role="alert" hidden></p>
     <div class="section stack">
       <button type="submit" class="btn">次へ</button>
-      <button type="button" class="linkbtn" id="to-chat">会話形式に切り替える</button>
     </div>
   </form>
 </main>
@@ -282,12 +281,6 @@
     idx -= 1;
     render(true);
     window.scrollTo(0, 0);
-  });
-
-  document.getElementById("to-chat").addEventListener("click", () => {
-    d.meta.mode = "chat";
-    KS.save(d);
-    location.href = "/soudan/chat/";
   });
 
   flow = buildFlow();

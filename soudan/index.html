@@ -44,15 +44,6 @@
       <p class="muted" style="margin-top:6px">あとからでも足せます。「かんたん」で始めて、気になるところだけ開く、という進め方でもかまいません。</p>
     </fieldset>
 
-    <fieldset class="section">
-      <legend>答え方を選んでください</legend>
-      <div class="mode-grid" style="margin-top:8px">
-        <label class="mode-card"><input type="radio" name="mode" value="step" checked><span class="face"><span class="icon" aria-hidden="true"></span><b>1問ずつ答える</b><br><span class="muted">質問に順番に答えます</span></span></label>
-        <label class="mode-card"><input type="radio" name="mode" value="chat"><span class="face"><span class="icon" aria-hidden="true"></span><b>会話のように答える</b><br><span class="muted">チャット形式で進みます</span></span></label>
-      </div>
-      <p class="muted" style="margin-top:6px">途中で切り替えられます。</p>
-    </fieldset>
-
     <!-- 保存の選び方は、はじめる前には見せない（既定は「このタブを閉じたら消す」）。
          端末に保存したい人のために、処理と選択肢は残しておく -->
     <fieldset class="section" hidden>
@@ -97,7 +88,7 @@
       const d = KS.loadLocal() || KS.load().data;
       d.meta.persist = "local";
       KS.save(d);
-      location.href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";
+      location.href = "/soudan/step/";
     });
     document.getElementById("resume-no").addEventListener("click", () => {
       KS.clearAll();
@@ -110,9 +101,6 @@
   const saved = KS.load().data;
   if (saved.meta && saved.meta.persist === "local" && KS.hasLocal) {
     document.querySelector('input[name="persist"][value="local"]').checked = true;
-  }
-  if (saved.meta && saved.meta.mode === "chat") {
-    document.querySelector('input[name="mode"][value="chat"]').checked = true;
   }
   // トップからの指定（?d=simple / ?d=detail）を初期選択にする。
   // これは「どこまで答えるか」の進め方であって、入力内容ではない（CLAUDE.md §3）
@@ -127,12 +115,13 @@
     const f = new FormData(e.target);
     // 「はじめる」は常に最初から。前回の続きは、上の「前回の続きから」を使う
     const d = KS.empty();
-    d.meta.mode = f.get("mode");
+    // 答え方は「1問ずつ」だけにした（2026-10-03 利用者判断）。チャット形式はやめた
+    d.meta.mode = "step";
     // くわしく＝質問画面の「詳しい条件」を開いた状態で始める
     d.meta.depth = f.get("depth") || "simple";
     d.meta.persist = f.get("persist") || "session";
     KS.save(d);
-    location.href = d.meta.mode === "chat" ? "/soudan/chat/" : "/soudan/step/";
+    location.href = "/soudan/step/";
   });
 })();
 </script>
