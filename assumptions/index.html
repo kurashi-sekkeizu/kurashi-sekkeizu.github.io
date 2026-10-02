@@ -213,9 +213,12 @@
     { v: "living", label: "生活費" }, { v: "rent", label: "家賃" }, { v: "tax", label: "固定資産税" },
     { v: "edu", label: "教育費" }, { v: "car", label: "車の維持費" }, { v: "other", label: "旅行・大きな出費" },
   ];
+  // 既定は正本（data/assumptions.json）から読む。KS.empty() から読むと、
+  // data.js を読み込まない画面で作られた値に引きずられる
+  const INF_DEFAULT = ((AS.defaults || {}).inflationTargets || {}).value || [];
   document.getElementById("assume-rows").innerHTML = [
     ["物価の上昇", "年 " + empty.assumptions.inflation + "%", "変えられます（結果の「前提を変える」）"],
-    ["物価の上昇を掛ける費目", INF_LABELS.filter((x) => (empty.assumptions.inflationOn || []).includes(x.v)).map((x) => x.label).join("・") || "なし",
+    ["物価の上昇を掛ける費目", INF_LABELS.filter((x) => INF_DEFAULT.includes(x.v)).map((x) => x.label).join("・") || "なし",
       "変えられます。<b>住宅ローンとその他の借入れの返済には掛けません</b>（契約した額のまま変わらないため）"],
     ["運用の利回り", "年 " + empty.assumptions.ret + "%（＝運用しない）", "変えられます。天気の判定は<b>常に運用しない場合</b>で行います"],
     ["万一のときの遺族の生活費", "いまの " + empty.assumptions.ratioLow + "〜" + empty.assumptions.ratioHigh + "%", "変えられます"],

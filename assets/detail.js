@@ -594,8 +594,13 @@
       body: (box) => {
         const as = d.assumptions;
         box.appendChild(radios("物価の上昇率（年）", as, "inflation", [0, 1, 2].map((v) => ({ v, label: `${v}%` })), "assumptions", { rerender: false }));
-        // どの費目に物価上昇を掛けるか。**返済は選択肢に出さない**（契約した額のまま変わらないため）
-        if (!Array.isArray(as.inflationOn)) as.inflationOn = ["living"];
+        // どの費目に物価上昇を掛けるか。**返済は選択肢に出さない**（契約した額のまま変わらないため）。
+        // まだ選んでいなければ、正本（data/assumptions.json）の既定を入れる。
+        // ここで ["living"] のような値を書くと、データの既定と食い違う
+        if (!Array.isArray(as.inflationOn)) {
+          const def = (((window.KSDATA || {}).assumptions || {}).defaults || {}).inflationTargets;
+          as.inflationOn = Array.isArray(def && def.value) ? def.value.slice() : [];
+        }
         box.appendChild(checks("物価の上昇を掛ける費目", as, "inflationOn", [
           { v: "living", label: "生活費" },
           { v: "rent", label: "家賃" },

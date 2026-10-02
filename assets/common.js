@@ -27,10 +27,13 @@
       version: VERSION,
       meta: { mode: "step", depth: "simple", persist: "session", pos: null, done: [] },
       answers: {},
-      assumptions: { inflation: 1, ret: 0, ratioLow: 70, ratioHigh: 80,
-        // 物価の上昇を掛ける費目。正本は data/assumptions.json の defaults.inflationTargets
-        inflationOn: ((window.KSDATA && window.KSDATA.assumptions && window.KSDATA.assumptions.defaults
-          && window.KSDATA.assumptions.defaults.inflationTargets || {}).value || ["living"]).slice() },
+      // 物価の上昇を掛ける費目（inflationOn）は、**ここで入れない。**
+      // この画面は data.js を読み込まないことがあり（/soudan/ の開始画面）、
+      // ここで既定を作ると window.KSDATA が無い状態の値が記録に焼き付いてしまう。
+      // 実際、利用者が選んでいないのに「生活費だけ」が保存され、
+      // /assumptions/ の表示（6費目）と計算が食い違っていた（2026-10-03）。
+      // 入っていなければ calc.js が data/assumptions.json の既定を使う
+      assumptions: { inflation: 1, ret: 0, ratioLow: 70, ratioHigh: 80 },
       pdf: { sections: ["todo", "plan", "estimate", "review", "ask"], note: "" },
     };
   }
