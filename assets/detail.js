@@ -751,7 +751,11 @@
           try {
             const probe = document.createElement("div");
             s.body(probe);
-            n = probe.querySelectorAll("select, input, textarea").length;
+            // **隠した欄は数えない。** かんたんの質問と重なる欄しか無い節（保険を
+            // 「入っていない」と答えた場合など）が、入力欄のない空の画面として
+            // 流れに挟まっていた（2026-10-03。チャットとの食い違いで発覚）
+            n = [...probe.querySelectorAll("select, input, textarea")]
+              .filter((x) => !x.closest("[hidden]")).length;
           } catch (e) {
             // 節の中身は計算（KSC.compute）を呼ぶものもあり、回答の途中では落ちることがある。
             // ここで例外を外に出すと、呼び出し側の処理（回答の保存）まで止まる
