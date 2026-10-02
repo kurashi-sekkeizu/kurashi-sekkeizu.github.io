@@ -644,8 +644,16 @@
   }
 
   // ── ライフプラン表（縦＝人、横＝年） ──
-  // 記号と凡例は calc.js の MARKS が正本。ここで別に持つと、片方だけ古くなる
+  // アイコンと凡例は calc.js の MARKS が正本。ここで別に持つと、片方だけ古くなる
   const iconOf = (e) => KSC.markOf(e);
+  // 線画のアイコンを1つ描く。中身は自分たちで書いた定数なので innerHTML でよい
+  function iconEl(mark) {
+    const sp = h("span", "ic-wrap");
+    sp.style.color = mark.color;
+    sp.innerHTML = mark.svg;
+    sp.title = mark.label;
+    return sp;
+  }
 
   function stageOf(kid, kidAge) {
     const p = kid.plan;
@@ -667,7 +675,12 @@
     const box = h("div", "lt-box");
 
     const legend = h("div", "lt-legend");
-    KSC.MARKS.forEach((m) => legend.appendChild(h("span", null, `${m.mark} ${m.label}`)));
+    KSC.MARKS.forEach((m) => {
+      const sp = h("span", "lt-legend-item");
+      sp.appendChild(iconEl(m));
+      sp.appendChild(h("span", null, m.label));
+      legend.appendChild(sp);
+    });
     box.appendChild(legend);
 
     // 行の定義：レーン（あなた・配偶者・子…・くらし）＋貯蓄残高
@@ -721,7 +734,9 @@
         const evs = row.byOff[i] || [];
         if (evs.length) {
           td.classList.add("lt-has");
-          td.appendChild(h("span", "lt-icons", evs.map(iconOf).join("")));
+          const icons = h("span", "lt-icons");
+          evs.forEach((e) => icons.appendChild(iconEl(iconOf(e))));
+          td.appendChild(icons);
           if (row.isLife) {
             const amt = evs.reduce((t, e) => t + (e.amount || 0), 0);
             if (amt > 0) td.appendChild(h("span", "lt-amt", Math.round(amt).toLocaleString("ja-JP")));
@@ -771,7 +786,12 @@
       laneRows.forEach((row) => (row.byOff[i] || []).forEach((e) => evs.push(e)));
       if (evs.length) {
         const ul = h("ul", "lt-panel-events");
-        evs.forEach((e) => ul.appendChild(h("li", null, `${iconOf(e)} ${e.text}`)));
+        evs.forEach((e) => {
+          const li = h("li");
+          li.appendChild(iconEl(iconOf(e)));
+          li.appendChild(h("span", null, e.text));
+          ul.appendChild(li);
+        });
         panel.appendChild(ul);
       } else {
         panel.appendChild(h("p", "lt-panel-none", "大きな出来事はありません"));

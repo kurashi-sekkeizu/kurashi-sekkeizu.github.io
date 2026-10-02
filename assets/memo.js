@@ -12,6 +12,13 @@
     return on.length === Object.keys(INF_LABELS).length ? "返済以外のすべての費目" : on.join("・") + "のみ";
   }
 
+  // 年表のアイコン。紙に出すので、線画のSVGをそのまま入れる
+  // （中身は calc.js が持つ自分たちの定数なので、エスケープはしない）
+  function iconHTML(key) {
+    const m = KSC.markByKey(key);
+    return `<span class="ic-wrap" style="color:${m.color}">${m.svg}</span> `;
+  }
+
   function memoHTML(r, d, A, opt) {
     opt = opt || {};
     const has = (id) => (d.pdf.sections || []).includes(id);
@@ -47,7 +54,7 @@
         `</tbody></table><p>★＝まずやること</p>`;
     }
     if (has("plan")) {
-      html += `<h2 class="page-break">これからの出来事</h2><table><thead><tr><th style="width:16%">年</th><th style="width:28%">家族の年齢</th><th>出来事</th><th style="width:14%">金額の目安</th></tr></thead><tbody>${r.timeline.map((t) => `<tr><td>${t.year}年</td><td>${esc(t.ages.map((a) => `${a.who}${a.age}`).join("・"))}</td><td>${t.items.map((it) => esc(it.icon + " " + it.text)).join("<br>")}</td><td>${t.items.map((it) => (it.amount >= 30 ? man(it.amount) : "")).join("<br>")}</td></tr>`).join("")}</tbody></table>`;
+      html += `<h2 class="page-break">これからの出来事</h2><table><thead><tr><th style="width:16%">年</th><th style="width:28%">家族の年齢</th><th>出来事</th><th style="width:14%">金額の目安</th></tr></thead><tbody>${r.timeline.map((t) => `<tr><td>${t.year}年</td><td>${esc(t.ages.map((a) => `${a.who}${a.age}`).join("・"))}</td><td>${t.items.map((it) => iconHTML(it.icon) + esc(it.text)).join("<br>")}</td><td>${t.items.map((it) => (it.amount >= 30 ? man(it.amount) : "")).join("<br>")}</td></tr>`).join("")}</tbody></table>`;
     }
     if (has("estimate")) {
       html += `<h2 class="page-break">分野別の目安</h2><table><tbody>` +

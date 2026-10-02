@@ -534,7 +534,11 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 
 /* ライフプラン表（縦＝人、横＝年） */
 .lt-box { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: none; padding: 10px 0 10px; }
-.lt-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: .78rem; color: var(--muted); padding: 0 12px 8px; }
+.lt-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .78rem; color: var(--muted); padding: 0 12px 8px; }
+.lt-legend-item { display: inline-flex; align-items: center; gap: 3px; }
+/* 年表のアイコン（線画）。色は種類ごとに calc.js が決める */
+.ic-wrap { display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.ic-wrap .ic { display: block; width: 16px; height: 16px; }
 .lt-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
 .lt-scroll:focus-visible { outline-offset: -3px; }
 .lt { border-collapse: separate; border-spacing: 0; font-size: .78rem; }
@@ -547,7 +551,7 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .lt .lt-five { border-left: 1px solid #d9d7cf; }
 .lt-age { display: block; font-size: .72rem; color: var(--muted); line-height: 1.1; }
 .lt-stage { display: block; font-size: .7rem; font-weight: 700; line-height: 1.2; }
-.lt-icons { display: block; font-size: .95rem; line-height: 1.1; }
+.lt-icons { display: flex; flex-wrap: wrap; justify-content: center; gap: 1px; line-height: 1; }
 .lt-amt { display: block; font-size: .64rem; font-weight: 700; color: #7a3b00; line-height: 1.1; }
 .lt .st-elem { background: #eef6fd; } .lt .st-junior { background: #e3effb; } .lt .st-high { background: #d8e8f8; } .lt .st-univ { background: #e6f5ee; }
 .lt .st-unborn { background: #fbfbf8; }
@@ -564,6 +568,7 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .lt-panel-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
 .lt-panel-ages { font-size: .8rem; color: var(--muted); }
 .lt-panel-events { list-style: none; margin: 4px 0; padding: 0; font-size: .9rem; }
+.lt-panel-events li { display: flex; align-items: flex-start; gap: 6px; }
 .lt-panel-none { font-size: .85rem; color: var(--muted); margin: 4px 0; }
 .lt-panel-money { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: .85rem; }
 .lt-panel-money span { color: var(--muted); margin-right: 6px; }
@@ -612,6 +617,9 @@ details.fold > summary .badge { margin-left: 6px; }
 .memo .memo-box { border: 2px solid #000; padding: 8px 10px; margin: 8px 0; }
 .memo table { border-collapse: collapse; width: 100%; }
 .memo th, .memo td { border: 1px solid #555; padding: 3px 6px; text-align: left; font-size: 12px; }
+/* 紙でもアイコンを出す。線画なので白黒印刷でもつぶれない */
+.memo .ic-wrap { vertical-align: -2px; }
+.memo .ic-wrap .ic { width: 12px; height: 12px; }
 .memo .write-line { border-bottom: 1px solid #000; height: 28px; }
 .memo .check::before { content: "□ "; }
 .memo .page-break { break-before: page; }
