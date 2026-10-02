@@ -785,3 +785,23 @@ h1 { font-size: 1.6rem; letter-spacing: .01em; font-weight: 700; }
 /* ボタンは角を立てる */
 .btn { border-radius: 2px; }
 .lead-note { background: none; border: 1px solid var(--line); border-left: 4px solid var(--accent); }
+
+/* ───────── 記事の末尾に置く関連書籍（Amazonアソシエイト）─────────
+ * PR表記はテンプレートが機械的に入れる。本文に手で書かない。
+ * 表紙はAmazonのサーバーから読むため、ページを見たことがAmazonに伝わる。
+ */
+.book-section { margin-top: 32px; border-top: 2px solid var(--ink); padding-top: 16px; }
+.book-pr { font-size: .8rem; color: var(--muted); background: #f1f0ea; border: 1px solid var(--line); padding: 8px 12px; margin: 0 0 14px; }
+.book-pr b { color: var(--ink); }
+.book-card { display: flex; gap: 14px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); padding: 14px; margin-bottom: 10px; }
+.book-cover { flex: none; display: block; width: 110px; background: #ebebe7; }
+.book-cover img { display: block; width: 110px; height: auto; }
+.book-body { min-width: 0; }
+.book-title { display: block; font-weight: 700; font-size: 1.02rem; line-height: 1.5; }
+.book-meta { font-size: .82rem; color: var(--muted); margin: 4px 0 8px; }
+.book-why { font-size: .9rem; margin: 0 0 6px; }
+.book-caveat { font-size: .84rem; color: var(--muted); margin: 0; }
+@media (max-width: 480px) {
+  .book-card { gap: 10px; padding: 12px; }
+  .book-cover, .book-cover img { width: 78px; }
+}
