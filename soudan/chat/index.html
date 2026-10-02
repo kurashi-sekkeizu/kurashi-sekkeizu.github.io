@@ -35,12 +35,34 @@
 <script src="/assets/common.js"></script>
 <script src="/assets/data.js"></script>
 <script src="/assets/questions.js"></script>
+<script src="/assets/calc.js"></script>
+<script src="/assets/detail.js"></script>
+<script src="/assets/flow.js"></script>
 <script>
 (function () {
   const d = KS.load().data;
   d.meta.mode = "chat";
   const A = d.answers;
   const esc = KS.esc;
+
+  // ── くわしくで聞く「詳しい条件」を、チャットの中で1問ずつ聞く ──
+  // 定義は detail.js（1問ずつの画面と同じ）。同じ回答なら同じ結果になる（CLAUDE.md §7）
+  const DETAIL_MODE = d.meta.depth === "detail";
+  if (!Array.isArray(d.meta.detailDone)) d.meta.detailDone = [];
+
+  // 詳しい条件の質問は、回答によって増減する。毎回つくり直す
+  const detailAll = () => (DETAIL_MODE && typeof KSF !== "undefined" ? KSF.detailQuestions(d) : []);
+  function detailCurrent() {
+    return detailAll().find((f) => !d.meta.detailDone.includes(f.id)) || null;
+  }
+  // いま選ばれている内容を、吹き出しに出す言葉にする
+  function fieldValue(el) {
+    const sel = el.querySelector("select");
+    if (sel) return sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].textContent : "—";
+    const checked = [...el.querySelectorAll("input:checked")];
+    if (!checked.length) return "—";
+    return checked.map((i) => (i.closest("label") || i.parentElement).textContent.trim()).join("、") || "—";
+  }
 
   function answeredList() {
     return KSQ.visible(A).filter((q) => d.meta.done.includes(q.id) && (KSQ.isAnswered(q, A) || !q.required));
@@ -65,9 +87,29 @@
       html += `<div class="bubble me">${esc(KSQ.display(q, A))}</div>`;
       prev = q;
     });
+    // 答え終わった「詳しい条件」も、やりとりとして残す
+    const dAll = detailAll();
+    const dDone = dAll.filter((f) => d.meta.detailDone.includes(f.id));
+    let lastHeading = null;
+    dDone.forEach((f) => {
+      if (f.heading !== lastHeading) {
+        html += `<div class="bubble bot">${esc(f.sectionTitle === f.heading ? f.heading + "のことを、くわしく教えてください。" : f.heading)}</div>`;
+        lastHeading = f.heading;
+      }
+      html += `<div class="bubble bot">${esc(f.label)}</div>`;
+      html += `<div class="bubble me">${esc(fieldValue(f.el))}</div>`;
+    });
+    const dCur = cur ? null : detailCurrent();
+
     let lastBot;
     if (cur) {
       lastBot = botText(cur, prev);
+      html += `<div class="bubble bot">${esc(lastBot)}</div>`;
+    } else if (dCur) {
+      if (dCur.heading !== lastHeading) {
+        html += `<div class="bubble bot">${esc(dCur.sectionTitle === dCur.heading ? dCur.heading + "のことを、くわしく教えてください。" : dCur.heading)}</div>`;
+      }
+      lastBot = dCur.label;
       html += `<div class="bubble bot">${esc(lastBot)}</div>`;
     } else {
       const react = prev && prev.react ? prev.react(A[prev.id], A) : null;
@@ -76,14 +118,15 @@
     }
     document.getElementById("log").innerHTML = html;
 
-    const total = KSQ.visible(A).length;
-    document.getElementById("count").textContent = `${Math.min(done.length + 1, total)} / ${total}`;
-    document.getElementById("bar").style.width = `${Math.round((done.length / total) * 100)}%`;
+    const total = KSQ.visible(A).length + dAll.length;
+    const nowAt = done.length + dDone.length;
+    document.getElementById("count").textContent = `${Math.min(nowAt + 1, total)} / ${total}`;
+    document.getElementById("bar").style.width = `${Math.round((nowAt / total) * 100)}%`;
     // 1問目では「戻る」として前のページへ戻す（1問ずつの画面と同じ動き）。
     // 以前は押せないようにしていたため、押しても何も起きず、戻れなくなっていた（2026-10-03）
     const undo = document.getElementById("undo");
-    undo.textContent = done.length === 0 ? "← 戻る" : "← 1つ戻す";
-    panel(cur);
+    undo.textContent = (done.length === 0 && !d.meta.detailDone.length) ? "← 戻る" : "← 1つ戻す";
+    panel(cur, dCur);
     if (announce) document.getElementById("live").textContent = lastBot;
     KS.save(d);
     window.scrollTo(0, document.body.scrollHeight);
@@ -114,9 +157,35 @@
         (o.help.link ? ` <a href="${o.help.link}">くわしく読む</a>` : "") + `</p>`).join("") + `</div></details>`;
   }
 
-  function panel(q) {
+  function panel(q, dCur) {
     const p = document.getElementById("panel");
     const switcher = `<p style="margin:10px 0 0"><button type="button" class="linkbtn" id="to-step">1問ずつの形式に切り替える</button></p>`;
+    if (!q && dCur) {
+      // 詳しい条件の欄を、そのままチャットの入力欄として置く。
+      // 欄そのものは detail.js が作るので、1問ずつの画面と同じ値・同じ保存先になる
+      p.replaceChildren();
+      p.appendChild(dCur.el);
+      dCur.extras.forEach((x) => p.appendChild(x));
+      const next = document.createElement("button");
+      next.type = "button";
+      next.className = "btn";
+      next.style.marginTop = "10px";
+      next.textContent = "次へ";
+      next.addEventListener("click", () => {
+        if (!d.meta.detailDone.includes(dCur.id)) d.meta.detailDone.push(dCur.id);
+        KS.save(d);
+        render(true);
+        const first = document.querySelector("#panel select, #panel input, #panel button");
+        if (first) first.focus();
+      });
+      p.appendChild(next);
+      const sw = document.createElement("p");
+      sw.style.margin = "10px 0 0";
+      sw.innerHTML = switcher.replace(/^<p[^>]*>|<\/p>$/g, "");
+      p.appendChild(sw);
+      bindSwitch();
+      return;
+    }
     if (!q) {
       p.innerHTML = `<a class="btn" href="/soudan/confirm/">回答の確認へ</a>` + switcher;
       bindSwitch();
@@ -190,13 +259,21 @@
     document.getElementById("to-step").addEventListener("click", () => {
       d.meta.mode = "step";
       const cur = current();
-      d.meta.pos = cur ? cur.id : null;
+      // 詳しい条件の途中なら、1問ずつの画面でも同じ節から続ける（確認画面に飛ばさない）
+      const dCur = cur ? null : detailCurrent();
+      d.meta.pos = cur ? cur.id : dCur ? "detail:" + dCur.section : null;
       KS.save(d);
-      location.href = cur ? "/soudan/step/" : "/soudan/confirm/";
+      location.href = cur || dCur ? "/soudan/step/" : "/soudan/confirm/";
     });
   }
 
   document.getElementById("undo").addEventListener("click", () => {
+    // 詳しい条件に入っていたら、まずそちらを1つ戻す
+    if (d.meta.detailDone.length) {
+      d.meta.detailDone.pop();
+      render(true);
+      return;
+    }
     const done = answeredList();
     const last = done[done.length - 1];
     // まだ1問も答えていないときは、前のページへ戻る

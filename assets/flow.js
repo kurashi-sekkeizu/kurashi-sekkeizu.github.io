@@ -42,5 +42,28 @@
     return out;
   }
 
-  window.KSF = { build, DETAIL_OF_GROUP };
+  /** くわしくで聞く「詳しい条件」の節を、質問の順に並べたもの（まとまりの順 → 節の順） */
+  function detailSections(d) {
+    const out = [];
+    Object.values(DETAIL_OF_GROUP).forEach((g) => {
+      KSD.build(d, { only: g.keys, hideAnswers: true }).sections().forEach((sec) => out.push(sec));
+    });
+    return out;
+  }
+
+  /** チャット用：詳しい条件を「1問ずつ」に切り分けて、節をまたいで一列に並べる。
+   *  1問ずつの画面と同じ定義（detail.js の SECTIONS）から作る（CLAUDE.md §7）。 */
+  function detailQuestions(d) {
+    // **かんたんでは1問も出さない。** 呼ぶ側の条件分岐に任せると、
+    // どこか1か所で忘れた瞬間に、かんたんの人に詳しい条件が出てしまう
+    if (d.meta.depth !== "detail") return [];
+    const out = [];
+    detailSections(d).forEach((sec) => {
+      KSD.build(d, { only: [sec.key], hideAnswers: true }).chatFields(sec.key)
+        .forEach((f) => out.push(Object.assign({ section: sec.key, sectionTitle: sec.title }, f)));
+    });
+    return out;
+  }
+
+  window.KSF = { build, DETAIL_OF_GROUP, detailSections, detailQuestions };
 })();
