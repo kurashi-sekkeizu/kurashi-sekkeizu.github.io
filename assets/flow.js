@@ -1,0 +1,46 @@
+/* 1問ずつの画面の「並び」を作る。
+ *
+ * **画面に出さず、ここだけで組み立てる。** 以前は step/index.html の中に書いていたため、
+ * 自動テストから触れず、不具合を手で見つけるしかなかった
+ * （くわしくで始めたのに進捗が「1／5」になる、を利用者に指摘されて気づいた。2026-10-03）。
+ *
+ * かんたん … 質問の画面だけ
+ * くわしく … そのまとまりの質問が終わったところで、詳しい条件を**独立した画面**として挟む
+ */
+(function () {
+  "use strict";
+
+  // まとまりごとに、どの「詳しい条件」を出すか。
+  // what は、まだ出せないときに「このあと何を入れられるか」を伝えるための言葉
+  const DETAIL_OF_GROUP = {
+    you: { keys: ["work"], what: "収入の見通し・定年と退職金・年金の見込み" },
+    family: { keys: ["family", "spouseWork", "edu"], what: "子どもの進路・配偶者の働き方・教育費" },
+    home: { keys: ["home", "car", "loans"], what: "住宅ローンの借入額・期間・金利、修繕、車の買い替え" },
+    money: { keys: ["living", "assets", "insurance", "spend", "assumptions"], what: "生活費の内訳・貯蓄と投資・保険・物価と利回りの前提" },
+  };
+
+  /** 画面の並びを作る。d.meta.depth が "detail" のときだけ、詳しい条件の画面を挟む */
+  function build(d) {
+    const A = d.answers;
+    const detailMode = d.meta.depth === "detail";
+    const qs = KSQ.screens(A);
+    const out = [];
+    qs.forEach((s, i) => {
+      out.push({ kind: "q", id: s[0].id, qs: s, group: s[0].group, title: s[0].groupTitle });
+      if (!detailMode) return;
+      const g = DETAIL_OF_GROUP[s[0].group];
+      // そのまとまりの最後の質問画面のうしろにだけ挟む
+      if (!g || (qs[i + 1] && qs[i + 1][0].group === s[0].group)) return;
+      // **必須が埋まっているかで出し分けない。** 以前は「埋まるまで挟まない」としていたため、
+      // くわしくで始めた直後の進捗が「1／5」（かんたんと同じ数）になり、
+      // 答えるたびに 5→6→9→11→16 と分母が増えていた。
+      // 節の中身は描くときに作り直すので、ここで先に数えても差し支えない
+      KSD.build(d, { only: g.keys, hideAnswers: true }).sections().forEach((sec) => {
+        out.push({ kind: "detail", id: "detail:" + sec.key, keys: [sec.key], title: sec.title, group: s[0].group });
+      });
+    });
+    return out;
+  }
+
+  window.KSF = { build, DETAIL_OF_GROUP };
+})();

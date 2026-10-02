@@ -79,7 +79,10 @@
     const total = KSQ.visible(A).length;
     document.getElementById("count").textContent = `${Math.min(done.length + 1, total)} / ${total}`;
     document.getElementById("bar").style.width = `${Math.round((done.length / total) * 100)}%`;
-    document.getElementById("undo").disabled = done.length === 0;
+    // 1問目では「戻る」として前のページへ戻す（1問ずつの画面と同じ動き）。
+    // 以前は押せないようにしていたため、押しても何も起きず、戻れなくなっていた（2026-10-03）
+    const undo = document.getElementById("undo");
+    undo.textContent = done.length === 0 ? "← 戻る" : "← 1つ戻す";
     panel(cur);
     if (announce) document.getElementById("live").textContent = lastBot;
     KS.save(d);
@@ -196,7 +199,8 @@
   document.getElementById("undo").addEventListener("click", () => {
     const done = answeredList();
     const last = done[done.length - 1];
-    if (!last) return;
+    // まだ1問も答えていないときは、前のページへ戻る
+    if (!last) { location.href = "/soudan/"; return; }
     d.meta.done = d.meta.done.filter((id) => id !== last.id);
     delete A[last.id];
     render(true);

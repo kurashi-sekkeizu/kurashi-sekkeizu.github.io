@@ -43,6 +43,7 @@
 <script src="/assets/questions.js"></script>
 <script src="/assets/calc.js"></script>
 <script src="/assets/detail.js"></script>
+<script src="/assets/flow.js"></script>
 <script>
 (function () {
   const d = KS.load().data;
@@ -92,39 +93,10 @@
     return "";
   }
 
-  // まとまりごとに、同じ画面で深められる「詳しい条件」を出す。
-  // what は、中に何があるかを見出しに書くための言葉。
-  // 「詳しい条件」とだけ書くと中身が想像できず、開かれないまま通過されるため
-  // （住宅ローンの借入額や期間が「質問されなかった」と受け取られた。2026-10-02）
-  const DETAIL_OF_GROUP = {
-    you: { keys: ["work"], what: "収入の見通し・定年と退職金・年金の見込み" },
-    family: { keys: ["family", "spouseWork", "edu"], what: "子どもの進路・配偶者の働き方・教育費" },
-    home: { keys: ["home", "car", "loans"], what: "住宅ローンの借入額・期間・金利、修繕、車の買い替え" },
-    money: { keys: ["living", "assets", "insurance", "spend", "assumptions"], what: "生活費の内訳・貯蓄と投資・保険・物価と利回りの前提" },
-  };
-
-  // ── 画面の並び ────────────────────────────────────────────
-  // 「くわしく」のときは、そのまとまりの質問が終わったところで、
-  // 詳しい条件を**独立した画面**として挟む。節ごとに1画面にする。
-  // 以前はアコーディオンの中に入れていたため、住宅ローンの借入額・期間・金利が
-  // 「質問として出てこない」と受け取られた（2026-10-02 利用者の指摘）
-  function buildFlow() {
-    const qs = KSQ.screens(A);
-    const out = [];
-    qs.forEach((s, i) => {
-      out.push({ kind: "q", id: s[0].id, qs: s, group: s[0].group, title: s[0].groupTitle });
-      if (!DETAIL_MODE) return;
-      const g = DETAIL_OF_GROUP[s[0].group];
-      // そのまとまりの最後の質問画面のうしろにだけ挟む
-      if (!g || (qs[i + 1] && qs[i + 1][0].group === s[0].group)) return;
-      // 必須が埋まっていないと節を組み立てられない（年齢が無いと選択肢が作れない等）
-      if (qs.slice(0, i + 1).flat().some((q) => q.required && !KSQ.isAnswered(q, A))) return;
-      KSD.build(d, { only: g.keys, hideAnswers: true }).sections().forEach((sec) => {
-        out.push({ kind: "detail", id: "detail:" + sec.key, keys: [sec.key], title: sec.title, group: s[0].group });
-      });
-    });
-    return out;
-  }
+  // 画面の並びと、まとまりごとの「詳しい条件」の定義は assets/flow.js が正本。
+  // 画面の中に書くと自動テストから触れず、不具合を手で探すことになる
+  const DETAIL_OF_GROUP = KSF.DETAIL_OF_GROUP;
+  const buildFlow = () => KSF.build(d);
 
   function startIndex() {
     if (d.meta.pos) {
