@@ -52,8 +52,9 @@ p { margin: 0 0 1em; }
 
 /* プロトタイプ表示 */
 .proto-banner {
-  background: #3b3b3b; color: #fff; font-size: .8rem; line-height: 1.5;
-  padding: 6px 16px; text-align: center;
+  /* 開発中であることの表示。警告ではないので、黒帯にせず控えめにする */
+  background: #f0efe9; color: var(--muted); font-size: .76rem; line-height: 1.5;
+  padding: 5px 16px; text-align: center; border-bottom: 1px solid var(--line);
 }
 
 /* レイアウト */

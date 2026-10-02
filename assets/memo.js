@@ -16,7 +16,7 @@
       ["住まい", KSQ.display(KSQ.byId.home, A)],
       ["生活費・貯蓄", KSQ.display(KSQ.byId.living, A) + "／" + KSQ.display(KSQ.byId.savings, A)],
     ];
-    const foot = `<p class="foot">くらしの設計図／一般的な計算による目安であり、商品の推奨ではありません／画面確認用プロトタイプ（数字はダミー）</p>`;
+    const foot = `<p class="foot">くらしの設計図／一般的な計算による目安であり、商品の推奨ではありません／開発中の版です</p>`;
 
     let html = `
       <h2 class="memo-title">くらしの設計図 ライフプランメモ</h2>
@@ -63,7 +63,7 @@
       `<p>この計算は、次のものを含んでいません。相談のときに確認してください。</p>` +
       `<table><tbody>${KSR.notIncludedItems(r, A).map((it) => `<tr><th style="width:8%;text-align:center">${{ better: "＋", worse: "−", both: "±" }[it.dir]}</th><td>${esc(it.text)}</td></tr>`).join("")}</tbody></table>` +
       `<p>＋＝入れると結果が良くなる方向／−＝厳しくなる方向／±＝どちらにも動く</p>`;
-    html += `<h2>出典・確認日</h2><p>（本番では、公的制度データごとに出典と確認日を記載します。プロトタイプの数字はダミーです。）</p>` + foot;
+    html += `<h2>出典・確認日</h2><p>公的な数字は、出典・適用年度・確認日をつけて管理しています。サイトの「もっと知る」で一覧を確認できます。制度は毎年のように変わるため、手続きの前には出典か窓口でご確認ください。</p>` + foot;
     return html;
   }
 

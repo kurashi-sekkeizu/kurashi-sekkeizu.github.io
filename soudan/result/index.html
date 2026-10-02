@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body class="has-lock">
-<div class="proto-banner">🧪 お試し版です。<b>操作はすべて動きます</b>が、<b>金額はダミー</b>なので、実際の金額としては使えません。</div>
+<div class="proto-banner">開発中の版です。画面や計算を見直している途中のため、表示が変わることがあります。</div>
 <header class="app-header">
   <div class="wrap">
     <a class="linkbtn" href="/soudan/confirm/">← 回答に戻る</a>
@@ -172,7 +172,7 @@
             <ol>
               <li><b>額面の年収</b>…あなたが答えた帯の真ん中の金額から始めます（${esc(KSQ.display(KSQ.byId.income, A))}）。</li>
               <li><b>年齢に応じた増減</b>…${esc(incomeAssumption(r))}。統計の年齢別の賃金を、<b>いまの年齢の水準を1とした倍率</b>にして掛けています。<b>平均の金額に置きかえてはいません。</b></li>
-              <li><b>額面から手取りへ</b>…税金と社会保険料を、年収に応じたおおよその割合で差し引きます（年収が高いほど手取りの割合は下がります）。⚠ この試作版では<b>ダミーの割合</b>を使っています。</li>
+              <li><b>額面から手取りへ</b>…税金と社会保険料を、年収に応じたおおよその割合で差し引きます（年収が高いほど手取りの割合は下がります）。個別の税額は計算できないため（税理士法）、<b>おおまかな割合</b>にとどめています。</li>
               <li><b>定年より先</b>…${r.detail.work.retireAge}歳で定年とし、そのあとは再雇用の設定（${Number(r.detail.work.rehire) > 0 ? `定年前の${r.detail.work.rehire}%・${r.detail.work.rehireUntil}歳まで` : "働かない"}）で計算します。</li>
               <li><b>年金</b>…受け取り開始の年齢から、働き方と収入に応じた見込み額を足します。</li>
             </ol>
