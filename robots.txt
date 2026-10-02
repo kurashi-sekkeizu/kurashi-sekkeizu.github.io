@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /
+Disallow: /soudan/chat/
+Disallow: /soudan/confirm/
+Disallow: /soudan/detail/
+Disallow: /soudan/pdf/
+Disallow: /soudan/result/
+Disallow: /soudan/step/
+
+Sitemap: https://kurashi-sekkeizu.github.io/sitemap.xml
