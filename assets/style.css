@@ -791,7 +791,7 @@ h1 { font-size: 1.6rem; letter-spacing: .01em; font-weight: 700; }
  * 表紙はAmazonのサーバーから読むため、ページを見たことがAmazonに伝わる。
  */
 .book-section { margin-top: 32px; border-top: 2px solid var(--ink); padding-top: 16px; }
-.book-pr { font-size: .8rem; color: var(--muted); background: #f1f0ea; border: 1px solid var(--line); padding: 8px 12px; margin: 0 0 14px; }
+.book-pr { font-size: .82rem; color: var(--ink); background: #f1f0ea; border: 1px solid var(--line); padding: 7px 12px; margin: 4px 0 0; }
 .book-pr b { color: var(--ink); }
 .book-card { display: flex; gap: 14px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); padding: 14px; margin-bottom: 10px; }
 .book-cover { flex: none; display: block; width: 110px; background: #ebebe7; }
