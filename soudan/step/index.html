@@ -3,13 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>質問｜くらしの設計図（プロトタイプ）</title>
+<title>質問｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/soudan/step/">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body class="has-lock">
-<div class="proto-banner">開発中の版です。画面や計算を見直している途中のため、表示が変わることがあります。</div>
 <header class="app-header">
   <div class="wrap">
     <button type="button" class="linkbtn" id="back">← 前の質問</button>
@@ -102,12 +101,15 @@
     return "";
   }
 
-  // まとまりごとに、同じ画面で深められる「詳しい条件」を出す
+  // まとまりごとに、同じ画面で深められる「詳しい条件」を出す。
+  // what は、中に何があるかを見出しに書くための言葉。
+  // 「詳しい条件」とだけ書くと中身が想像できず、開かれないまま通過されるため
+  // （住宅ローンの借入額や期間が「質問されなかった」と受け取られた。2026-10-02）
   const DETAIL_OF_GROUP = {
-    you: ["work"],
-    family: ["family", "spouseWork", "edu"],
-    home: ["home", "car", "loans"],
-    money: ["living", "assets", "insurance", "spend", "assumptions"],
+    you: { keys: ["work"], what: "収入の見通し・定年と退職金・年金の見込み" },
+    family: { keys: ["family", "spouseWork", "edu"], what: "子どもの進路・配偶者の働き方・教育費" },
+    home: { keys: ["home", "car", "loans"], what: "住宅ローンの借入額・期間・金利、修繕、車の買い替え" },
+    money: { keys: ["living", "assets", "insurance", "spend", "assumptions"], what: "生活費の内訳・貯蓄と投資・保険・物価と利回りの前提" },
   };
 
   // ここまでの画面の必須が埋まっていれば、詳しい条件を組み立てられる
@@ -118,12 +120,26 @@
   function renderDetail(groupKey) {
     const slot = document.getElementById("more");
     slot.replaceChildren();
-    const keys = DETAIL_OF_GROUP[groupKey];
-    if (!keys || !detailReady() || typeof KSD === "undefined") return;
+    const g = DETAIL_OF_GROUP[groupKey];
+    if (!g || typeof KSD === "undefined") return;
+    // 必須が埋まるまでは中身を組み立てられない。ただし**何も出さないと気配が消える**ので、
+    // 「このあと何を入れられるか」だけは先に見せる
+    if (!detailReady()) {
+      const box = document.createElement("div");
+      box.className = "more-wait";
+      box.appendChild(Object.assign(document.createElement("p"), {
+        className: "more-wait-head", textContent: "このあと、詳しい条件も入力できます",
+      }));
+      box.appendChild(Object.assign(document.createElement("p"), {
+        className: "muted small", textContent: `上の質問に答えると、${g.what} を入れる欄が開きます。`,
+      }));
+      slot.appendChild(box);
+      return;
+    }
     const det = document.createElement("details");
     det.className = "fold more-fold";
     const sum = document.createElement("summary");
-    sum.textContent = "詳しい条件を入力する（あとからでも大丈夫です）";
+    sum.textContent = `詳しい条件を入力する（${g.what}）`;
     det.appendChild(sum);
     const body = document.createElement("div");
     body.className = "body";
@@ -131,7 +147,7 @@
     det.addEventListener("toggle", () => { if (det.open) moreOpen.add(groupKey); else moreOpen.delete(groupKey); });
     det.open = moreOpen.has(groupKey);
     slot.appendChild(det);
-    KSD.build(d, { only: keys, openAll: d.meta.depth === "detail",
+    KSD.build(d, { only: g.keys, openAll: d.meta.depth === "detail",
       onChange: () => { /* 保存は KSD 側で行う */ } }).mount(body);
   }
   // 「くわしく」で始めた人は、詳しい条件を開いた状態にする
@@ -194,8 +210,9 @@
       }
     }
     KS.save(d);
-    // その画面の質問に答え終わった時点で「詳しい条件」を出す（答えを消したら引っ込める）
-    if (!!document.querySelector("#more details") !== detailReady()) renderDetail(screens[idx][0].group);
+    // その画面の質問に答え終わった時点で「詳しい条件」を開ける（答えを消したら予告に戻す）
+    const g = DETAIL_OF_GROUP[screens[idx][0].group];
+    if (g && !!document.querySelector("#more details") !== detailReady()) renderDetail(screens[idx][0].group);
   });
 
   document.getElementById("form").addEventListener("submit", (e) => {

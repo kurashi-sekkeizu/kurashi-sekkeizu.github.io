@@ -3,13 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>「わからない」と答えたときに使う値｜くらしの設計図（プロトタイプ）</title>
+<title>「わからない」と答えたときに使う値｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/assumptions/">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
-<div class="proto-banner">開発中の版です。画面や計算を見直している途中のため、表示が変わることがあります。</div>
 <header class="site-header">
   <div class="wrap">
     <a class="brand" href="/">くらしの設計図</a>
@@ -24,7 +23,7 @@
   <p class="muted">答えられない項目は、<b>一般的な目安で仮に置いて</b>計算しています。どんな値を使っているかを、ここで全部見られます。
     結果の画面では <span class="badge warn">⚠ 仮</span> の印が付きます。</p>
 
-  <div class="note info">計算に使う数字は、<b>すべて data/ のデータファイルを正本</b>にしています。公的な統計から取っているものは出典・適用年度・確認日つきで、<a href="/sources/">もっと知る</a>に一覧があります。公的な統計が無いものは、下の「公的な統計が無い前提」に根拠とともに並べています。</div>
+  <div class="note info">計算に使う数字は、<b>すべてこのページか「もっと知る」で確かめられます</b>。公的な統計から取っているものは出典・適用年度・確認日つきで、<a href="/sources/">もっと知る</a>に一覧があります。公的な統計が無いものは、下の「公的な統計が無い前提」に根拠とともに並べています。</div>
 
   <section class="section">
     <h2 class="section-title">生活費の内訳</h2>
@@ -37,7 +36,7 @@
         <tbody id="living-rows"></tbody>
       </table>
     </div>
-    <p class="small muted">0.5万円単位に丸め、端数は「その他」で調整して、合計が元の金額と一致するようにしています。</p>
+    <p class="small muted">内訳の合計は、答えた金額と必ず一致します。</p>
     <h3 class="section-title" style="font-size:1rem">世帯の人数から置く金額</h3>
     <div class="table-wrap">
       <table class="data text">
@@ -78,7 +77,7 @@
         <tbody id="public-rows"></tbody>
       </table>
     </div>
-    <p class="small muted">本番では、日本年金機構・厚生労働省の公表値から計算します。いまの数字は概算です。</p>
+    <p class="small muted">金額は、下の出典の公表値から計算しています。ひとりずつの加入期間や報酬による違いは反映していないため、ご自身の見込み額は「ねんきん定期便」でご確認ください。</p>
   </section>
 
   <section class="section">

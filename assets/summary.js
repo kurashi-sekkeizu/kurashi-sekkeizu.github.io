@@ -149,7 +149,7 @@
           ul.appendChild(li);
         });
         body.appendChild(ul);
-        if (c.living.source !== "detail") body.appendChild(h("p", "costs-note", "内訳は一般的な割合で分けた目安です（プロトタイプの仮の割合）。"));
+        if (c.living.source !== "detail") body.appendChild(h("p", "costs-note", "内訳は、家計調査の平均の割合で分けた目安です。実際の内訳は「くわしく入力」で直せます。"));
       }
       // 飛び先のセクションが無い項目には、修正ボタンを出さない（押しても何も開かないため）
       const noSection = row.fix === "edu" && !(r.kidInfo || []).length;
@@ -456,6 +456,116 @@
     return box;
   }
 
+  // ── 見直せるかもしれない支出 ──
+  // 家計調査の平均より多い費目を、差の大きい順に挙げる。
+  // **多い＝悪いとは書かない**（CLAUDE.md §4）。「理由があるなら、それでよい」と添える。
+  //
+  // 大事な制約：生活費の内訳を答えていない人には、費目ごとの比較ができない。
+  // 内訳は家計調査の割合で機械的に分けているので、あなたの額＝合計×割合、平均＝平均合計×同じ割合になり、
+  // **どの費目も同じ向きに同じだけずれる**（費目ごとの多い・少ないが出てこない）。
+  // そのため、内訳が目安のままのときは、答えから直に出ている費目だけを扱う。
+  function reviewItems(r, a) {
+    const K = window.KSDATA && window.KSDATA.kakei;
+    if (!K || !K.groups || !K.map) return { error: "家計調査のデータを読み込めませんでした。" };
+    const c = r.current;
+    const L = Object.fromEntries(c.living.items.map((i) => [i.key, i.monthly]));
+    const SPECIAL = { car: c.car.monthly, education: c.edu.monthly, housing: c.housing.monthly, loan: c.loan.monthly };
+    const mine = (key) => (L[key] != null ? L[key] : SPECIAL[key] != null ? SPECIAL[key] : 0);
+    // 答えから直に出ている費目（内訳を答えていなくても比べられるもの）
+    const FROM_ANSWERS = new Set(["education", "transport"]);
+    const fromDetail = c.living.source === "detail";
+
+    const ageGroups = ageGroupsFor(r, K.groupsByAge);
+    const axis = Object.keys(ageGroups).length > 0 && householdSize(r) <= 1 ? "age" : "persons";
+    const groups = axis === "age" ? ageGroups : K.groups;
+    const gkey = axis === "age" ? pickAgeGroup(r, ageGroups) : pickGroup(r, a, K.groups);
+    const g = groups[gkey];
+    if (!g) return { error: "見比べる相手の区分が決まりませんでした。" };
+
+    const over = [];
+    const cannot = [];
+    K.map.forEach((m) => {
+      if (!m.kakei) { cannot.push(m); return; }
+      if (!fromDetail && !FROM_ANSWERS.has(m.key)) return;
+      const you = (m.parts || [m.key]).reduce((t, k) => t + mine(k), 0);
+      const avg = (g.items[m.kakei] || 0) / 10000;   // 円 → 万円
+      if (avg < 0.05) return;                        // 平均がほぼ0の費目は比べても何もわからない
+      const d = you - avg;
+      if (d / avg <= 0.1) return;                    // 1割以内は「平均的」。挙げない
+      over.push({ key: m.key, label: m.label, you, avg, diff: d, yearly: d * 12, ratio: you / avg, note: m.note });
+    });
+    over.sort((x, y) => y.diff - x.diff);
+    return {
+      over, cannot, group: g, axis, fromDetail,
+      smallSample: K.smallSampleUnder && g.n && g.n < K.smallSampleUnder ? g.n : null,
+      total: over.reduce((t, x) => t + x.yearly, 0),
+    };
+  }
+
+  function review(r, a) {
+    const box = h("div", "review");
+    const v = reviewItems(r, a);
+    if (v.error) { box.appendChild(h("p", "note warn small", "⚠ " + v.error + "この章は表示していません。")); return box; }
+
+    box.appendChild(h("p", null, `${v.group.label}の1か月あたりの平均と並べて、あなたのほうが多い費目を挙げています。`));
+
+    if (!v.fromDetail) {
+      const note = h("p", "note info");
+      note.appendChild(document.createTextNode("生活費の内訳をまだ答えていないため、ここで見られるのは、答えから直に出ている費目だけです。"));
+      note.appendChild(h("br"));
+      note.appendChild(document.createTextNode("食費・水道光熱費・趣味などは、いま家計調査の平均と同じ割合で分けているので、費目ごとの多い・少ないが出てきません。"));
+      const link = h("a", "btn-mini", "くわしく入力で、生活費の内訳を入れる →");
+      link.href = "/soudan/detail/#living";
+      note.appendChild(h("br"));
+      note.appendChild(link);
+      box.appendChild(note);
+    }
+
+    if (!v.over.length) {
+      box.appendChild(h("p", "card", v.fromDetail
+        ? "平均より目立って多い費目は見つかりませんでした。平均に近い、または平均より少ない費目ばかりです。"
+        : "答えから直に出ている費目のうち、平均より目立って多いものは見つかりませんでした。"));
+    } else {
+      if (v.smallSample) {
+        box.appendChild(h("p", "note warn small", `⚠ この区分は集計した世帯数が少ないため（${v.smallSample}世帯）、数字が振れやすくなっています。`));
+      }
+      const ul = h("ul", "review-list");
+      v.over.forEach((x) => {
+        const li = h("li", "card");
+        const head = h("div", "review-head");
+        head.append(h("b", "review-label", x.label), h("span", "review-word", "平均より多い"));
+        li.appendChild(head);
+        const nums = h("p", "review-nums");
+        nums.append(
+          h("span", null, `あなた ${manM(x.you)}`),
+          h("span", "muted", ` ／ 平均 ${manM(x.avg)}`),
+          h("b", "review-diff", `　差 月${manM(x.diff)}（年 ${manM(x.yearly)}）`),
+        );
+        li.appendChild(nums);
+        if (x.note) li.appendChild(h("p", "small muted", x.note));
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+      if (v.over.length > 1) {
+        box.appendChild(h("p", "review-total", `平均より多い分を合わせると、年 ${manM(v.total)} です。`));
+      }
+      box.appendChild(h("p", "note info small",
+        "多いことは、悪いことではありません。通勤や通院で交通費がかかる、習いごとを続けている、といった理由があるなら、"
+        + "その金額が必要だということです。減らす先を探すときの手がかりとして見てください。"));
+    }
+
+    if (v.cannot.length) {
+      const det = h("details", "fold");
+      det.appendChild(h("summary", null, `ここに出していない費目（${v.cannot.length}）`));
+      const inner = h("div", "body");
+      v.cannot.forEach((m) => inner.appendChild(h("p", null, `【${m.label}】${m.reason}`)));
+      det.appendChild(inner);
+      box.appendChild(det);
+    }
+    box.appendChild(h("p", "small", "少ない費目もふくめて全部並べたものは、下の「家計調査の平均との見比べ」にあります。"));
+    return box;
+  }
+
   // ── この計算に入れていないこと ──
   // dir: better＝実際はもっと良くなる可能性／worse＝もっと厳しくなる可能性／both＝どちらにも動く
   function notIncludedItems(r, a) {
@@ -522,9 +632,8 @@
   }
 
   // ── ライフプラン表（縦＝人、横＝年） ──
-  const ICON = { car: "", repair: "", home: "", care: "", spend: "", work: "" };
-  const SHORT_ICON = { 誕生: "", 小学校: "", 中学: "", 高校: "", 大学: "", 専門: "", 独立: "", 定年: "", 年金: "", 完済: "" };
-  const iconOf = (e) => ICON[e.kind] || SHORT_ICON[e.short] || "●";
+  // 記号と凡例は calc.js の MARKS が正本。ここで別に持つと、片方だけ古くなる
+  const iconOf = (e) => KSC.markOf(e);
 
   function stageOf(kid, kidAge) {
     const p = kid.plan;
@@ -546,7 +655,7 @@
     const box = h("div", "lt-box");
 
     const legend = h("div", "lt-legend");
-    [["", "誕生"], ["", "入学"], ["", "独立"], ["", "定年"], ["", "年金"], ["", "働き方"], ["", "車"], ["", "修繕"], ["", "住まい"], ["", "介護"], ["", "出費"]].forEach(([i, t]) => legend.appendChild(h("span", null, `${i} ${t}`)));
+    KSC.MARKS.forEach((m) => legend.appendChild(h("span", null, `${m.mark} ${m.label}`)));
     box.appendChild(legend);
 
     // 行の定義：レーン（あなた・配偶者・子…・くらし）＋貯蓄残高
@@ -681,5 +790,5 @@
     return box;
   }
 
-  window.KSR = { forecast, costs, costTable, lifeTable, advice, compare, notIncluded, notIncludedItems, WEATHER };
+  window.KSR = { forecast, costs, costTable, lifeTable, advice, compare, review, reviewItems, notIncluded, notIncludedItems, WEATHER };
 })();

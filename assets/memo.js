@@ -16,7 +16,7 @@
       ["住まい", KSQ.display(KSQ.byId.home, A)],
       ["生活費・貯蓄", KSQ.display(KSQ.byId.living, A) + "／" + KSQ.display(KSQ.byId.savings, A)],
     ];
-    const foot = `<p class="foot">くらしの設計図／一般的な計算による目安であり、商品の推奨ではありません／開発中の版です</p>`;
+    const foot = `<p class="foot">くらしの設計図／一般的な計算による目安であり、商品の推奨ではありません</p>`;
 
     let html = `
       <h2 class="memo-title">くらしの設計図 ライフプランメモ</h2>
@@ -50,7 +50,25 @@
         r.insurance.map((x) => `<tr><th style="width:30%">${esc(x.name)}</th><td><b>${esc(x.level.text)}</b><br>${esc(x.reason)}</td></tr>`).join("") + `</tbody></table>`;
     }
     if (has("review")) {
-      html += `<h2>見直せるかもしれない支出</h2><p>固定費は「くわしく入力」で答えると表示されます。保険料はこの一覧に含めません。</p>`;
+      const v = KSR.reviewItems(r, A);
+      // ここは1万円未満の差が意味を持つ（月0.4万円＝年5万円）。man() は万円単位で丸めるので、
+      // そのまま使うと「3万円 と 3万円 の差が 5万円」と読めてしまう
+      const man1 = (x) => (Math.round(x * 10) / 10).toLocaleString("ja-JP", { maximumFractionDigits: 1 }) + "万円";
+      html += `<h2>見直せるかもしれない支出</h2>`;
+      if (v.error) {
+        html += `<p>${esc(v.error)}この章は出せませんでした。</p>`;
+      } else {
+        html += `<p>${esc(v.group.label)}の1か月あたりの平均と並べて、多いほうの費目です。`
+          + (v.fromDetail ? "" : "生活費の内訳は答えていないため、答えから直に出ている費目だけを見ています。") + `</p>`;
+        html += v.over.length
+          ? `<table><thead><tr><th>費目</th><th style="width:16%">あなた</th><th style="width:16%">平均</th><th style="width:22%">差（年）</th></tr></thead><tbody>`
+            + v.over.map((x) => `<tr><th>${esc(x.label)}</th><td>${man1(x.you)}</td><td>${man1(x.avg)}</td><td>${man1(x.yearly)}</td></tr>`).join("")
+            + `</tbody></table><p>多いことは悪いことではありません。理由があるなら、その金額が必要だということです。</p>`
+          : `<p>平均より目立って多い費目は見つかりませんでした。</p>`;
+        if (v.cannot.length) {
+          html += `<p>ここに出していない費目：` + v.cannot.map((m) => esc(m.label)).join("、") + `（平均と比べられないため）</p>`;
+        }
+      }
     }
     if (has("ask")) {
       html += `<h2 class="page-break">専門家に聞くこと</h2>` +

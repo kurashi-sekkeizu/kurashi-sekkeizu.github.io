@@ -3,13 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>あなたの設計図｜くらしの設計図（プロトタイプ）</title>
+<title>あなたの設計図｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/soudan/result/">
 <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body class="has-lock">
-<div class="proto-banner">開発中の版です。画面や計算を見直している途中のため、表示が変わることがあります。</div>
 <header class="app-header">
   <div class="wrap">
     <a class="linkbtn" href="/soudan/confirm/">← 回答に戻る</a>
@@ -138,12 +137,8 @@
 
     const sections = [
       { id: "todo", title: "やることリスト（すべて）", html: r.todos.length ? r.todos.map(todoCard).join("") : "<p>いま特に急ぐことは見つかりませんでした。</p>" },
-      { id: "review", title: "見直せるかもしれない支出", html: `
-          <p class="note info">固定費（通信費・電気代など）は「くわしく入力（固定費）」で答えると表示されます。</p>
-          <div class="card"><b>表示例：通信費</b><br><span class="level l2">見直しの余地があるかもしれません</span>
-          <p class="small" style="margin:6px 0">〈ここに、同じ区分の平均との差が入ります。金額は実際の入力から出します〉</p>
-          <p class="small" style="margin:0">いまの支出を平均と見比べたい場合は、<b>「③ 家計調査の平均と見比べる」</b>をご覧ください。</p></div>
-          <p class="small" style="margin-top:8px">保険料は、この一覧には含めません（家計調査では消費支出の外に分類されるため、平均と比べられません）。</p>` },
+      // 中身は KSR.review() が組み立てる（下で差し込む）
+      { id: "review", title: "見直せるかもしれない支出", html: "" },
       { id: "estimate", title: "分野別の目安", html: death + dis + retire + insurance +
           `<p class="small" style="margin-top:12px">言葉の意味：<a href="/learn/izoku-nenkin/">遺族年金</a>　<a href="/learn/kougaku-ryouyouhi/">高額療養費</a>　<a href="/learn/roukogo-2000man/">老後2000万円問題</a>　<a href="/learn/">ほかの解説を見る</a></p>` },
       { id: "ask", title: "専門家に聞くこと", html: `<ul>${r.ask.map((x) => `<li>${esc(x.q)}<br><span class="muted small">相談先の例：${esc(x.who)}</span></li>`).join("")}</ul><p class="small">自分で書き足したいことは、PDF作成の画面で追加できます。</p>` },
@@ -173,7 +168,7 @@
             <ol>
               <li><b>額面の年収</b>…あなたが答えた帯の真ん中の金額から始めます（${esc(KSQ.display(KSQ.byId.income, A))}）。</li>
               <li><b>年齢に応じた増減</b>…${esc(incomeAssumption(r))}。統計の年齢別の賃金を、<b>いまの年齢の水準を1とした倍率</b>にして掛けています。<b>平均の金額に置きかえてはいません。</b></li>
-              <li><b>額面から手取りへ</b>…税金と社会保険料を、年収に応じたおおよその割合で差し引きます（年収が高いほど手取りの割合は下がります）。個別の税額は計算できないため（税理士法）、<b>おおまかな割合</b>にとどめています。</li>
+              <li><b>額面から手取りへ</b>…税金と社会保険料を、年収に応じたおおよその割合で差し引きます（年収が高いほど手取りの割合は下がります）。個別の税額は計算できないため、<b>おおまかな割合</b>にとどめています。</li>
               <li><b>定年より先</b>…${r.detail.work.retireAge}歳で定年とし、そのあとは再雇用の設定（${Number(r.detail.work.rehire) > 0 ? `定年前の${r.detail.work.rehire}%・${r.detail.work.rehireUntil}歳まで` : "働かない"}）で計算します。</li>
               <li><b>年金</b>…受け取り開始の年齢から、働き方と収入に応じた見込み額を足します。</li>
             </ol>
@@ -249,6 +244,9 @@
       location.href = "/soudan/detail/";
     }));
     document.getElementById("compare").appendChild(KSR.compare(r, A));
+    // 「見直せるかもしれない支出」は、家計調査との見比べから組み立てる
+    const rev = document.querySelector('[data-sec="review"] > .body');
+    if (rev) rev.appendChild(KSR.review(r, A));
     document.getElementById("timeline").appendChild(KSR.lifeTable(r));
     document.getElementById("notinc").appendChild(KSR.notIncluded(r, A));
     const ctFold = document.getElementById("cost-table-fold");
@@ -298,7 +296,7 @@
         </div>
         <fieldset style="margin-top:12px"><legend style="font-size:1rem">物価の上昇率（年）</legend>
           <div class="radio-row">${radios("inflation", [0, 1, 2], as.inflation, "%")}</div>
-          <details class="help"><summary>なぜ1%が初期値？</summary><div>長い期間の計算で物価上昇を無視すると、将来の支出を少なく見積もってしまうためです（プロトタイプの仮の設定）。</div></details>
+          <details class="help"><summary>なぜ1%が初期値？</summary><div>長い期間の計算で物価上昇を無視すると、将来の支出を少なく見積もってしまうためです。ここは、ご自身で選べます。</div></details>
         </fieldset>
         <fieldset style="margin-top:8px"><legend style="font-size:1rem">運用利回り（年）</legend>
           <div class="radio-row">${radios("ret", [0, 1, 3], as.ret, "%")}</div>

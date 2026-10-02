@@ -64,6 +64,33 @@
     return age < 3 ? DUMMY.childAllowanceU3 : DUMMY.childAllowance;
   }
 
+  // 年表の出来事につける記号。**絵文字は使わない**（字体が環境で変わり、印刷でも崩れる。
+  // 晴れのマークが白黒で表示される不具合が実際に起きた）。全角の幾何記号は、画面でも紙でも同じ形になる。
+  // **凡例もここから作る。** 別々に持つと、記号を変えたときに凡例だけ古いまま残る
+  // （アイコンを空にしたのに凡例が11個並んだままになっていた。2026-10-02）
+  const MARKS = [
+    { mark: "◎", label: "誕生", shorts: ["誕生"] },
+    { mark: "▲", label: "入学", shorts: ["小学校", "中学", "高校", "大学", "専門"] },
+    { mark: "△", label: "独立", shorts: ["独立"] },
+    { mark: "■", label: "定年", shorts: ["定年"] },
+    { mark: "◆", label: "年金", shorts: ["年金"] },
+    { mark: "▣", label: "ローン完済", shorts: ["完済"] },
+    { mark: "◇", label: "働き方", kinds: ["work"] },
+    { mark: "○", label: "車", kinds: ["car"] },
+    { mark: "※", label: "修繕", kinds: ["repair"] },
+    { mark: "□", label: "住まい", kinds: ["home"] },
+    { mark: "＋", label: "介護", kinds: ["care"] },
+    { mark: "▼", label: "大きな出費", kinds: ["spend"] },
+  ];
+  const MARK_BY_KIND = {};
+  const MARK_BY_SHORT = {};
+  MARKS.forEach((m) => {
+    (m.kinds || []).forEach((k) => { MARK_BY_KIND[k] = m.mark; });
+    (m.shorts || []).forEach((s) => { MARK_BY_SHORT[s] = m.mark; });
+  });
+  // 出来事1つの記号。当てはまるものが無ければ中黒（「その他の出来事」の意味）
+  const markOf = (e) => MARK_BY_KIND[e.kind] || MARK_BY_SHORT[e.short] || "・";
+
   // 生活費（住居費・教育費・車を除く）の内訳。
   // 割合は家計調査から出す（build_data.py が計算して data.js に書き出す）
   const LIVING_LABELS = [
@@ -991,7 +1018,7 @@
       },
       edu: { monthly: p0.exp.edu / 12, source: kids.length ? (D.set.edu ? "detail" : a.eduPlan === "unknown" ? "provisional" : "answer") : "none", note: kids.length ? "今年の学年と進学の方針から" : "お子さんなし" },
       car: { monthly: D.cars.reduce((t, c) => t + (age < Number(c.until) ? Number(c.upkeep) : 0), 0) / 12, source: D.cars.length ? (D.set.car ? "detail" : "provisional") : "none", note: D.cars.length ? "維持費（税金・保険・車検・ガソリンなど）。買い替えは年表の時期にまとめて計上" : "車なし" },
-      loan: { monthly: D.loans.reduce((t, l) => t + (age < Number(l.endAge) ? Number(l.monthly) : 0), 0), source: D.loans.length ? "detail" : a.otherLoan === "yes" ? "provisional" : "none", note: D.loans.length ? "奨学金・自動車ローンなどの毎月の返済（住宅ローンは上の行）" : a.otherLoan === "yes" ? "「ある」と答えていますが、未入力です" : "住宅ローン以外の借入れなし" },
+      loan: { monthly: D.loans.reduce((t, l) => t + (age < Number(l.endAge) ? Number(l.monthly) : 0), 0), source: D.loans.length ? "detail" : a.otherLoan === "yes" ? "provisional" : "none", note: D.loans.length ? "奨学金・自動車ローンなどの毎月の返済（住宅ローンは上の行）" : a.otherLoan === "yes" ? "借入れが「ある」とお答えですが、毎月の返済額をまだ入れていないため、0円で計算しています" : "住宅ローン以外の借入れなし" },
       other: { monthly: (Number(D.spend.travel) > 0 ? Number(D.spend.travel) : 0) / 12 + (D.care.on === "yes" && Number(D.care.startAge) <= age ? Number(D.care.monthly) : 0), source: D.set.spend || D.set.care ? "detail" : "none", note: "旅行・介護など（くわしく入力で設定）" },
       incomeMonthly: p0.income / 12,
     };
@@ -1025,7 +1052,7 @@
         key: "working", title: "現役のあいだの家計", q: "65歳までに貯蓄が底をつかないか",
         weather: min.balance < 0 ? RAIN : min.balance < yearLiving / 2 ? CLOUD : SUN,
         short: min.balance < 0 ? `${pre.find((p) => p.balance < 0).age}歳でマイナス` : `いちばん少ない時 ${KS.man(min.balance)}`,
-        criteria: "晴れ：いちばん少ない時でも生活費の半年分以上／くもり：半年分を下回る時期がある／雨：マイナスになる時期がある",
+        criteria: "いちばん少ない時でも生活費の半年分が残れば晴れ、半年分を切る時期があればくもり、マイナスになる時期があれば雨です",
         reason: min.balance < 0
           ? `${pre.find((p) => p.balance < 0).age}歳ごろに貯蓄がマイナスになる見込みです（いちばん少ないのは${min.age}歳で${KS.man(min.balance)}）。`
           : `貯蓄がいちばん少なくなるのは${min.age}歳ごろで、約${KS.man(min.balance)}の見込みです${min.balance < yearLiving / 2 ? "（生活費の半年分を下回ります）" : ""}。`,
@@ -1039,7 +1066,7 @@
         key: "retire", title: "老後のお金", q: "90歳まで貯蓄がもつか",
         weather: outAge !== null ? RAIN : endP.balance < yearLiving * (Number(D.retire.ratio) / 100) * 2 ? CLOUD : SUN,
         short: outAge !== null ? (post[0] && post[0].balance < 0 ? (post[0].age <= age ? "いまの時点でマイナス" : `${post[0].age}歳でマイナス`) : `${outAge}歳で底をつく`) : `90歳で${KS.man(endP.balance)}残る`,
-        criteria: "晴れ：90歳で老後の生活費2年分以上残る／くもり：もつが余裕が少ない／雨：途中でなくなる",
+        criteria: "90歳の時点で老後の生活費2年分が残れば晴れ、もつものの余裕が少なければくもり、途中でなくなれば雨です",
         reason: outAge !== null
           ? (post[0] && post[0].balance < 0
             ? `${post[0].age <= age ? "いまの時点" : post[0].age + "歳の時点"}で、すでに貯蓄がマイナス（約${KS.man(post[0].balance)}）の見込みです。まず現役のあいだの家計から見ていくことになります。`
@@ -1049,12 +1076,12 @@
       });
     }
     forecast.push(!death
-      ? { key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は", weather: SUN, short: "扶養家族なし", criteria: "晴れ：不足なし／くもり：不足500万円以内／雨：不足500万円超", reason: "扶養しているご家族がいないため、大きな備えの必要性は低めです。", target: "estimate" }
+      ? { key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は", weather: SUN, short: "扶養家族なし", criteria: "不足がなければ晴れ、不足が500万円以内ならくもり、500万円を超えれば雨です", reason: "扶養しているご家族がいないため、大きな備えの必要性は低めです。", target: "estimate" }
       : {
         key: "death", title: "万一のとき", q: "あなたが亡くなったとき、家族の生活は",
         weather: insurancePending ? CLOUD : death.high <= 0 ? SUN : death.high <= 500 ? CLOUD : RAIN,
         short: insurancePending ? "保障額が未入力" : death.high <= 0 ? "不足なし" : `不足 ${KS.man(death.low)}〜${KS.man(death.high)}`,
-        criteria: "晴れ：不足なし／くもり：不足500万円以内／雨：不足500万円超",
+        criteria: "不足がなければ晴れ、不足が500万円以内ならくもり、500万円を超えれば雨です",
         reason: (insurancePending ? "加入中の保険の保障額が未入力のため、晴れ・雨の判定ができません。くわしく入力で設定してください。" + "\n" : "") + (death.high <= 0
           ? "加入中の保険を差し引いて計算すると、遺族年金・配偶者の収入・貯蓄で、ご家族の支出をまかなえる見込みです。"
           : `加入中の保険を差し引いて計算すると、約${KS.man(death.low)}〜${KS.man(death.high)}不足する見込みです。`),
@@ -1067,7 +1094,7 @@
         key: "sick", title: "働けなくなったとき", q: "休業中の収入減を、貯蓄で1年半しのげるか",
         weather: insurancePending ? CLOUD : disability.first <= 0 ? SUN : need18 <= savings ? CLOUD : RAIN,
         short: insurancePending ? "保障額が未入力" : disability.first <= 0 ? "不足なし" : `毎月 ${KS.man(disability.first)} 不足`,
-        criteria: "晴れ：不足なし／くもり：1年半分の不足を貯蓄でしのげる／雨：貯蓄では足りない",
+        criteria: "不足がなければ晴れ、1年半分の不足を貯蓄でしのげればくもり、貯蓄では足りなければ雨です",
         reason: disability.first <= 0
           ? "休業中の手当などで、毎月の支出をまかなえる見込みです。"
           : `毎月約${KS.man(disability.first)}足りなくなり、1年半で約${KS.man(need18)}。${need18 <= savings ? "今の貯蓄でしのげる見込みですが、貯蓄は減ります。" : "今の貯蓄では足りない見込みです。"}`,
@@ -1083,7 +1110,7 @@
         key: "emergency", title: "急な出費への備え", q: `貯蓄が毎月の支出の何か月分あるか（目安${need}か月分）`,
         weather: m >= need ? SUN : m >= need / 2 ? CLOUD : RAIN,
         short: `貯蓄 ${m >= 24 ? "24か月分以上" : Math.floor(m) + "か月分"}`,
-        criteria: `晴れ：毎月の支出の${need}か月分以上／くもり：${need / 2}〜${need}か月分／雨：${need / 2}か月分未満`,
+        criteria: `毎月の支出の${need}か月分があれば晴れ、${need / 2}か月分以上ならくもり、それより少なければ雨です`,
         reason: `貯蓄は毎月の支出（生活費＋住居費）の約${m >= 24 ? "24か月分以上" : Math.floor(m) + "か月分"}です。${varyIncome ? "収入の波が大きい働き方のため、1年分を目安にしています。" : "一般に、半年分ほどを目安にする考え方があります。"}`,
         target: "costs",
       });
@@ -1095,14 +1122,12 @@
     if (sim0.shortageAge !== null) events.push({ year: year0 + sim0.shortageAge - age, age: sim0.shortageAge, text: "貯蓄が底をつく見込み（運用しない場合）" });
     events.sort((x, y) => x.year - y.year);
 
-    // 年表（行ごと）：年・家族の年齢・出来事（アイコン・金額）
-    const ICON = { car: "", repair: "", home: "", care: "", spend: "", work: "", loan: "" };
-    const SHORT_ICON = { 誕生: "", 小学校: "", 中学: "", 高校: "", 大学: "", 専門: "", 独立: "", 定年: "", 年金: "", 完済: "" };
+    // 年表（行ごと）：年・家族の年齢・出来事（記号・金額）
     const rowsByOff = {};
     const addRow = (off, item) => { (rowsByOff[off] = rowsByOff[off] || []).push(item); };
     lanes.forEach((lane) => lane.events.forEach((e) => {
       const pt = sim0.points[e.offset];
-      addRow(e.offset, { icon: ICON[e.kind] || SHORT_ICON[e.short] || "●", text: e.text.replace(/（約[^）]*）/, ""), amount: e.amount || (e.short === "大学" || e.short === "専門" ? Math.round(pt ? pt.exp.edu : 0) : 0), kind: e.kind || (["小学校", "中学", "高校", "大学", "専門", "独立"].includes(e.short) ? "edu" : "life") });
+      addRow(e.offset, { icon: markOf(e), text: e.text.replace(/（約[^）]*）/, ""), amount: e.amount || (e.short === "大学" || e.short === "専門" ? Math.round(pt ? pt.exp.edu : 0) : 0), kind: e.kind || (["小学校", "中学", "高校", "大学", "専門", "独立"].includes(e.short) ? "edu" : "life") });
     }));
     if (sim0.shortageAge !== null) addRow(sim0.shortageAge - age, { icon: "⚠", text: "貯蓄が底をつく見込み（運用しない場合）", amount: 0, kind: "alert" });
     const timeline = Object.keys(rowsByOff).map(Number).sort((x, y) => x - y).map((off) => ({
@@ -1127,5 +1152,5 @@
     return Math.round(n / 100) * 100;
   }
 
-  window.KSC = { compute, detailOf, detailDefaults, splitLiving, loanFromOrigin, DUMMY, LIVING_ITEMS, EDU_PLAN, dataReady };
+  window.KSC = { compute, detailOf, detailDefaults, splitLiving, loanFromOrigin, DUMMY, LIVING_ITEMS, EDU_PLAN, dataReady, MARKS, markOf };
 })();

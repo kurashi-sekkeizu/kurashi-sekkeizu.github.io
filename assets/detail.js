@@ -274,7 +274,7 @@
       body: (box) => {
         box.appendChild(select("働き方", A, "work", opts("work"), "work", { text: true, answers: true }));
         box.appendChild(select("年収（額面・税込）", A, "income", opts("income"), "work", { text: true, answers: true }));
-        box.appendChild(curvePicker("今後の年収の見込み", D.work, "growth", A.work, "work", { toAge: Math.min(60, Number(D.work.retireAge)), note: "線は、実際に計算に使う倍率から引いています。「年齢に応じて」は厚生労働省の統計の年齢別の賃金の形（57歳で頭打ち。60歳以降は下の定年・再雇用の設定で計算）。上がる／下がる は年1%です" }));
+        box.appendChild(curvePicker("今後の年収の見込み", D.work, "growth", A.work, "work", { toAge: Math.min(60, Number(D.work.retireAge)), note: "線は、実際の計算と同じ動きで引いています。「年齢に応じて」は、厚生労働省の統計にある年齢ごとの賃金の動きに合わせて、いまの年収を増減させます（57歳からは増えません。60歳以降は下の定年・再雇用の設定で計算します）。上がる／下がる は年1%です" }));
         box.appendChild(sub("定年・再雇用・退職金"));
         box.appendChild(select("仕事をやめる（定年の）年齢", D.work, "retireAge", [55, 60, 63, 65, 70, 75].map((v) => ({ v, label: `${v}歳` })), "work", { rerender: true }));
         box.appendChild(select("定年後の働き方（再雇用など）", D.work, "rehire", [{ v: 0, label: "働かない" }, { v: 50, label: "定年前の年収の5割" }, { v: 70, label: "定年前の年収の7割" }, { v: 100, label: "定年前と同じ" }], "work", { rerender: true }));
@@ -298,7 +298,7 @@
       body: (box) => {
         box.appendChild(select("働き方", A, "spouseWork", opts("spouseWork"), "spouseWork", { text: true, answers: true }));
         box.appendChild(select("年収（額面・税込）", A, "spouseIncome", opts("spouseIncome"), "spouseWork", { text: true, answers: true }));
-        box.appendChild(curvePicker("今後の年収の見込み", D.spouseWork, "growth", A.spouseWork, "spouseWork", { fromAge: Number(A.spouseAge), toAge: Math.min(60, Number(D.spouseWork.retireAge)), note: "線は、実際に計算に使う倍率から引いています" }));
+        box.appendChild(curvePicker("今後の年収の見込み", D.spouseWork, "growth", A.spouseWork, "spouseWork", { fromAge: Number(A.spouseAge), toAge: Math.min(60, Number(D.spouseWork.retireAge)), note: "線は、実際の計算と同じ動きで引いています" }));
         box.appendChild(select("今後の働き方", D.spouseWork, "plan", [
           { v: "same", label: "今と同じ" }, { v: "leave", label: "一時的に収入が減る（育休・時短など）" },
           { v: "quit", label: "仕事をやめる" }, { v: "return", label: "働き始める・復職する" }], "spouseWork", { text: true, rerender: true }));

@@ -431,6 +431,16 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .compare-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .compare-label { font-weight: 600; }
 .compare-word { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+
+/* 見直せるかもしれない支出 */
+.review-list { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 10px; }
+.review-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.review-word { font-size: .85rem; color: var(--muted); white-space: nowrap; }
+.review-nums { margin: 6px 0 0; font-size: .95rem; }
+.review-nums > span + span { margin-left: 2px; }
+.review-diff { display: inline-block; }
+.review-total { margin-top: 10px; font-weight: 700; }
+.btn-mini { display: inline-block; margin-top: 6px; font-weight: 600; }
 .compare-bars { display: grid; gap: 2px; margin-top: 4px; }
 .compare-bar { display: grid; grid-template-columns: 3.4em minmax(0, 1fr) 5.2em; align-items: center; gap: 8px; }
 .compare-who { font-size: .8rem; color: var(--muted); white-space: nowrap; }
@@ -447,6 +457,10 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .more-fold > summary { color: var(--accent); font-weight: 700; }
 .more-fold > .body { margin-top: 10px; }
 .more-fold .fold { margin-bottom: 8px; }
+/* まだ必須が埋まっていないときの予告。控えめに、でも在ることは分かるように */
+.more-wait { margin-top: 18px; border-top: 1px dashed var(--line); padding-top: 14px; }
+.more-wait-head { margin: 0 0 4px; font-weight: 700; color: var(--muted); }
+.more-wait .small { margin: 0; }
 
 /* 収入の見込みを、線の形で選ぶ */
 .curve-row { display: flex; flex-wrap: wrap; gap: 8px; }
