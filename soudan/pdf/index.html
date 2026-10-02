@@ -61,7 +61,12 @@
 </main>
 <footer class="app-footer no-print">
   <div class="wrap">
-    <a class="linkbtn" href="/">くらしの設計図のトップへ</a>
+    <!-- 入力中でもサイトの他のページへ行けるようにする。
+         上部のヘッダーは「戻る／進捗／削除」で手一杯なので、ここに置く
+         （2026-10-03 web_tester の指摘8・利用者の指示） -->
+    <nav class="nav foot-nav" aria-label="サイト内のほかのページ">
+      <a href="/">トップ</a><a href="/learn/">学ぶ</a><a href="/sources/">もっと知る</a><a href="/about/">このサイトについて</a>
+    </nav>
     <span class="small muted">答えた内容は、この端末の中だけにあります</span>
   </div>
 </footer>

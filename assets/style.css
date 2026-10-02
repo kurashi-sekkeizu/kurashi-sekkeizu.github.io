@@ -93,6 +93,9 @@ body.has-lock { padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px)); }
 /* どの画面からもトップへ戻れるようにする */
 .app-footer { border-top: 1px solid var(--line); margin-top: 28px; padding: 14px 0 18px; }
 .app-footer .wrap { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; justify-content: space-between; }
+/* 入力中の画面から、ほかのページへ行けるようにする */
+.foot-nav { gap: 4px 14px; }
+.foot-nav a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
 /* 削除確認 */
 .confirm-panel {
@@ -309,6 +312,12 @@ table.data { border-collapse: collapse; width: 100%; font-size: .88rem; font-var
 table.data th, table.data td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: right; white-space: nowrap; }
 table.data th:first-child, table.data td:first-child { text-align: left; }
 table.data.text th, table.data.text td { text-align: left; white-space: normal; }
+/* 日付・年度は折り返さない。「2026-」「09-16」のようにハイフンで割れて、
+   46行すべてが2行になっていた（2026-10-03 web_tester の指摘1） */
+table.data .nw { white-space: nowrap; }
+/* 列の多い表は、狭い画面で潰すより横にスクロールさせる。
+   資料名が1〜3文字ごとに折り返されていた（指摘19）。.table-wrap が受け止める */
+table.data.wide { min-width: 560px; }
 .timeline { list-style: none; padding: 0; margin: 0; border-left: 3px solid var(--accent-weak); }
 .timeline li { position: relative; padding: 4px 0 12px 18px; }
 .timeline li::before {

@@ -13,7 +13,7 @@
   <div class="wrap">
     <a class="brand" href="/">くらしの設計図</a>
     <nav class="nav" aria-label="メインメニュー">
-      <a href="/learn/">学ぶ</a><a href="/sources/" aria-current="page">もっと知る</a><a href="/soudan/">見通しをつくる</a><a href="/about/">このサイトについて</a>
+      <a href="/learn/">学ぶ</a><a href="/sources/" aria-current="page">もっと知る</a><a href="/soudan/">相談スタート</a><a href="/about/">このサイトについて</a>
     </nav>
   </div>
 </header>
@@ -29,9 +29,9 @@
     <h2 class="section-title">計算に使っている数字の出典</h2>
     <p class="small muted">記事と画面に出している数字は、すべて<b>下の出典の公表値</b>です。<b>見通しの計算も、同じ数字を使っています。</b>年に1回、公表に合わせて新しくします。公的な統計が無い前提は、<a href="/assumptions/">「わからない」と答えたときに使う値</a>に根拠つきで並べています。</p>
     <div class="table-wrap">
-      <table class="data text">
+      <table class="data text wide">
         <caption class="visually-hidden">公的データの出典・適用年度・確認日</caption>
-        <thead><tr><th>発行元</th><th>資料</th><th>適用年度</th><th>確認日</th></tr></thead>
+        <thead><tr><th>発行元</th><th>資料</th><th class="nw">適用年度</th><th class="nw">確認日</th></tr></thead>
         <tbody id="src-rows"><tr><td colspan="4">読み込み中…</td></tr></tbody>
       </table>
     </div>
@@ -56,7 +56,7 @@
   <section class="section card">
     <p style="margin:0"><b>自分の場合はどうか、確かめてみませんか</b></p>
     <p class="small">家族・収入・住まいを答えると、将来の見通しと、相談で聞くことがまとまります。</p>
-    <a href="/soudan/">自分の場合を整理する →</a>
+    <a href="/soudan/">相談スタート →</a>
   </section>
 </main>
 
@@ -80,7 +80,7 @@
   const esc = (t) => String(t == null ? "" : t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const rows = Object.values(D.sources).sort((a, b) => (a.publisher + a.name).localeCompare(b.publisher + b.name, "ja"));
   tb.innerHTML = rows.map((s) =>
-    `<tr><td>${esc(s.publisher)}</td><td><a href="${esc(s.url)}" rel="noopener">${esc(s.name)}</a></td><td>${esc(s.year)}</td><td>${esc(s.checked)}</td></tr>`).join("");
+    `<tr><td>${esc(s.publisher)}</td><td><a href="${esc(s.url)}" rel="noopener">${esc(s.name)}</a></td><td class="nw">${esc(s.year)}</td><td class="nw">${esc(s.checked)}</td></tr>`).join("");
   document.getElementById("src-note").textContent =
     `全${rows.length}件（データ更新日 ${D.generated}）。制度は年度ごとに変わるため、実際の手続きの前に出典でご確認ください。`;
 })();
