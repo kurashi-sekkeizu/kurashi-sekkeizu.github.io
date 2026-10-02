@@ -223,15 +223,40 @@ details.help div { background: #eef1f2; border-radius: 2px; padding: 10px 12px; 
 textarea.select { min-height: 110px; resize: vertical; line-height: 1.7; }
 
 /* 相談スタート */
-.mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+/* 狭い幅では1列にする。2列のままだと札が細くなり、「かんたん（約／5分）」のように
+   見出しが途中で折れて読みにくい（2026-10-03 web_tester の指摘） */
+.mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 10px; }
 .mode-card { position: relative; }
 .mode-card input { position: absolute; opacity: 0; inset: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+/* 選べる札。**選んでいるほうは全体の色を変える。**
+   以前は枠線と薄い背景の違いだけで、押せることも選択中であることも伝わっていなかった
+   （2026-10-03 web_tester の指摘と利用者の指示） */
 .mode-card .face {
-  display: block; text-align: center; background: var(--card); border: 2px solid var(--line);
-  border-radius: var(--radius); padding: 16px 10px; min-height: 120px;
+  display: block; text-align: left; background: var(--card); border: 2px solid var(--line-strong);
+  border-radius: var(--radius); padding: 14px 14px 14px 42px; min-height: 108px; position: relative;
 }
+/* 左に丸を置き、選ぶものだと見て分かるようにする */
+.mode-card .face::before {
+  content: ""; position: absolute; left: 14px; top: 16px; width: 18px; height: 18px;
+  border: 2px solid var(--line-strong); border-radius: 50%; background: var(--card);
+}
+.mode-card .face b { display: block; font-size: 1.05rem; }
 .mode-card .icon { font-size: 1.8rem; display: block; }
-.mode-card input:checked + .face { border-color: var(--accent); background: var(--accent-weak); }
+.mode-card:hover .face { border-color: var(--accent); }
+/* 選んでいるほう：全体を藍で塗る */
+.mode-card input:checked + .face {
+  border-color: var(--accent); background: var(--accent); color: var(--accent-ink);
+}
+.mode-card input:checked + .face .muted { color: #dde6ef; }
+/* 選んだ印は、色だけでなく形でも分かるようにする（CLAUDE.md §4） */
+.mode-card input:checked + .face::before {
+  background: var(--accent-ink); border-color: var(--accent-ink);
+}
+.mode-card input:checked + .face::after {
+  content: ""; position: absolute; left: 19px; top: 21px; width: 9px; height: 5px;
+  border-left: 2px solid var(--accent); border-bottom: 2px solid var(--accent);
+  transform: rotate(-45deg);
+}
 .mode-card input:focus-visible + .face { outline: 3px solid #1b5fb5; outline-offset: 2px; }
 
 /* チャット */
