@@ -27,7 +27,10 @@
       version: VERSION,
       meta: { mode: "step", depth: "simple", persist: "session", pos: null, done: [] },
       answers: {},
-      assumptions: { inflation: 1, ret: 0, ratioLow: 70, ratioHigh: 80 },
+      assumptions: { inflation: 1, ret: 0, ratioLow: 70, ratioHigh: 80,
+        // 物価の上昇を掛ける費目。正本は data/assumptions.json の defaults.inflationTargets
+        inflationOn: ((window.KSDATA && window.KSDATA.assumptions && window.KSDATA.assumptions.defaults
+          && window.KSDATA.assumptions.defaults.inflationTargets || {}).value || ["living"]).slice() },
       pdf: { sections: ["todo", "plan", "estimate", "review", "ask"], note: "" },
     };
   }

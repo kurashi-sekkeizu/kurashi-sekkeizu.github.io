@@ -2,7 +2,7 @@
  * 正本は data/*.json です。`python3 scripts/build_data.py` で作り直します。
  */
 window.KSDATA = {
-  "generated": "2026-10-02",
+  "generated": "2026-10-03",
   "sources": {
     "nenkin_izoku_kiso": {
       "name": "遺族基礎年金（受給要件・対象者・年金額）",
@@ -2430,6 +2430,19 @@ window.KSDATA = {
         "unit": "年",
         "label": "配偶者が働き方を変える期間（初期値）",
         "basis": "仮置き。"
+      },
+      "inflationTargets": {
+        "value": [
+          "living",
+          "rent",
+          "tax",
+          "edu",
+          "car",
+          "other"
+        ],
+        "unit": "",
+        "label": "物価の上昇を掛ける費目（初期値）",
+        "basis": "毎年くりかえしかかる支出は、物価と同じように上がると置いている。住宅ローンとその他の借入れの返済は、契約した額のまま変わらないので掛けない。マンションの修繕積立金は別に値上がりの設定があるため、二重に掛けない。修繕や買い替えの一時金は、入力した金額のまま計算する。利用者が費目ごとに外せる。"
       }
     }
   }

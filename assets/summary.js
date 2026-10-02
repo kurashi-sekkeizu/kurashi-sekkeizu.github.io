@@ -592,7 +592,19 @@
     } else {
       list.push({ dir: "both", text: "年齢による収入の変化。いまの収入がそのまま続く前提で計算しています（くわしく入力で変えられます）" });
     }
-    list.push({ dir: "worse", text: "物価の上昇は生活費だけに掛けています。教育費・修繕費・車の価格は、いまの水準のままです" });
+    // 物価の上昇は費目ごとに選べるので、いまの設定をそのまま伝える（2026-10-03）
+    {
+      const L = { living: "生活費", rent: "家賃", tax: "固定資産税", edu: "教育費", car: "車の維持費", other: "旅行・大きな出費" };
+      const on = (r.inflationOn || []).map((k) => L[k]).filter(Boolean);
+      const off = Object.values(L).filter((x) => !on.includes(x));
+      if (Number(r.inflation) === 0) {
+        list.push({ dir: "worse", text: "物価の上昇を0%にしています。値上がりは見ていません（くわしく入力で変えられます）" });
+      } else if (off.length) {
+        list.push({ dir: "worse", text: `物価の上昇（年${r.inflation}%）を掛けているのは ${on.join("・")} です。${off.join("・")} は、いまの水準のままです` });
+      }
+      // 返済と一時金は、設定にかかわらず据え置きなので必ず伝える
+      list.push({ dir: "worse", text: "修繕や買い替えの一時金は、入力した金額のままで計算しています。工事費や車の価格の値上がりは見ていません" });
+    }
     list.push({ dir: "both", text: "投資の値動き。利回りは毎年一定として計算し、元本割れは見ていません" });
     list.push({ dir: "worse", text: "突然の医療費・介護費・失業や休職による収入の減少（くわしく入力で設定した分を除く）" });
     list.push({ dir: "both", text: "年金・児童手当などの制度が将来変わること。いまの制度が続く前提です" });

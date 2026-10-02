@@ -17,6 +17,15 @@
     }
     return v.value;
   }
+  // 値が「並び」の前提（物価上昇を掛ける費目など）。need() は数値だけを通す歯止めなので分けている
+  function needList(group, key) {
+    const g = A_ && A_[group];
+    const v = g && g[key];
+    if (!v || !Array.isArray(v.value) || v.value.some((x) => typeof x !== "string")) {
+      throw new Error(`前提『${group}.${key}』が読み込めません（文字の並びではありません）。data/assumptions.json と build_data.py を確認してください`);
+    }
+    return v.value.slice();
+  }
   function dataReady() {
     return Boolean(A_ && A_.public && A_.estimate && A_.defaults && A_.derived);
   }
@@ -408,6 +417,13 @@
 
     const inf = as.inflation / 100;
     const ret = as.ret / 100;
+    // 物価の上昇をどの費目に掛けるか。利用者が費目ごとに外せる（CLAUDE.md §5：前提は利用者が選ぶ）。
+    // 以前は生活費にしか掛けておらず、家賃や教育費が何十年も据え置きになる甘い見積りだった。
+    // **返済は掛けない。** 住宅ローンもその他の借入れも、契約した額のまま変わらないため。
+    // マンションの修繕積立金も掛けない（別に値上がりの設定があり、二重になる）
+    const INF_TARGETS = needList("defaults", "inflationTargets");
+    const infOn = new Set(Array.isArray(as.inflationOn) ? as.inflationOn : INF_TARGETS);
+    const infAt = (key, y) => (infOn.has(key) ? Math.pow(1 + inf, y) : 1);
     const year0 = new Date().getFullYear();
     const span = DUMMY.endAge - age;
     const EMPLOYEE_LIKE = ["employee", "civil", "leave", "short"];
@@ -589,13 +605,16 @@
     function housingCost(y) {
       const cur = age + y;
       let c = 0, fee = 0, homeLoan = 0;
-      if (moveOff !== null && y >= moveOff) return { base: Number(D.move.monthly) * 12, fee: 0, homeLoan: 0 };
+      // 家賃と固定資産税には物価上昇を掛ける。返済には掛けない（契約した額のまま）
+      if (moveOff !== null && y >= moveOff) {
+        return { base: Number(D.move.monthly) * 12 * infAt("rent", y), fee: 0, homeLoan: 0 };
+      }
       if (home === "loan" && cur < loanEndAge) { c += loanYearly; homeLoan += loanYearly; }
-      if (renting && (purchaseOff === null || y < purchaseOff)) c += Number(D.rent.monthly) * (12 + Number(D.rent.renewal) / 2);  // 更新料は2年ごと
+      if (renting && (purchaseOff === null || y < purchaseOff)) c += Number(D.rent.monthly) * (12 + Number(D.rent.renewal) / 2) * infAt("rent", y);  // 更新料は2年ごと
       if (purchaseOff !== null && y >= purchaseOff && y < purchaseOff + purchaseLoanYears) { c += purchaseLoan; homeLoan += purchaseLoan; }
       const ownFrom = owns ? 0 : purchaseOff;
       const ownType = owns ? homeType : P.type;
-      if (ownFrom !== null && y >= ownFrom) c += Number(ownType === "mansion" ? D.mansion.tax : D.house.tax);
+      if (ownFrom !== null && y >= ownFrom) c += Number(ownType === "mansion" ? D.mansion.tax : D.house.tax) * infAt("tax", y);
       const mansionFrom = owns && homeType === "mansion" ? 0 : purchaseOff !== null && P.type === "mansion" ? purchaseOff : null;
       if (mansionFrom !== null && y >= mansionFrom) {
         fee = Number(D.mansion.monthly) * 12 * Math.pow(1 + Number(D.mansion.raise) / 100, Math.floor((y - mansionFrom) / 10));
@@ -678,18 +697,18 @@
       const cur = age + y;
       // すでに年金の年齢に達している人は「いまの生活費」を答えているので、老後の圧縮率は掛けない
       const retireRatio = age >= DUMMY.pensionAge ? 1 : Number(D.retire.ratio) / 100;
-      return living * 12 * Math.pow(1 + inf, y) * (cur >= DUMMY.pensionAge ? retireRatio : 1);
+      return living * 12 * infAt("living", y) * (cur >= DUMMY.pensionAge ? retireRatio : 1);
     }
 
     /** 教育費（子ごとに、その年の学年で出す） */
     function expenseEduAt(y) {
-      return kids.reduce((t, k, i) => t + eduCost(i, k + y), 0);
+      return kids.reduce((t, k, i) => t + eduCost(i, k + y), 0) * infAt("edu", y);
     }
 
     /** 車の維持費（買い替えは一時的な出来事のほうに入っている） */
     function expenseCarUpkeepAt(y) {
       const cur = age + y;
-      return D.cars.reduce((t, c) => t + (cur < Number(c.until) ? Number(c.upkeep) : 0), 0);
+      return D.cars.reduce((t, c) => t + (cur < Number(c.until) ? Number(c.upkeep) : 0), 0) * infAt("car", y);
     }
 
     /** 住宅ローン以外の借入れの返済 */
@@ -701,7 +720,7 @@
     /** 旅行など、予定している出費 */
     function expenseTravelAt(y) {
       const cur = age + y;
-      return Number(D.spend.travel) > 0 && cur < Number(D.spend.travelUntil) ? Number(D.spend.travel) : 0;
+      return (Number(D.spend.travel) > 0 && cur < Number(D.spend.travelUntil) ? Number(D.spend.travel) : 0) * infAt("other", y);
     }
 
     /** その年の収入と支出を、ぜんぶ組み立てる */
@@ -811,7 +830,7 @@
     let retire = null;
     if (age < DUMMY.pensionAge) {
       const yrs = DUMMY.endAge - DUMMY.pensionAge;
-      const need = living * 12 * (Number(D.retire.ratio) / 100) * Math.pow(1 + inf, DUMMY.pensionAge - age) * yrs - (pensionSelf + pensionSpouse) * yrs;
+      const need = living * 12 * (Number(D.retire.ratio) / 100) * infAt("living", DUMMY.pensionAge - age) * yrs - (pensionSelf + pensionSpouse) * yrs;
       const at65 = (sim) => sim.points.find((p) => p.age === DUMMY.pensionAge)?.balance ?? 0;
       const gap0 = Math.max(0, need - Math.max(0, at65(sim0)));
       const months = (DUMMY.pensionAge - age) * 12;
@@ -1145,7 +1164,7 @@
     const wageApplied = W.growth === "stat" && wageFactor(work, age, age + 1) !== null;
     const wageCapped = wageApplied && age >= wageCapAge();
 
-    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, loanView, region, incomeCheck, wageApplied, wageCapped, householdNow, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, age, detail: D, EDU_PLAN };
+    return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, loanView, region, incomeCheck, wageApplied, wageCapped, householdNow, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, inflation: as.inflation, inflationOn: [...infOn], age, detail: D, EDU_PLAN };
   }
 
   function round100(n) {

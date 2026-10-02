@@ -102,6 +102,18 @@
     </div>
   </section>
 
+  <section class="section">
+    <h2 class="section-title">くわしく入力の、はじめの値</h2>
+    <p class="small">答えていないときに置いておく値です。<b>公的な根拠があるものではなく、よくある例から置いています。</b>
+      くわしく入力で、ご自身の予定に直せます（直した時点で、この値は使われません）。</p>
+    <div class="table-wrap">
+      <table class="data text">
+        <thead><tr><th>項目</th><th>はじめの値</th></tr></thead>
+        <tbody id="default-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
   <div class="section stack">
     <a class="btn" href="/soudan/">自分の場合を計算する</a>
     <a class="btn secondary" href="/sources/">公的データの出典を見る</a>
@@ -178,23 +190,33 @@
       (R.caveats || []).map((c) => c.text).join(" ");
   }
 
-  // 公的な統計が無い前提（estimate と defaults）を、根拠つきで並べる
+  // 公的な統計が無い前提（estimate）を、根拠つきで並べる。
+  // **defaults（くわしく入力のはじめの値）は別の表にする。**
+  // 同じ表に混ぜていたため、根拠の欄に「仮置き。」の4文字だけが20行並んでいた。
+  // defaults に求められるのは根拠ではなく「ご自身の予定に直せます」という案内（2026-10-03）
   const AS = (window.KSDATA && window.KSDATA.assumptions) || {};
-  const rows2 = [];
-  ["estimate", "defaults"].forEach((g) => {
-    Object.entries(AS[g] || {}).forEach(([k, v]) => {
-      rows2.push(row([esc(v.label || k),
-        `${v.value}${esc(v.unit || "")}`,
-        `<span class="small">${esc(v.basis || "")}</span>`,
-        v.editable || g === "defaults" ? "変えられる" : "—"]));
-    });
-  });
-  document.getElementById("estimate-rows").innerHTML = rows2.join("");
+  document.getElementById("estimate-rows").innerHTML =
+    Object.entries(AS.estimate || {}).map(([k, v]) => row([
+      esc(v.label || k),
+      `${v.value}${esc(v.unit || "")}`,
+      `<span class="small">${esc(v.basis || "")}</span>`,
+      v.editable ? "変えられる" : "—",
+    ])).join("");
+
+  const fmtVal = (v) => (Array.isArray(v.value) ? v.value.length + "項目" : `${v.value}${esc(v.unit || "")}`);
+  document.getElementById("default-rows").innerHTML =
+    Object.entries(AS.defaults || {}).map(([k, v]) => row([esc(v.label || k), fmtVal(v)])).join("");
 
   // 計算の前提
   const empty = KS.empty();
+  const INF_LABELS = [
+    { v: "living", label: "生活費" }, { v: "rent", label: "家賃" }, { v: "tax", label: "固定資産税" },
+    { v: "edu", label: "教育費" }, { v: "car", label: "車の維持費" }, { v: "other", label: "旅行・大きな出費" },
+  ];
   document.getElementById("assume-rows").innerHTML = [
     ["物価の上昇", "年 " + empty.assumptions.inflation + "%", "変えられます（結果の「前提を変える」）"],
+    ["物価の上昇を掛ける費目", INF_LABELS.filter((x) => (empty.assumptions.inflationOn || []).includes(x.v)).map((x) => x.label).join("・") || "なし",
+      "変えられます。<b>住宅ローンとその他の借入れの返済には掛けません</b>（契約した額のまま変わらないため）"],
     ["運用の利回り", "年 " + empty.assumptions.ret + "%（＝運用しない）", "変えられます。天気の判定は<b>常に運用しない場合</b>で行います"],
     ["万一のときの遺族の生活費", "いまの " + empty.assumptions.ratioLow + "〜" + empty.assumptions.ratioHigh + "%", "変えられます"],
     ["老後の生活費", "現役のときの " + dflt.retire.ratio + "%", "変えられます（くわしく入力）"],

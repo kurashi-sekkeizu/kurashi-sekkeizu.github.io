@@ -4,6 +4,14 @@
 (function () {
   "use strict";
 
+  // 物価の上昇をどの費目に掛けているか。相談の場で前提を聞かれたときに答えられるように出す
+  const INF_LABELS = { living: "生活費", rent: "家賃", tax: "固定資産税", edu: "教育費", car: "車の維持費", other: "旅行など" };
+  function infTargets(r) {
+    const on = (r.inflationOn || []).map((k) => INF_LABELS[k]).filter(Boolean);
+    if (!on.length) return "どの費目にも掛けていない";
+    return on.length === Object.keys(INF_LABELS).length ? "返済以外のすべての費目" : on.join("・") + "のみ";
+  }
+
   function memoHTML(r, d, A, opt) {
     opt = opt || {};
     const has = (id) => (d.pdf.sections || []).includes(id);
@@ -30,7 +38,7 @@
       <p>☀️晴れ＝今の前提では心配は小さい見込み／⛅くもり＝注意して確認を／☔雨＝対策を考える価値あり</p>
       <h2 class="page-break">お金の流れと、貯蓄の見通し</h2>
       ${KSV.staticHTML(r, 680)}
-      <p>前提：物価上昇 年${d.assumptions.inflation}%／運用 年${d.assumptions.ret}%${r.sim0.shortageAge !== null ? `／<b>${r.sim0.shortageAge}歳ごろ、貯蓄が底をつく見込み</b>` : "／90歳まで貯蓄はプラスの見込み"}</p>
+      <p>前提：物価上昇 年${d.assumptions.inflation}%（${infTargets(r)}）／運用 年${d.assumptions.ret}%${r.sim0.shortageAge !== null ? `／<b>${r.sim0.shortageAge}歳ごろ、貯蓄が底をつく見込み</b>` : "／90歳まで貯蓄はプラスの見込み"}</p>
       <h2>計算に使っている毎月の支出（いま）</h2>
       <table><tbody>${[["生活費", r.current.living], ["住宅ローンの返済", r.current.homeLoan], ["住居費（家賃・税金など）", r.current.housing], ["教育費", r.current.edu], ["車", r.current.car], ["そのほかの借入れ", r.current.loan], ["その他", r.current.other]].filter(([, c]) => c.source !== "none" || c.monthly > 0).map(([l, c]) => `<tr><th style="width:26%">${l}</th><td style="width:22%">${(Math.round(c.monthly * 10) / 10).toLocaleString()}万円</td><td>${{ answer: "あなたの回答", detail: "くわしく入力の値", provisional: "仮の値（一般的な目安）", none: "—" }[c.source]}</td></tr>`).join("")}<tr><th>合計</th><td>${(Math.round(r.current.total * 10) / 10).toLocaleString("ja-JP")}万円</td><td>いまの手取り収入 月${(Math.round(r.current.incomeMonthly * 10) / 10).toLocaleString()}万円</td></tr></tbody></table>`;
     if (has("todo")) {

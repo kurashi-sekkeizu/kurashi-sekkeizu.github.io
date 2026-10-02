@@ -594,6 +594,20 @@
       body: (box) => {
         const as = d.assumptions;
         box.appendChild(radios("物価の上昇率（年）", as, "inflation", [0, 1, 2].map((v) => ({ v, label: `${v}%` })), "assumptions", { rerender: false }));
+        // どの費目に物価上昇を掛けるか。**返済は選択肢に出さない**（契約した額のまま変わらないため）
+        if (!Array.isArray(as.inflationOn)) as.inflationOn = ["living"];
+        box.appendChild(checks("物価の上昇を掛ける費目", as, "inflationOn", [
+          { v: "living", label: "生活費" },
+          { v: "rent", label: "家賃" },
+          { v: "tax", label: "固定資産税" },
+          { v: "edu", label: "教育費" },
+          { v: "car", label: "車の維持費" },
+          { v: "other", label: "旅行・大きな出費" },
+        ], "assumptions", { rerender: false,
+          note: "外した費目は、いまの金額のままで先まで計算します。"
+            + "住宅ローンとその他の借入れの返済は、契約した額のまま変わらないので、ここには出していません。"
+            + "マンションの修繕積立金は、別に値上がりの設定があります。"
+            + "修繕や買い替えの一時金は、入力した金額のままです。" }));
         box.appendChild(radios("運用利回り（年）", as, "ret", [0, 1, 3].map((v) => ({ v, label: `${v}%` })), "assumptions", { rerender: false, note: "運用成果は保証されません。見通しの天気は、いつも運用しない場合で判定します。" }));
         box.appendChild(select("万一のときの遺族の生活費（下限）", as, "ratioLow", [60, 70, 80, 90, 100].map((v) => ({ v, label: `現在の${v}%` })), "assumptions"));
         box.appendChild(select("万一のときの遺族の生活費（上限）", as, "ratioHigh", [60, 70, 80, 90, 100].map((v) => ({ v, label: `現在の${v}%` })), "assumptions"));
