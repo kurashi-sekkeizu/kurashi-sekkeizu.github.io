@@ -48,19 +48,10 @@
   const d = KS.load().data;
   d.meta.mode = "step";
   const A = d.answers;
-  let screens = KSQ.screens(A);
-  let idx = startIndex();
-
-  function startIndex() {
-    if (d.meta.pos) {
-      const i = screens.findIndex((s) => s.some((q) => q.id === d.meta.pos));
-      if (i >= 0) return i;
-    }
-    const i = screens.findIndex((s) => s.some((q) => q.required && !KSQ.isAnswered(q, A)));
-    if (i >= 0) return i;
-    // 全部答え終わっている（確認画面から戻ってきた）ときは、最後の画面を出す
-    return Math.max(0, screens.length - 1);
-  }
+  // 「くわしく」で始めた人には、詳しい条件も**質問の画面**として出す
+  const DETAIL_MODE = d.meta.depth === "detail";
+  let flow = [];
+  let idx = 0;
 
   function control(q) {
     const name = q.id;
@@ -112,16 +103,53 @@
     money: { keys: ["living", "assets", "insurance", "spend", "assumptions"], what: "生活費の内訳・貯蓄と投資・保険・物価と利回りの前提" },
   };
 
-  // ここまでの画面の必須が埋まっていれば、詳しい条件を組み立てられる
-  function detailReady() {
-    return !screens.slice(0, idx + 1).flat().some((q) => q.required && !KSQ.isAnswered(q, A));
+  // ── 画面の並び ────────────────────────────────────────────
+  // 「くわしく」のときは、そのまとまりの質問が終わったところで、
+  // 詳しい条件を**独立した画面**として挟む。節ごとに1画面にする。
+  // 以前はアコーディオンの中に入れていたため、住宅ローンの借入額・期間・金利が
+  // 「質問として出てこない」と受け取られた（2026-10-02 利用者の指摘）
+  function buildFlow() {
+    const qs = KSQ.screens(A);
+    const out = [];
+    qs.forEach((s, i) => {
+      out.push({ kind: "q", id: s[0].id, qs: s, group: s[0].group, title: s[0].groupTitle });
+      if (!DETAIL_MODE) return;
+      const g = DETAIL_OF_GROUP[s[0].group];
+      // そのまとまりの最後の質問画面のうしろにだけ挟む
+      if (!g || (qs[i + 1] && qs[i + 1][0].group === s[0].group)) return;
+      // 必須が埋まっていないと節を組み立てられない（年齢が無いと選択肢が作れない等）
+      if (qs.slice(0, i + 1).flat().some((q) => q.required && !KSQ.isAnswered(q, A))) return;
+      KSD.build(d, { only: g.keys, hideAnswers: true }).sections().forEach((sec) => {
+        out.push({ kind: "detail", id: "detail:" + sec.key, keys: [sec.key], title: sec.title, group: s[0].group });
+      });
+    });
+    return out;
   }
 
+  function startIndex() {
+    if (d.meta.pos) {
+      const i = flow.findIndex((e) => e.id === d.meta.pos);
+      if (i >= 0) return i;
+    }
+    const i = flow.findIndex((e) => e.kind === "q" && e.qs.some((q) => q.required && !KSQ.isAnswered(q, A)));
+    if (i >= 0) return i;
+    // 全部答え終わっている（確認画面から戻ってきた）ときは、最後の画面を出す
+    return Math.max(0, flow.length - 1);
+  }
+
+  // かんたんのときだけ使う。その画面までの必須が埋まっていれば、詳しい条件を組み立てられる
+  function detailReady() {
+    return !flow.slice(0, idx + 1).filter((e) => e.kind === "q").flatMap((e) => e.qs)
+      .some((q) => q.required && !KSQ.isAnswered(q, A));
+  }
+
+  // かんたんのときに、質問の下へ出す「詳しい条件」の折りたたみ。
+  // くわしくのときは独立した画面として出すので、ここは使わない
   function renderDetail(groupKey) {
     const slot = document.getElementById("more");
     slot.replaceChildren();
     const g = DETAIL_OF_GROUP[groupKey];
-    if (!g || typeof KSD === "undefined") return;
+    if (!g || DETAIL_MODE || typeof KSD === "undefined") return;
     // 必須が埋まるまでは中身を組み立てられない。ただし**何も出さないと気配が消える**ので、
     // 「このあと何を入れられるか」だけは先に見せる
     if (!detailReady()) {
@@ -147,22 +175,30 @@
     det.addEventListener("toggle", () => { if (det.open) moreOpen.add(groupKey); else moreOpen.delete(groupKey); });
     det.open = moreOpen.has(groupKey);
     slot.appendChild(det);
-    KSD.build(d, { only: g.keys, openAll: d.meta.depth === "detail",
-      onChange: () => { /* 保存は KSD 側で行う */ } }).mount(body);
+    KSD.build(d, { only: g.keys, onChange: () => { /* 保存は KSD 側で行う */ } }).mount(body);
   }
-  // 「くわしく」で始めた人は、詳しい条件を開いた状態にする
-  const moreOpen = new Set(d.meta.depth === "detail" ? Object.keys(DETAIL_OF_GROUP) : []);
+  const moreOpen = new Set();
 
   function render(focus) {
-    const s = screens[idx];
-    const title = s[0].groupTitle ? `<h1 style="font-size:1.1rem;color:var(--muted)">${KS.esc(s[0].groupTitle)}</h1>` : "";
-    document.getElementById("screen").innerHTML = title + s.map(control).join("");
-    renderDetail(s[0].group);
-    document.getElementById("count").textContent = `${idx + 1}／${screens.length}`;
-    document.getElementById("bar").style.width = `${Math.round((idx / screens.length) * 100)}%`;
+    const e = flow[idx];
+    const screenEl = document.getElementById("screen");
+    if (e.kind === "detail") {
+      // 詳しい条件の画面。折りたたまず、質問としてそのまま並べる
+      screenEl.innerHTML = `<h1 style="font-size:1.1rem;color:var(--muted)">${KS.esc(e.title)}</h1>`;
+      const box = document.createElement("div");
+      screenEl.appendChild(box);
+      KSD.build(d, { only: e.keys, flat: true, hideAnswers: true, onChange: onDetailChange }).mount(box);
+      document.getElementById("more").replaceChildren();
+    } else {
+      const title = e.title ? `<h1 style="font-size:1.1rem;color:var(--muted)">${KS.esc(e.title)}</h1>` : "";
+      screenEl.innerHTML = title + e.qs.map(control).join("");
+      renderDetail(e.group);
+    }
+    document.getElementById("count").textContent = `${idx + 1}／${flow.length}`;
+    document.getElementById("bar").style.width = `${Math.round((idx / flow.length) * 100)}%`;
     document.getElementById("err").hidden = true;
     document.getElementById("back").textContent = idx === 0 ? "← 戻る" : "← 前の質問";
-    d.meta.pos = s[0].id;
+    d.meta.pos = e.id;
     KS.save(d);
     if (focus) {
       const first = document.querySelector("#screen legend, #screen label[for]");
@@ -170,9 +206,29 @@
     }
   }
 
+  // 詳しい条件の画面で値が変わったとき。
+  // 「お住まい」をローンあり→賃貸に変えると出す節が変わるので、画面の並びを作り直す。
+  // 画面そのものは KSD が描き直すので、ここでは並びと進捗だけを合わせる
+  function onDetailChange() {
+    const curId = d.meta.pos;
+    flow = buildFlow();
+    const i = flow.findIndex((x) => x.id === curId);
+    if (i < 0) {
+      // いまの節が出なくなった（住まいを変えた等）。手前のいちばん近い画面へ下がる
+      idx = Math.max(0, Math.min(idx, flow.length - 1));
+      render(false);
+      return;
+    }
+    idx = i;
+    document.getElementById("count").textContent = `${idx + 1}／${flow.length}`;
+    document.getElementById("bar").style.width = `${Math.round((idx / flow.length) * 100)}%`;
+  }
+
   // 入力のたびに回答を保存（画面は勝手に進めない）
   document.getElementById("screen").addEventListener("change", (e) => {
     const t = e.target;
+    // 詳しい条件の画面の欄は name を持たない。保存も描き直しも KSD 側で行う
+    if (flow[idx].kind === "detail") return;
     if (t.dataset.age !== undefined) {
       const n = Number(A.kidsCount) || 0;
       const arr = Array.isArray(A.kidsAges) ? A.kidsAges.slice(0, n) : [];
@@ -197,40 +253,48 @@
         }
       }
       KS.forgetDetail(d, q.id);
+      // **答えはここで必ず保存する。** このあと画面を組み立て直す処理が続くので、
+      // そこで例外が出ても答えが消えないようにする
+      // （画面の並びを作る処理が落ちて、最後の2問が保存されなくなった。2026-10-02）
+      KS.save(d);
       // 回答によって同じ画面の質問が増減する場合（子の人数→年齢欄、持ち家→戸建て/マンション）は描き直す
-      const before = screens[idx].map((x) => x.id).join(",");
-      const nextScreens = KSQ.screens(A);
-      const now = nextScreens.find((sc) => sc.some((x) => x.id === screens[idx][0].id));
-      const hintChanged = screens[idx].some((x) => typeof x.hint === "function");
-      if (now && (q.id === "kidsCount" || hintChanged || now.map((x) => x.id).join(",") !== before)) {
-        screens = nextScreens;
-        idx = Math.max(0, screens.indexOf(now));
+      const cur = flow[idx];
+      const before = cur.qs.map((x) => x.id).join(",");
+      flow = buildFlow();
+      const now = flow.find((x) => x.kind === "q" && x.id === cur.id);
+      const hintChanged = cur.qs.some((x) => typeof x.hint === "function");
+      if (now && (q.id === "kidsCount" || hintChanged || now.qs.map((x) => x.id).join(",") !== before)) {
+        idx = Math.max(0, flow.indexOf(now));
         render(false);
         document.querySelector(`input[name="${q.id}"][value="${t.value}"]`)?.focus();
+      } else if (now) {
+        idx = Math.max(0, flow.indexOf(now));
       }
     }
     KS.save(d);
-    // その画面の質問に答え終わった時点で「詳しい条件」を開ける（答えを消したら予告に戻す）
-    const g = DETAIL_OF_GROUP[screens[idx][0].group];
-    if (g && !!document.querySelector("#more details") !== detailReady()) renderDetail(screens[idx][0].group);
+    // かんたんのとき、その画面の質問に答え終わった時点で「詳しい条件」を開ける
+    const g = DETAIL_OF_GROUP[flow[idx].group];
+    if (g && !DETAIL_MODE && !!document.querySelector("#more details") !== detailReady()) renderDetail(flow[idx].group);
   });
 
   document.getElementById("form").addEventListener("submit", (e) => {
     e.preventDefault();
-    const missing = screens[idx].find((q) => q.required && !KSQ.isAnswered(q, A));
     const err = document.getElementById("err");
-    if (missing) {
-      err.textContent = missing.type === "multi" ? "1つ以上選んでください。" : missing.type === "ages" ? "お子さん全員の年齢を選んでください。" : `「${missing.label}」を選んでください。`;
-      err.hidden = false;
-      const target = document.querySelector(`[data-q="${missing.id}"] input, [data-q="${missing.id}"] select`);
-      target?.focus();
-      return;
+    if (flow[idx].kind === "q") {
+      const missing = flow[idx].qs.find((q) => q.required && !KSQ.isAnswered(q, A));
+      if (missing) {
+        err.textContent = missing.type === "multi" ? "1つ以上選んでください。" : missing.type === "ages" ? "お子さん全員の年齢を選んでください。" : `「${missing.label}」を選んでください。`;
+        err.hidden = false;
+        const target = document.querySelector(`[data-q="${missing.id}"] input, [data-q="${missing.id}"] select`);
+        target?.focus();
+        return;
+      }
+      flow[idx].qs.forEach((q) => { if (!KSQ.isAnswered(q, A)) A[q.id] = []; if (!d.meta.done.includes(q.id)) d.meta.done.push(q.id); });
     }
-    screens[idx].forEach((q) => { if (!KSQ.isAnswered(q, A)) A[q.id] = []; if (!d.meta.done.includes(q.id)) d.meta.done.push(q.id); });
-    screens = KSQ.screens(A);
+    flow = buildFlow();
     const curId = d.meta.pos;
-    const cur = screens.findIndex((s) => s.some((q) => q.id === curId));
-    if (cur + 1 >= screens.length) {
+    const cur = flow.findIndex((x) => x.id === curId);
+    if (cur + 1 >= flow.length) {
       d.meta.pos = null;
       KS.save(d);
       location.href = "/soudan/confirm/";
@@ -254,6 +318,8 @@
     location.href = "/soudan/chat/";
   });
 
+  flow = buildFlow();
+  idx = startIndex();
   render(false);
 })();
 </script>

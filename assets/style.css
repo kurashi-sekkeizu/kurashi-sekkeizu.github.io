@@ -457,6 +457,15 @@ table.data.text th, table.data.text td { text-align: left; white-space: normal; 
 .more-fold > summary { color: var(--accent); font-weight: 700; }
 .more-fold > .body { margin-top: 10px; }
 .more-fold .fold { margin-bottom: 8px; }
+/* hidden を付けた欄は必ず消す。
+   .field-row などに display を指定しているため、[hidden] の既定（display:none）が負ける */
+[hidden] { display: none !important; }
+
+/* 「くわしく」で、詳しい条件を独立した画面として出すとき（折りたたまない） */
+.detail-flat + .detail-flat { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 16px; }
+.detail-flat-head { margin: 0 0 10px; font-size: 1.05rem; font-weight: 700; }
+.detail-flat > .body { margin: 0; }
+
 /* まだ必須が埋まっていないときの予告。控えめに、でも在ることは分かるように */
 .more-wait { margin-top: 18px; border-top: 1px dashed var(--line); padding-top: 14px; }
 .more-wait-head { margin: 0 0 4px; font-weight: 700; color: var(--muted); }

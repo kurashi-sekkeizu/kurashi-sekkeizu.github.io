@@ -16,6 +16,14 @@
     // 「くわしく」で始めた人には、節を開いた状態で見せる。
     // 閉じたままだと、見出しだけが並んで「質問されなかった」と受け取られるため
     const openAll = Boolean(cfg.openAll);
+    // flat: 折りたたみを使わず、中身をそのまま並べる。
+    // 1問ずつの画面で「詳しい条件」を**独立した画面**として出すときに使う。
+    // アコーディオンの中に入れていたため、住宅ローンの借入額・期間が
+    // 「質問として出てこない」と受け取られた（2026-10-02）
+    const flat = Boolean(cfg.flat);
+    // hideAnswers: かんたんの質問と重なる欄を出さない。
+    // くわしくのステップでは、直前の画面で同じことを聞いているため（2026-10-02）
+    const hideAnswers = Boolean(cfg.hideAnswers);
     const afterChange = cfg.onChange || function () {};
     const only = cfg.only || null;   // 指定したセクションだけを出す
 
@@ -54,6 +62,10 @@
     });
     row.append(l, s);
     if (opt.note) row.appendChild(h("p", "muted small", opt.note));
+    // かんたんの質問と重なる欄は、くわしくのステップでは隠す（直前の画面で聞いている）。
+    // **要素は作ってから隠す。** 作らずに返すと、戻り値を触る呼び出し側が壊れる
+    // （bandRow.querySelector("select").id = … で例外になり、回答の保存まで止まった）
+    if (opt.answers && hideAnswers) row.hidden = true;
     return row;
   }
   // 複数選べる項目（入っている保険など）
@@ -79,6 +91,10 @@
     });
     fs.appendChild(wrap);
     if (opt.note) fs.appendChild(h("p", "muted small", opt.note));
+    // かんたんの質問と重なる欄は、くわしくのステップでは隠す（直前の画面で聞いている）。
+    // **要素は作ってから隠す。** 作らずに返すと、戻り値を触る呼び出し側が壊れる
+    // （bandRow.querySelector("select").id = … で例外になり、回答の保存まで止まった）
+    if (opt.answers && hideAnswers) fs.hidden = true;
     return fs;
   }
 
@@ -144,6 +160,10 @@
     });
     fs.appendChild(wrap);
     if (opt.note) fs.appendChild(h("p", "muted small", opt.note));
+    // かんたんの質問と重なる欄は、くわしくのステップでは隠す（直前の画面で聞いている）。
+    // **要素は作ってから隠す。** 作らずに返すと、戻り値を触る呼び出し側が壊れる
+    // （bandRow.querySelector("select").id = … で例外になり、回答の保存まで止まった）
+    if (opt.answers && hideAnswers) fs.hidden = true;
     return fs;
   }
 
@@ -165,6 +185,10 @@
     });
     fs.appendChild(wrap);
     if (opt.note) fs.appendChild(h("p", "muted small", opt.note));
+    // かんたんの質問と重なる欄は、くわしくのステップでは隠す（直前の画面で聞いている）。
+    // **要素は作ってから隠す。** 作らずに返すと、戻り値を触る呼び出し側が壊れる
+    // （bandRow.querySelector("select").id = … で例外になり、回答の保存まで止まった）
+    if (opt.answers && hideAnswers) fs.hidden = true;
     return fs;
   }
   const note = (text) => h("p", "note info small", text);
@@ -577,11 +601,38 @@
     },
   ];
 
+  // いま出すべき節（回答によって出ない節がある）
+  const visibleSections = () => SECTIONS.filter((s) => (!s.show || s.show()) && (!only || only.includes(s.key)));
+
   function renderSections(root) {
     const focusId = document.activeElement && document.activeElement.id;
     uid = 0; // 描き直しても同じ id になるように
     root.replaceChildren();
-    SECTIONS.filter((s) => (!s.show || s.show()) && (!only || only.includes(s.key))).forEach((s) => {
+    if (flat) {
+      visibleSections().forEach((s) => {
+        const box = h("div", "detail-flat");
+        box.dataset.key = s.key;
+        const isSet = !!D.set[s.key];
+        const head = h("p", "detail-flat-head");
+        head.appendChild(h("span", null, s.title + " "));
+        const badge = h("span", isSet ? "badge set" : "badge warn", isSet ? "設定済み" : "目安で計算中");
+        badge.dataset.status = s.key;
+        head.appendChild(badge);
+        box.appendChild(head);
+        const body = h("div", "body");
+        s.body(body);
+        if (isSet) {
+          const reset = h("button", "linkbtn", "一般的な目安に戻す"); reset.type = "button";
+          reset.addEventListener("click", () => resetSection(s.key));
+          body.appendChild(reset);
+        }
+        box.appendChild(body);
+        root.appendChild(box);
+      });
+      if (focusId) document.getElementById(focusId)?.focus();
+      return;
+    }
+    visibleSections().forEach((s) => {
       const det = h("details", "fold");
       det.dataset.key = s.key;
       det.open = openAll || openState.has(s.key);
@@ -637,6 +688,26 @@
       mount(root) { mounted = root; renderSections(root); return root; },
       refresh() { if (mounted) renderSections(mounted); },
       data() { return d; },
+      // 画面の流れを組み立てる側が、どの節をいくつ出すかを知るために使う。
+      // **中身が空になる節は返さない。** hideAnswers でかんたんの質問だけの節は空になり、
+      // そのままだと「何も入れる欄がない画面」が流れに挟まってしまう
+      sections() {
+        return visibleSections().map((s) => {
+          const keep = uid;
+          let n = 1;   // 下見に失敗したら「中身はある」とみなす（隠すより出すほうが安全）
+          try {
+            const probe = document.createElement("div");
+            s.body(probe);
+            n = probe.querySelectorAll("select, input, textarea").length;
+          } catch (e) {
+            // 節の中身は計算（KSC.compute）を呼ぶものもあり、回答の途中では落ちることがある。
+            // ここで例外を外に出すと、呼び出し側の処理（回答の保存）まで止まる
+            n = 1;
+          }
+          uid = keep;   // 下見で id を進めない（本番の描画と id がずれる）
+          return n > 0 ? { key: s.key, title: s.title } : null;
+        }).filter(Boolean);
+      },
     };
   }
 
