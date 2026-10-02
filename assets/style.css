@@ -86,7 +86,9 @@ main.wrap { padding-block: 20px 40px; }
   background: #25343a; color: #fff; font-size: .8rem; text-align: center;
   padding: 6px 16px calc(6px + env(safe-area-inset-bottom, 0px));
 }
-body.has-lock { padding-bottom: 48px; }
+/* 固定帯の高さは、端末の下端の余白（セーフエリア）のぶん高くなる。
+   48px 固定だと、その端末で本文の最後が帯に隠れる（2026-10-03 web_tester の指摘） */
+body.has-lock { padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px)); }
 
 /* どの画面からもトップへ戻れるようにする */
 .app-footer { border-top: 1px solid var(--line); margin-top: 28px; padding: 14px 0 18px; }

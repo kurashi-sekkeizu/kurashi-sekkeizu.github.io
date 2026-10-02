@@ -99,7 +99,7 @@
     slot.appendChild(sourceList(used));
     const note = document.createElement("p");
     note.className = "small muted";
-    note.textContent = `このページの数字は、上の出典の公表値です（${DATA.generated} 時点）。制度は年度ごとに変わるため、実際の手続きの前に出典でご確認ください。`;
+    note.textContent = "このページの数字は、上の出典の公表値です。いつ確認した数字かは、出典ごとの確認日をご覧ください。制度は年度ごとに変わるため、実際の手続きの前に出典でご確認ください。";
     slot.appendChild(note);
   }
 
