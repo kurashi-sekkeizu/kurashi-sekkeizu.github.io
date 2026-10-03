@@ -29,11 +29,6 @@
   </div>
   <p id="broken" hidden class="note warn">前回の内容を読み込めませんでした。お手数ですが、最初からお答えください。</p>
 
-  <div class="note lock">
-    🔒 <b>入力内容は送信されません。</b>この端末の中だけで計算します。
-    <details class="help"><summary>説明をひらく</summary><div>答えた内容は、サーバーにもこのサイトの運営者にも届きません。ブラウザの中で計算し、結果もブラウザの中に表示します。</div></details>
-  </div>
-
   <form id="start" class="section" style="margin-top:20px">
     <fieldset>
       <legend>どこまで答えますか</legend>
@@ -69,6 +64,14 @@
     <p class="note info section">答えられないところは「わからない」で大丈夫です。入力内容は<b>このタブを閉じると消えます</b>。</p>
     <button type="submit" class="btn" id="start-btn">はじめる</button>
   </form>
+
+  <!-- 送信しないことの説明は、画面の先頭ではなく下に置く（2026-10-03 利用者の指示）。
+       画面の上は「どこまで答えますか」から始めたい。
+       なお、送信しないことは下端の帯で常に出ているので、ここが唯一の表示ではない -->
+  <div class="note lock section">
+    🔒 <b>入力内容は送信されません。</b>この端末の中だけで計算します。
+    <details class="help"><summary>説明をひらく</summary><div>答えた内容は、サーバーにもこのサイトの運営者にも届きません。ブラウザの中で計算し、結果もブラウザの中に表示します。</div></details>
+  </div>
 </main>
 <footer class="app-footer no-print">
   <div class="wrap">
@@ -78,7 +81,6 @@
     <nav class="nav foot-nav" aria-label="サイト内のほかのページ">
       <a href="/">トップ</a><a href="/learn/">学ぶ</a><a href="/sources/">もっと知る</a><a href="/about/">このサイトについて</a>
     </nav>
-    <span class="small muted">答えた内容は、この端末の中だけにあります</span>
   </div>
 </footer>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
