@@ -263,11 +263,11 @@ textarea.select { min-height: 110px; resize: vertical; line-height: 1.7; }
   transform: translateY(-70%) rotate(-45deg);
 }
 .mode-card input:focus-visible + .face { outline: 3px solid #1b5fb5; outline-offset: 2px; }
-/* 札の説明。札の中に長い文を入れると高さがそろわず、字も詰まるので外に出す */
-.mode-note { margin: 10px 0 0; font-size: .9rem; line-height: 1.8; }
-.mode-note dt { font-weight: 700; color: var(--accent); }
-.mode-note dd { margin: 0 0 8px; color: var(--muted); }
-.mode-note dd:last-child { margin-bottom: 0; }
+/* 札とその説明は、1つの組にして同じ列に置く。
+   説明をまとめて下に並べると、横2列の札に対して説明が縦1列になり、
+   どちらの説明か分からなくなる（2026-10-03 利用者の指摘） */
+.mode-col { display: flex; flex-direction: column; gap: 6px; }
+.mode-desc { margin: 0; font-size: .88rem; line-height: 1.8; color: var(--muted); }
 
 /* チャット */
 .chat-log { display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; }
