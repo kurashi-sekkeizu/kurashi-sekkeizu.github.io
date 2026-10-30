@@ -6,7 +6,7 @@
 <title>あなたの設計図｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/soudan/result/">
-<link rel="stylesheet" href="/assets/style.css?v=0ee8a4">
+<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
 </head>
 <body class="has-lock">
 <header class="app-header">
@@ -38,11 +38,11 @@
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
 <script src="/assets/common.js?v=43fc23"></script>
-<script src="/assets/data.js?v=f854e0"></script>
+<script src="/assets/data.js?v=d1e671"></script>
 <script src="/assets/questions.js?v=edf23b"></script>
-<script src="/assets/calc.js?v=cb1337"></script>
+<script src="/assets/calc.js?v=2643b2"></script>
 <script src="/assets/charts.js?v=336170"></script>
-<script src="/assets/summary.js?v=e6b938"></script>
+<script src="/assets/summary.js?v=5b9a7a"></script>
 <script>
 (function () {
   const d = KS.load().data;
@@ -119,11 +119,12 @@
       : `<h3>万一のときの保障額（死亡）</h3><p>扶養しているご家族がいないため、計算していません。</p>`;
 
     const retire = r.retire ? `
-      <h3 style="margin-top:20px">老後の不足額（65歳時点）</h3>
+      <h3 style="margin-top:20px">老後の不足額（90歳まで貯蓄をもたせるのに足りない額）</h3>
       <div class="kv">
         <span>運用しない場合</span><span class="v"><b>${man(r.retire.gap0)}</b>（毎月 約${man(r.retire.monthly0)}の積立で埋まる計算）</span>
         ${r.retire.gapR !== null ? `<span>年${r.ret}%で運用した場合</span><span class="v"><b>${man(r.retire.gapR)}</b>（毎月 約${man(r.retire.monthlyR)}）</span>` : ""}
       </div>
+      <p class="small">貯蓄残高の推移（住居費・車・物価の上昇を含む）で、${KSC.DUMMY.pensionAge}歳から${KSC.DUMMY.endAge}歳までに貯蓄がいちばん少なくなる時のマイナス分です。</p>
       <p class="small">※運用成果は保証されません。運用しない場合の数字もあわせて見てください。</p>` : "";
 
     const dis = `

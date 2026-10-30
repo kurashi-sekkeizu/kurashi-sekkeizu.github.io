@@ -6,7 +6,7 @@
 <title>「わからない」と答えたときに使う値｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/assumptions/">
-<link rel="stylesheet" href="/assets/style.css?v=0ee8a4">
+<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
 </head>
 <body>
 <header class="site-header">
@@ -127,10 +127,10 @@
   </div>
 </footer>
 
-<script src="/assets/data.js?v=f854e0"></script>
+<script src="/assets/data.js?v=d1e671"></script>
 <script src="/assets/common.js?v=43fc23"></script>
 <script src="/assets/questions.js?v=edf23b"></script>
-<script src="/assets/calc.js?v=cb1337"></script>
+<script src="/assets/calc.js?v=2643b2"></script>
 <script>
 (function () {
   "use strict";
@@ -152,7 +152,11 @@
   const E = D.edu;
   document.getElementById("home-rows").innerHTML = [
     ["家賃（「わからない」のとき）", "回答の帯の真ん中。帯を選んでいなければ<b>お住まいの都道府県の民営借家の平均</b>（答えていなければ全国の目安）"],
-    ["住宅ローンの返済", "月 " + man(dflt.loan.monthly) + "・" + dflt.loan.endAge + "歳完済・団信あり"],
+    // 計算で使う「借りたときの内容」から書く。以前は使っていない「月10万円・65歳完済」を出していた（2026-10-30）
+    (() => {
+      const L = dflt.loan, lv = KSC.loanFromOrigin(L, 40);
+      return ["住宅ローンの返済", "借入 " + man(L.borrowed) + "・" + L.years + "年・金利" + L.rate + "%・返し始めて" + L.startedAgo + "年、として計算（返済 月 約" + man(lv.monthly) + "。完済は残りの" + (L.years - L.startedAgo) + "年後）・団信あり"];
+    })(),
     ["戸建ての修繕", "外壁・屋根の塗装 " + man(dflt.house.paintCost) + "（" + dflt.house.paintEvery + "年ごと）／水回り・給湯器 " + man(dflt.house.waterCost) + "（" + dflt.house.waterEvery + "年ごと）"],
     ["固定資産税など", "戸建て 年 " + man(dflt.house.tax) + "／マンションは管理費・修繕積立金 月 " + man(dflt.mansion.monthly) + "（10年ごとに " + dflt.mansion.raise + "% 上がる前提）"],
     ["車", "維持費 年 " + man(dflt.cars[0] ? dflt.cars[0].upkeep : 35) + "／" + (dflt.cars[0] ? dflt.cars[0].interval : 10) + "年ごとに " + man(dflt.cars[0] ? dflt.cars[0].budget : 250) + " で買い替え"],
@@ -195,10 +199,14 @@
   // 同じ表に混ぜていたため、根拠の欄に「仮置き。」の4文字だけが20行並んでいた。
   // defaults に求められるのは根拠ではなく「ご自身の予定に直せます」という案内（2026-10-03）
   const AS = (window.KSDATA && window.KSDATA.assumptions) || {};
+  // [年収, 割合] の並び（手取りの割合）は「年収◯万円で◯%」と1行ずつ出す
+  const estVal = (v) => (Array.isArray(v.value) && v.value.every(Array.isArray)
+    ? v.value.map(([x, r]) => `<span style="white-space:nowrap">${x}万円：${Math.round(r * 100)}%</span>`).join("<br>")
+    : `${v.value}${esc(v.unit || "")}`);
   document.getElementById("estimate-rows").innerHTML =
     Object.entries(AS.estimate || {}).map(([k, v]) => row([
       esc(v.label || k),
-      `${v.value}${esc(v.unit || "")}`,
+      estVal(v),
       `<span class="small">${esc(v.basis || "")}</span>`,
       v.editable ? "変えられる" : "—",
     ])).join("");

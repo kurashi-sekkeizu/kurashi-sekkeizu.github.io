@@ -26,13 +26,24 @@
     }
     return v.value.slice();
   }
+  // 値が「[年収, 割合] の並び」の前提（手取りの割合）。年収の小さい順でなければ止める
+  function needPoints(group, key) {
+    const g = A_ && A_[group];
+    const v = g && g[key];
+    const ok = v && Array.isArray(v.value) && v.value.length >= 2
+      && v.value.every((p, i) => Array.isArray(p) && p.length === 2 && p.every((x) => typeof x === "number") && (i === 0 || p[0] > v.value[i - 1][0]));
+    if (!ok) {
+      throw new Error(`前提『${group}.${key}』が読み込めません（[年収, 割合] の並びではありません）。data/assumptions.json と build_data.py を確認してください`);
+    }
+    return v.value.map((p) => p.slice());
+  }
   function dataReady() {
     return Boolean(A_ && A_.public && A_.estimate && A_.defaults && A_.derived);
   }
 
   // 以前は DUMMY という名前でコードに直書きしていた。いまは正本データから組み立てる
   const DUMMY = dataReady() ? {
-    takeHomeRate: need("estimate", "takeHomeRate"),
+    takeHomeRate: needPoints("estimate", "takeHomeRate"),
     pensionBase: need("public", "pensionBase"),
     pensionEmployeeRate: need("estimate", "pensionEmployeeRate"),
     pensionAge: need("estimate", "pensionAge"),
@@ -279,14 +290,19 @@
     };
   }
 
+  // 割合はデータの点（[年収, 割合]）のあいだを直線でつなぐ。以前は年収帯で段階的に変えていたため、
+  // 帯の境目で「額面が増えると手取りが減る」逆転が起きていた（699万→538万、700万→525万。2026-10-30）
   function takeHome(income) {
     const y = Number(income) || 0;
-    if (y < 200) return 0.84;
-    if (y < 300) return 0.82;
-    if (y < 500) return 0.80;
-    if (y < 700) return 0.77;
-    if (y < 1000) return 0.75;
-    return 0.72;
+    const P = DUMMY.takeHomeRate;
+    if (y <= P[0][0]) return P[0][1];
+    for (let i = 1; i < P.length; i++) {
+      if (y <= P[i][0]) {
+        const [x0, r0] = P[i - 1], [x1, r1] = P[i];
+        return r0 + ((r1 - r0) * (y - x0)) / (x1 - x0);
+      }
+    }
+    return P[P.length - 1][1];
   }
 
   const EDU_PLAN = {
@@ -453,7 +469,14 @@
     }
     if (D.cars.length && !D.set.car) provisional.push("車（10年ごと・250万円で買い替え、維持費 年35万円で仮置き）");
     if (!D.set.home) {
-      if (home === "loan") provisional.push("住宅ローン（返済 月10万円・65歳完済・団信ありで仮置き）");
+      // 文言は、実際に計算に使う値から作る（以前は「月10万円・65歳完済」と書きながら、
+      // 借りたときの内容から計算した別の値を使っていた。2026-10-30）
+      if (home === "loan") {
+        const L = D.loan, lv = L.input !== "current" ? loanFromOrigin(L, age) : null;
+        provisional.push(lv
+          ? `住宅ローン（借入${KS.man(L.borrowed)}・${lv.years}年・金利${L.rate}%・返し始めて${lv.paid}年で仮置き。返済 月約${KS.man(lv.monthly)}・${lv.endAge}歳まで・団信あり）`
+          : `住宅ローン（返済 月${KS.man(L.monthly)}・${L.endAge}歳まで・団信ありで仮置き）`);
+      }
       if (renting && (a.rent === undefined || a.rent === "unknown")) {
         const rr = regionRent(a);
         provisional.push(rr
@@ -878,10 +901,15 @@
     // 老後
     let retire = null;
     if (age < DUMMY.pensionAge) {
-      const yrs = DUMMY.endAge - DUMMY.pensionAge;
-      const need = living * 12 * (Number(D.retire.ratio) / 100) * infAt("living", DUMMY.pensionAge - age) * yrs - (pensionSelf + pensionSpouse) * yrs;
-      const at65 = (sim) => sim.points.find((p) => p.age === DUMMY.pensionAge)?.balance ?? 0;
-      const gap0 = Math.max(0, need - Math.max(0, at65(sim0)));
+      // 不足額は、残高の推移そのものから出す。年金の受け取り開始から90歳までで、
+      // 貯蓄がいちばん少なくなる時のマイナス分＝それまでに足しておけば底をつかない額。
+      // 以前は「生活費×割合×年数−年金」で別に計算しており、住居費・車・65歳以降の物価が入らず、
+      // 「不足0円」と「83歳で底をつく」が同じ画面に並んでいた（2026-10-30）。天気の判定と同じ推移を使う
+      const shortOf = (sim) => {
+        const post = sim.points.filter((p) => p.age >= DUMMY.pensionAge);
+        return post.length ? Math.max(0, -Math.min(...post.map((p) => p.balance))) : 0;
+      };
+      const gap0 = shortOf(sim0);
       const months = (DUMMY.pensionAge - age) * 12;
       const monthly = (gap, r) => {
         if (gap <= 0 || months <= 0) return 0;
@@ -890,10 +918,11 @@
         return (gap * i) / (Math.pow(1 + i, months) - 1);
       };
       retire = {
-        gap0: round100(gap0),
+        // 切り上げる。100万円単位の四捨五入だと、少しでも底をつくのに「0円」と出てしまう
+        gap0: ceil10(gap0),
         monthly0: monthly(gap0, 0),
-        gapR: simR ? round100(Math.max(0, need - Math.max(0, at65(simR)))) : null,
-        monthlyR: simR ? monthly(Math.max(0, need - Math.max(0, at65(simR))), ret) : null,
+        gapR: simR ? ceil10(shortOf(simR)) : null,
+        monthlyR: simR ? monthly(shortOf(simR), ret) : null,
       };
     }
 
@@ -953,7 +982,7 @@
     }
     if (retire && retire.gap0 > 0) {
       todos.push({ key: "retire", when: `${DUMMY.pensionAge - age}年以内`, title: "老後資金の積立を検討する",
-        reason: `65歳時点で約${KS.man(retire.gap0)}不足する見込みです（運用しない場合）。毎月約${KS.man(retire.monthly0)}の積立で埋まる計算です。`,
+        reason: `90歳まで貯蓄をもたせるには、約${KS.man(retire.gap0)}足りない見込みです（運用しない場合）。65歳までに毎月約${KS.man(retire.monthly0)}を積み立てると埋まる計算です。`,
         link: { href: "/sources/", text: "公的な情報を見る" } });
     }
     if (home === "loan") {
@@ -1216,9 +1245,12 @@
     return { provisional, death, disability, retire, sim0, simR, todos, insurance, ask, events, lanes, timeline, forecast, current, loanMismatch, loanView, region, incomeCheck, wageApplied, wageCapped, householdNow, kidInfo, spouse, spouseAge, living, savings, income, ret: as.ret, inflation: as.inflation, inflationOn: [...infOn], age, detail: D, EDU_PLAN };
   }
 
+  function ceil10(n) {
+    return Math.ceil(n / 10) * 10;
+  }
   function round100(n) {
     return Math.round(n / 100) * 100;
   }
 
-  window.KSC = { compute, detailOf, detailDefaults, splitLiving, loanFromOrigin, DUMMY, LIVING_ITEMS, EDU_PLAN, dataReady, MARKS, markOf, markByKey };
+  window.KSC = { compute, detailOf, detailDefaults, splitLiving, loanFromOrigin, takeHome, DUMMY, LIVING_ITEMS, EDU_PLAN, dataReady, MARKS, markOf, markByKey };
 })();

@@ -60,7 +60,7 @@
       html += `<h2 class="page-break">分野別の目安</h2><table><tbody>` +
         (r.death ? `<tr><th>万一のときの保障額</th><td>${man(r.death.low)}〜${man(r.death.high)}（遺族の生活費 ${d.assumptions.ratioLow}〜${d.assumptions.ratioHigh}%）</td></tr>` : "") +
         `<tr><th>働けなくなったとき</th><td>月 ${man(r.disability.first)}（1年6か月まで）／月 ${man(r.disability.after)}（それ以降）</td></tr>` +
-        (r.retire ? `<tr><th>老後の不足（65歳）</th><td>運用しない場合 ${man(r.retire.gap0)}${r.retire.gapR !== null ? `／年${r.ret}% ${man(r.retire.gapR)}（保証されません）` : ""}</td></tr>` : "") +
+        (r.retire ? `<tr><th>老後の不足（90歳まで）</th><td>運用しない場合 ${man(r.retire.gap0)}${r.retire.gapR !== null ? `／年${r.ret}% ${man(r.retire.gapR)}（保証されません）` : ""}</td></tr>` : "") +
         `</tbody></table><h2>保険の種類ごとの優先度</h2><table><tbody>` +
         r.insurance.map((x) => `<tr><th style="width:30%">${esc(x.name)}</th><td><b>${esc(x.level.text)}</b><br>${esc(x.reason)}</td></tr>`).join("") + `</tbody></table>`;
     }

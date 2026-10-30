@@ -306,7 +306,8 @@ details.fold > summary::-webkit-details-marker { display: none; }
 details.fold > summary::after { content: "＋"; color: var(--accent); font-size: 1.2rem; }
 details.fold[open] > summary::after { content: "－"; }
 details.fold > .body { padding: 0 16px 16px; }
-.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: .95rem; }
+/* 見出しの列に最低幅を持たせる。値が長いと auto の列が幅を取り切り、見出しが縦1列に潰れた（2026-10-30） */
+.kv { display: grid; grid-template-columns: minmax(7em, 1fr) auto; gap: 4px 12px; font-size: .95rem; }
 .kv .v { text-align: right; font-variant-numeric: tabular-nums; }
 .kv .total { border-top: 1px solid var(--line); padding-top: 6px; font-weight: 700; }
 .big-num { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
