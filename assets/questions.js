@@ -41,22 +41,6 @@
 
   const QUESTIONS = [
     {
-      id: "fields", type: "multi", required: true,
-      label: "今日は、どのことを考えたいですか？",
-      hint: "複数選べます。あとから変えられます。選んだところを結果の最初に案内し、「まずやること」も選んだ分野を先に出します。どの分野も計算はします。",
-      why: "結果のはじめに、選んだことを見る場所への案内を出します。「まずやること」も、選んだ分野を先に並べます。計算する内容そのものは変わりません（どの分野も必ず計算します）。",
-      options: [
-        { v: "insurance", label: "保険" },
-        { v: "invest", label: "貯蓄・投資（NISA・iDeCo）" },
-        { v: "home", label: "住まい" },
-        { v: "edu", label: "子どもの教育費" },
-        { v: "retire", label: "老後のお金" },
-        { v: "fixed", label: "毎月の固定費" },
-        { v: "all", label: "ぜんぶ" },
-      ],
-      react: () => "ありがとうございます。まず、あなたのことを教えてください。",
-    },
-    {
       id: "age", type: "select", required: true, group: "you",
       groupTitle: "あなたのこと",
       label: "あなたの年齢を教えてください",
@@ -90,6 +74,7 @@
     },
     {
       id: "selfPension", type: "multi", required: false, group: "you",
+      exclusive: ["none", "unknown"],
       label: "上乗せの年金・退職金の代わりに、入っているものはありますか？（任意・複数選択）",
       hint: "自営業・フリーランスには会社の退職金や厚生年金がないぶん、自分で上乗せする制度があります。",
       why: "老後の見通しと、専門家に聞くことに反映するためです。",
@@ -268,7 +253,12 @@
       label: "車を持っていますか？",
       why: "車の維持費と、買い替えのときの大きな出費を年表に入れるためです。",
       options: [{ v: 0, label: "持っていない" }, { v: 1, label: "1台" }, { v: 2, label: "2台以上" }],
-      react: (v) => (Number(v) > 0 ? "買い替えの時期や予算は、結果画面の「くわしく入力」で設定できます。まずは一般的な目安（10年ごとに買い替え）で計算します。" : null),
+      // 目安の間隔は data/assumptions.json の defaults.carInterval から（読めなければ間隔は書かない）
+      react: (v) => {
+        if (!(Number(v) > 0)) return null;
+        const every = window.KSDATA && window.KSDATA.assumptions && window.KSDATA.assumptions.defaults.carInterval;
+        return "買い替えの時期や予算は、結果画面の「くわしく入力」で設定できます。" + (every ? `まずは一般的な目安（${every.value}年ごとに買い替え）で計算します。` : "まずは一般的な目安で計算します。");
+      },
     },
     {
       id: "otherLoan", type: "single", required: true, group: "money",
@@ -299,6 +289,8 @@
     },
     {
       id: "insured", type: "multi", required: true, group: "money",
+      // ほかと同時には選べない選択肢（質問の画面とくわしく入力で同じ動き。KSQ.toggleMulti）
+      exclusive: ["none", "unknown"],
       label: "入っている保険は、どれですか？",
       hint: "会社名や商品名は聞きません。当てはまるものをすべて選んでください。",
       why: "保険は「何が起きたときのお金か」で役割が違うため、種類ごとに見通しへの反映を変えます。",
@@ -322,7 +314,8 @@
       label: "亡くなったときに出る保険金は、だいたいいくらですか？",
       hint: "証券が手元になくても大丈夫です。わからなければ「わからない」を選んでください。",
       why: "この額がわからないと、万一のときに足りるかどうかを出せないからです。",
-      when: (a) => Array.isArray(a.insured) && a.insured.includes("death"),
+      // 「入っていない」と一緒に残っている古い保存データでも、金額は聞かない（2026-10-31 K6）
+      when: (a) => chosen(byId.insured, a.insured).includes("death"),
       options: [
         { v: "b1", label: "500万円くらい", mid: 500 },
         { v: "b2", label: "1,000万円くらい", mid: 1000 },
@@ -462,5 +455,24 @@
     return best.v;
   }
 
-  window.KSQ = { QUESTIONS, byId, visible, screens, isAnswered, display, option, mid, bandOf, labelOf, hasSpouse, UNKNOWN_REACT };
+  // 複数選ぶ質問で、1つ選んだ（外した）あとの答え。q.exclusive の選択肢（「入っていない」「わからない」）は
+  // ほかと同時に選べない：それを選んだらほかを外し、ほかを選んだらそれを外す。並びは選択肢の順
+  // 以前は質問の画面だけこの決まりが無く、「入っていない」と「死亡保障」を両方選べ、金額の質問も残っていた（2026-10-31 K6）
+  function toggleMulti(q, cur, v, checked) {
+    const ex = q.exclusive || [];
+    const set = new Set(Array.isArray(cur) ? cur : []);
+    if (!checked) set.delete(v);
+    else if (ex.includes(v)) { set.clear(); set.add(v); }
+    else { ex.forEach((x) => set.delete(x)); set.add(v); }
+    const order = (q.options || []).map((o) => String(o.v));
+    return [...set].sort((x, y) => order.indexOf(String(x)) - order.indexOf(String(y)));
+  }
+  // 保存された答えの読み方。ほかと同時に選べない選択肢が入っていれば、そちらだけを答えとみなす（古い保存データのため）
+  function chosen(q, v) {
+    const arr = Array.isArray(v) ? v : [];
+    const ex = (q.exclusive || []).find((x) => arr.includes(x));
+    return ex ? [ex] : arr;
+  }
+
+  window.KSQ = { toggleMulti, chosen, QUESTIONS, byId, visible, screens, isAnswered, display, option, mid, bandOf, labelOf, hasSpouse, UNKNOWN_REACT };
 })();

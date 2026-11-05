@@ -162,10 +162,14 @@
       svgText({ x: x + (left ? -5 : 5), y: ly, "text-anchor": left ? "end" : "start", "font-size": 11, fill: COLOR.ink, stroke: COLOR.surface, "stroke-width": 3, "paint-order": "stroke" }, `＋退職金など ${man(p.inc.lump)}`, svg);
     });
 
-    const ri = pts.findIndex((p) => p.age === 65);
-    if (ri > 0) {
+    // 定年の線は、年表の「定年」と同じ年に引く。以前は誰でも65歳に「定年」と書いており、定年を60歳にした人や、
+    // 働いていない人・定年を過ぎて働いている人（仕事をやめる年齢を仮置き）とも食い違っていた（2026-10-31 B4-5）
+    const selfLane = (r.lanes || []).find((l) => l.label === "あなた");
+    const rev = selfLane && selfLane.events.find((e) => e._ev === "retire");
+    const ri = rev ? rev.offset : -1;
+    if (ri > 0 && ri < n) {
       svgEl("line", { x1: fr.cx(ri), x2: fr.cx(ri), y1: T, y2: H - B, stroke: COLOR.base, "stroke-width": 1 }, svg);
-      svgText({ x: fr.cx(ri) + 4, y: T + 10, "font-size": 11, fill: COLOR.ink2 }, "定年", svg);
+      svgText({ x: fr.cx(ri) + 4, y: T + 10, "font-size": 11, fill: COLOR.ink2 }, rev.short === "定年" ? "定年" : "仕事をやめる", svg);
     }
     drawXAxis(svg, fr, pts, H - B);
     const cross = addCrosshair(svg, fr, T, H - B);
@@ -199,7 +203,7 @@
     const last = s0[n - 1];
     const lx = fr.cx(n - 1), lyv = ys.f(last.balance);
     svgEl("circle", { cx: lx, cy: lyv, r: 4, fill: COLOR.balance, stroke: COLOR.surface, "stroke-width": 2 }, svg);
-    svgText({ x: lx - 6, y: lyv + (lyv < T + 24 ? 16 : -8), "text-anchor": "end", "font-size": 12, fill: COLOR.ink, "font-weight": 700 }, `${last.age}歳 ${man(last.balance)}`, svg);
+    svgText({ x: lx - 6, y: lyv + (lyv < T + 24 ? 16 : -8), "text-anchor": "end", "font-size": 12, fill: COLOR.ink, "font-weight": 700 }, `${last.age}歳 ${KSX.balanceText(last)}`, svg);
 
     if (r.sim0.shortageAge !== null) {
       const si = s0.findIndex((p) => p.age === r.sim0.shortageAge);
@@ -240,8 +244,8 @@
     });
     const flow = p.income - p.expense;
     row({ type: "none" }, flow >= 0 ? "その年の収支（黒字）" : "その年の収支（赤字）", (flow >= 0 ? "＋" : "−") + man(Math.abs(flow)), "flow");
-    row({ type: "line", color: COLOR.balance }, "貯蓄残高（運用しない場合）", man(p.balance));
-    if (pr) row({ type: "dash", color: COLOR.scenario }, `貯蓄残高（年${r.ret}%運用・保証なし）`, man(pr.balance));
+    row({ type: "line", color: COLOR.balance }, "貯蓄残高（運用しない場合）", KSX.balanceText(p));
+    if (pr) row({ type: "dash", color: COLOR.scenario }, `貯蓄残高（年${r.ret}%運用・保証なし）`, KSX.balanceText(pr));
     const evs = [];
     r.lanes.forEach((lane) => lane.events.forEach((ev) => { if (ev.offset === i) evs.push(ev.text); }));
     if (r.sim0.shortageAge === p.age) evs.push("⚠ 貯蓄が底をつく見込み");

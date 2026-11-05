@@ -103,6 +103,14 @@ body.has-lock { padding-bottom: calc(52px + env(safe-area-inset-bottom, 0px)); }
   padding: 14px 16px; margin: 12px 0;
 }
 .confirm-panel .row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+/* 選んでもらうための枠（消す確認ではないので、赤にしない） */
+.choice-panel {
+  background: var(--accent-weak); border: 2px solid var(--accent); border-radius: var(--radius);
+  padding: 14px 16px; margin: 12px 0;
+}
+.choice-panel .stack { margin-top: 8px; }
+/* 質問の画面：答えに合わせて画面の数が変わったことの知らせ */
+.flow-note { margin: 0 auto; max-width: 720px; padding: 6px 16px; color: var(--ink); background: var(--accent-weak); }
 
 /* ボタン */
 .btn {
@@ -550,10 +558,6 @@ table.data.wide { min-width: 560px; }
 .opt-help[open] { flex: 1 1 100%; }
 .opt-help[open] > summary { margin: 0 0 4px; }
 
-/* 選んだ分野への案内 */
-.fields-nav-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: .92rem; }
-.fields-nav-list li { line-height: 1.7; }
-
 /* この計算に入れていないこと */
 .ni-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 4px; }
 .ni-list li { display: flex; gap: 8px; align-items: baseline; font-size: .9rem; line-height: 1.7; }
@@ -623,6 +627,8 @@ table.data.wide { min-width: 560px; }
 .detail-preview { position: sticky; top: 60px; z-index: 5; margin-top: 12px; }
 .detail-preview-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 4px; }
 .detail-preview-item b { display: block; font-size: 1rem; line-height: 1.4; }
+/* 答えていない欄があるときの文は、3列にまたがって1行で出す（1列に入れると縦に細長くなる） */
+.detail-preview-msg { grid-column: 1 / -1; margin: 0; }
 .detail-sub { font-size: 1rem; margin: 18px 0 2px; padding-top: 10px; border-top: 1px solid var(--line); }
 .detail-legend { font-size: .95rem; font-weight: 700; margin-bottom: 0; }
 .detail-item { margin-top: 10px; }

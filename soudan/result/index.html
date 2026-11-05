@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://m.media-amazon.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>あなたの設計図｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/soudan/result/">
-<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
+<link rel="stylesheet" href="/assets/style.css?v=4aca26">
 </head>
 <body class="has-lock">
 <header class="app-header">
@@ -37,56 +38,40 @@
 </footer>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
-<script src="/assets/common.js?v=43fc23"></script>
-<script src="/assets/data.js?v=d1e671"></script>
-<script src="/assets/questions.js?v=edf23b"></script>
-<script src="/assets/calc.js?v=2643b2"></script>
-<script src="/assets/charts.js?v=336170"></script>
-<script src="/assets/summary.js?v=5b9a7a"></script>
+<script src="/assets/common.js?v=d5329c"></script>
+<script src="/assets/data.js?v=ab854b"></script>
+<script src="/assets/questions.js?v=0e34ea"></script>
+<script src="/assets/model/plan.js?v=dac1e6"></script>
+<script src="/assets/model/yearly.js?v=6019b7"></script>
+<script src="/assets/model/metrics.js?v=e20ef0"></script>
+<script src="/assets/view/marks.js?v=77fe38"></script>
+<script src="/assets/view/explain.js?v=0dc5f3"></script>
+<script src="/assets/calc.js?v=908bac"></script>
+<script src="/assets/charts.js?v=452077"></script>
+<script src="/assets/summary.js?v=7e73bc"></script>
 <script>
 (function () {
-  const d = KS.load().data;
+  const loaded = KS.loadOrRestart();
+  if (!loaded) return;   // 保存データが壊れていた。開始画面で理由を出す
+  const d = loaded.data;
   const A = d.answers;
   const esc = KS.esc, man = KS.man;
   if (KSQ.visible(A).some((q) => q.required && !KSQ.isAnswered(q, A))) {
     document.getElementById("incomplete").hidden = false;
     return;
   }
+  // 公的データや計算の部品が読めないときは、試算を出さずに理由を出す（2026-10-31 検証 D2）
+  if (!KS.calcReady()) { KS.showCalcFailure(); return; }
   const app = document.getElementById("app");
   app.hidden = false;
   const openState = new Set();
 
-  // 「今日は、どのことを考えたいですか？」で選んだ分野から、見る場所へ案内する
-  const FIELD_GUIDE = {
-    insurance: { label: "保険", to: "estimate", text: "分野別の目安（万一のとき・働けなくなったとき・保険の種類ごとの優先度）" },
-    invest: { label: "貯蓄・投資", to: "estimate", text: "分野別の目安（老後の不足額と、積立の目安）" },
-    home: { label: "住まい", to: "costs-block", text: "⑤ 毎月の支出の「住居費」と、年ごとの表（修繕・固定資産税）" },
-    edu: { label: "子どもの教育費", to: "timeline-block", text: "④ ライフプラン表（入学の年）と、年ごとの表の「教育費」" },
-    retire: { label: "老後のお金", to: "viz-block", text: "② 貯蓄残高の推移と、分野別の目安の「老後の不足額」" },
-    fixed: { label: "毎月の固定費", to: "compare-block", text: "⑥ 家計調査の平均との見比べ" },
-  };
+  // 収入をどう見込んでいるかを、1行で言う（文は説明の層）
+  const incomeAssumption = (r) => KSX.incomeAssumptionText(r, A);
 
-  function fieldsNav(A) {
-    const chosen = (A.fields || []).filter((f) => FIELD_GUIDE[f]);
-    if (!chosen.length) return "";
-    const items = chosen.map((f) => {
-      const g = FIELD_GUIDE[f];
-      return `<li><b>${esc(g.label)}</b> → <button type="button" class="linkbtn" data-goto="${g.to}">${esc(g.text)}</button></li>`;
-    }).join("");
-    return `<div class="note info" id="fields-nav">
-      <p style="margin:0 0 6px">はじめに選んだことは、次のところで見られます。<b>まずやること</b>も、選んだ分野を先に出しています。</p>
-      <ul class="fields-nav-list">${items}</ul>
-    </div>`;
-  }
-
-  // 収入をどう見込んでいるかを、1行で言う
-  function incomeAssumption(r) {
-    const mode = (r.detail.work && r.detail.work.growth) || "flat";
-    if (mode !== "stat") return { flat: "いまのまま", up: "年1%ずつ上がる", down: "年1%ずつ下がる" }[mode] || "いまのまま";
-    if (!r.wageApplied) return "いまのまま（この働き方は賃金の統計の対象外です）";
-    if (r.wageCapped) return "いまのまま（統計で増減させるのは57歳まで。以降は定年・再雇用の設定で計算）";
-    return "年齢に応じて（統計の年齢別の賃金の形／57歳より先は定年・再雇用の設定）";
-  }
+  // 「収入をどう計算しているか」の各段。文は説明の層（KSX.incomeSteps）だけが作る。ここはエスケープして並べるだけ（2026-10-31 K1）
+  const incomeSteps = (r) => KSX.incomeSteps(r, A).map((st) =>
+    `<li><b>${esc(st.head)}</b>…${st.parts.map((p) => (p.b ? `<b>${esc(p.t)}</b>` : esc(p.t))).join("")}</li>`).join("");
 
   function render() {
     const r = KSC.compute(d);
@@ -105,35 +90,39 @@
 
     const death = r.death ? `
       <h3>万一のときの保障額（死亡）</h3>
-      <p class="big-num">${man(r.death.low)} 〜 ${man(r.death.high)}</p>
+      <p class="big-num">${esc(KSX.deathRange(r.death.low, r.death.high))}</p>
       <details class="help"><summary>内訳を見る</summary><div class="kv">
-        <span>遺族の支出（${r.death.years}年分・生活費${d.assumptions.ratioLow}〜${d.assumptions.ratioHigh}%）</span><span class="v">${man(r.death.breakdown.expenseLow)}〜${man(r.death.breakdown.expenseHigh)}</span>
-        <span>　うち教育費</span><span class="v">${man(r.death.breakdown.eduRemain)}</span>
+        <span>遺族の支出（${r.death.years}年分・生活費${esc(KSX.pctRange(d.assumptions.ratioLow, d.assumptions.ratioHigh))}）</span><span class="v">${esc(KSX.manRange(r.death.breakdown.expenseLow, r.death.breakdown.expenseHigh))}</span>
+        ${KSX.deathBreakdownRows(r).map((x) => `<span>　うち${esc(x.label)}</span><span class="v">${esc(KSX.manRange(x.lowShown, x.highShown))}</span>`).join("")}
         <span>− 遺族年金など</span><span class="v">${man(r.death.breakdown.survivorPension)}</span>
         <span>− 配偶者の収入</span><span class="v">${man(r.death.breakdown.spouseInc)}</span>
+        <span>− 配偶者の年金</span><span class="v">${man(r.death.breakdown.spousePension)}</span>
         <span>− 貯蓄</span><span class="v">${man(r.death.breakdown.savings)}</span>
         <span>− 加入中の死亡保障</span><span class="v">${man(r.death.breakdown.insuredDeath)}</span>
-        <span class="total">不足の目安</span><span class="v total">${man(r.death.low)}〜${man(r.death.high)}</span>
-      </div>${r.death.breakdown.loanNote ? '<p class="small" style="margin-top:6px">住宅ローンは、団信で完済される前提で支出から除いています。</p>' : ""}</details>
-      <p class="small">幅の理由：遺族の生活費を、現在の${d.assumptions.ratioLow}%〜${d.assumptions.ratioHigh}%で計算しています。</p>`
+        <span class="total">不足の目安</span><span class="v total">${esc(KSX.deathRange(r.death.low, r.death.high))}</span>
+      </div>${r.death.breakdown.loanNote ? '<p class="small" style="margin-top:6px">住宅ローンは、団信で完済される前提で支出から除いています。</p>' : ""}${r.death.breakdown.pensionChoiceYears > 0 ? `<p class="small" style="margin-top:6px">${esc(KSX.pensionChoiceNote())}</p>` : ""}</details>
+      <p class="small">${String(d.assumptions.ratioLow) === String(d.assumptions.ratioHigh) ? "" : "幅の理由："}遺族の生活費を、現在の${esc(KSX.pctRange(d.assumptions.ratioLow, d.assumptions.ratioHigh))}で計算しています。</p>`
       : `<h3>万一のときの保障額（死亡）</h3><p>扶養しているご家族がいないため、計算していません。</p>`;
 
     const retire = r.retire ? `
-      <h3 style="margin-top:20px">老後の不足額（90歳まで貯蓄をもたせるのに足りない額）</h3>
+      <h3 style="margin-top:20px">老後の不足額（${KSC.DUMMY.endAge}歳まで貯蓄をもたせるのに足りない額）</h3>
       <div class="kv">
-        <span>運用しない場合</span><span class="v"><b>${man(r.retire.gap0)}</b>（毎月 約${man(r.retire.monthly0)}の積立で埋まる計算）</span>
-        ${r.retire.gapR !== null ? `<span>年${r.ret}%で運用した場合</span><span class="v"><b>${man(r.retire.gapR)}</b>（毎月 約${man(r.retire.monthlyR)}）</span>` : ""}
+        <span>運用しない場合</span><span class="v">${esc(KSX.retireGapText(r.retire.gap0, r.retire.monthly0))}</span>
+        ${r.retire.gapR !== null ? `<span>年${esc(r.ret)}%で運用した場合</span><span class="v">${esc(KSX.retireGapText(r.retire.gapR, r.retire.monthlyR))}</span>` : ""}
       </div>
-      <p class="small">貯蓄残高の推移（住居費・車・物価の上昇を含む）で、${KSC.DUMMY.pensionAge}歳から${KSC.DUMMY.endAge}歳までに貯蓄がいちばん少なくなる時のマイナス分です。</p>
+      <p class="small">${esc(KSX.retireBasisText(r))}</p>
       <p class="small">※運用成果は保証されません。運用しない場合の数字もあわせて見てください。</p>` : "";
 
-    const dis = `
+    // 働いていない人は対象外（PDF と同じ文。KSX.disabilityRowText）。以前は「0万円」を並べていた（2026-10-31 K2）
+    const dis = r.disability.na ? `
+      <h3 style="margin-top:20px">働けなくなったとき（月あたりの不足）</h3>
+      <p>${esc(KSX.disabilityRowText(r.disability))}</p>` : `
       <h3 style="margin-top:20px">働けなくなったとき（月あたりの不足）</h3>
       <div class="kv">
-        <span>はじめの1年6か月</span><span class="v">${man(r.disability.first)}</span>
-        <span>それ以降</span><span class="v">${man(r.disability.after)}</span>
+        <span>はじめの${esc(KSX.sickPeriodText())}</span><span class="v">${esc(KSX.sickGapText(r.disability.first))}</span>
+        <span>それ以降</span><span class="v">${esc(KSX.sickGapText(r.disability.after))}</span>
       </div>
-      <p class="small">${r.disability.hasSick ? "休業中の手当がある前提で計算しています。" : "休業中の手当がない働き方として計算しています。"}</p>`;
+      <p class="small">${esc(KSX.disabilityBasisText(r.disability.hasSick))}</p>`;
 
     const insurance = `
       <h3 style="margin-top:20px">保険の種類ごとの優先度</h3>
@@ -154,8 +143,6 @@
       <p class="muted" style="margin-bottom:6px">${dateStr}時点の目安</p>
       ${r.provisional.length ? `<p class="note warn">⚠ 仮の値を含みます：${esc(r.provisional.join("、"))}</p>` : ""}
 
-      ${fieldsNav(A)}
-
 <section class="section" id="forecast-block">
         <h2 class="section-title">① 見通し</h2>
         <p class="small muted" style="margin-bottom:8px">言葉がわからないときは <a href="/learn/">やさしく学ぶ</a> で確認できます。</p>
@@ -170,17 +157,11 @@
         <details class="fold" style="margin-top:8px">
           <summary>収入をどう計算しているか</summary>
           <div class="body">
-            <ol>
-              <li><b>額面の年収</b>…あなたが答えた帯の真ん中の金額から始めます（${esc(KSQ.display(KSQ.byId.income, A))}）。</li>
-              <li><b>年齢に応じた増減</b>…${esc(incomeAssumption(r))}。統計の年齢別の賃金を、<b>いまの年齢の水準を1とした倍率</b>にして掛けています。<b>平均の金額に置きかえてはいません。</b></li>
-              <li><b>額面から手取りへ</b>…税金と社会保険料を、年収に応じたおおよその割合で差し引きます（年収が高いほど手取りの割合は下がります）。個別の税額は計算できないため、<b>おおまかな割合</b>にとどめています。</li>
-              <li><b>定年より先</b>…${r.detail.work.retireAge}歳で定年とし、そのあとは再雇用の設定（${Number(r.detail.work.rehire) > 0 ? `定年前の${r.detail.work.rehire}%・${r.detail.work.rehireUntil}歳まで` : "働かない"}）で計算します。</li>
-              <li><b>年金</b>…受け取り開始の年齢から、働き方と収入に応じた見込み額を足します。</li>
-            </ol>
+            <ol>${incomeSteps(r)}</ol>
             <p class="small muted">この積み上げの結果なので、前提が少し違うだけで先の金額は大きく変わります。<b>遠い将来の金額は、額そのものより「増えるのか・減るのか」を見てください。</b></p>
           </div>
         </details>
-        <p class="small" style="margin-top:8px">前提：物価上昇 年${d.assumptions.inflation}% ／ 運用 年${d.assumptions.ret}% ／ 収入 ${esc(incomeAssumption(r))}　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button>　<button type="button" class="linkbtn" data-fix-work>収入の見込みを変える</button></p>
+        <p class="small" style="margin-top:8px">前提：物価上昇 年${esc(d.assumptions.inflation)}% ／ 運用 年${esc(d.assumptions.ret)}% ／ 収入 ${esc(incomeAssumption(r))}　<button type="button" class="linkbtn" data-open-sheet>前提を変える</button>　<button type="button" class="linkbtn" data-fix-work>収入の見込みを変える</button></p>
         ${r.incomeCheck && r.incomeCheck.far ? `<p class="note warn small">⚠ いまの年収は、同じ年齢の平均（約${r.incomeCheck.avg}万円）の<b>${r.incomeCheck.ratio}倍</b>です。「年齢に応じて」は<b>平均と同じ増え方の割合</b>を、いまの年収に掛けています（平均の金額に置きかえてはいません）。平均から離れているほど、実際とずれやすくなります。<button type="button" class="linkbtn" data-fix-work>「いまのまま」に変える</button></p>` : ""}
       </section>
 
@@ -266,20 +247,9 @@
     document.getElementById("advice").appendChild(KSR.advice(r, (section) => {
       try { sessionStorage.setItem("ks-open-section", section); } catch (e) { /* 保存できなくても画面は開く */ }
       location.href = "/soudan/detail/";
-    }));
+    }, d.answers));
     app.querySelectorAll("details.fold").forEach((el) => el.addEventListener("toggle", () => {
       el.open ? openState.add(el.dataset.sec) : openState.delete(el.dataset.sec);
-    }));
-    app.querySelectorAll("[data-goto]").forEach((b) => b.addEventListener("click", () => {
-      const to = b.dataset.goto;
-      if (to === "estimate") {
-        const det = document.querySelector('[data-sec="estimate"]');
-        det.open = true;
-        openState.add("estimate");
-        det.scrollIntoView({ behavior: "smooth", block: "start" });
-      } else {
-        document.getElementById(to)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
     }));
     app.querySelectorAll("[data-open-sheet]").forEach((b) => b.addEventListener("click", openSheet));
     app.querySelectorAll("[data-fix-work]").forEach((b) => b.addEventListener("click", () => {
@@ -300,7 +270,7 @@
           <button type="button" class="linkbtn" id="sheet-close" aria-label="閉じる">閉じる</button>
         </div>
         <fieldset style="margin-top:12px"><legend style="font-size:1rem">物価の上昇率（年）</legend>
-          <div class="radio-row">${radios("inflation", [0, 1, 2], as.inflation, "%")}</div>
+          <div class="radio-row">${radios("inflation", KSX.INFLATION_CHOICES, as.inflation, "%")}</div>
           <details class="help"><summary>なぜ1%が初期値？</summary><div>長い期間の計算で物価上昇を無視すると、将来の支出を少なく見積もってしまうためです。ここは、ご自身で選べます。</div></details>
         </fieldset>
         <fieldset style="margin-top:8px"><legend style="font-size:1rem">運用利回り（年）</legend>
@@ -326,8 +296,9 @@
     form.querySelector("#sheet-title").focus();
     form.scrollIntoView({ behavior: "smooth", block: "start" });
     document.getElementById("sheet-close").addEventListener("click", () => { slot.innerHTML = ""; });
+    // 「初期値に戻す」は、このシートに出ている前提だけを戻す（物価を掛ける費目など、ほかの前提は消さない）
     document.getElementById("sheet-reset").addEventListener("click", () => {
-      d.assumptions = KS.empty().assumptions;
+      Object.assign(d.assumptions, KS.empty().assumptions);
       KS.save(d);
       render();
       openSheet();
@@ -341,18 +312,27 @@
         er.hidden = false;
         return;
       }
-      d.assumptions = {
+      // 変えた項目だけを上書きする。丸ごと置きかえると、くわしく入力で選んだ
+      // 「物価の上昇を掛ける費目」（inflationOn）が消えていた（2026-10-31 検証 C2）
+      Object.assign(d.assumptions, {
         inflation: Number(form.querySelector('input[name="inflation"]:checked').value),
         ret: Number(form.querySelector('input[name="ret"]:checked').value),
         ratioLow: lo, ratioHigh: hi,
-      };
+      });
       KS.save(d);
       render();
       document.getElementById("viz-block").scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }
 
-  render();
+  try {
+    render();
+  } catch (err) {
+    // 計算の途中で止まったら、途中まで描いた結果を残さない（古い値や推測で見せない。CLAUDE.md §5）
+    app.replaceChildren();
+    app.hidden = true;
+    KS.showCalcFailure(null, err);
+  }
 })();
 </script>
 </body>

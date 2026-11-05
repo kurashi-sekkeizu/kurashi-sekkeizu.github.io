@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://m.media-amazon.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>回答の確認｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/soudan/confirm/">
-<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
+<link rel="stylesheet" href="/assets/style.css?v=4aca26">
 </head>
 <body class="has-lock">
 <header class="app-header">
@@ -42,17 +43,23 @@
 </footer>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
-<script src="/assets/common.js?v=43fc23"></script>
-<script src="/assets/data.js?v=d1e671"></script>
-<script src="/assets/questions.js?v=edf23b"></script>
+<script src="/assets/common.js?v=d5329c"></script>
+<script src="/assets/data.js?v=ab854b"></script>
+<script src="/assets/questions.js?v=0e34ea"></script>
 <script>
 (function () {
-  const d = KS.load().data;
+  const loaded = KS.loadOrRestart();
+  if (!loaded) return;   // 保存データが壊れていた。開始画面で理由を出す
+  const d = loaded.data;
   const A = d.answers;
   const vis = KSQ.visible(A);
+  // 確認画面に着いたら「修正から来た」印は外す（質問の画面の「確認画面に戻る」を出し続けない）
+  if (d.meta.from) { delete d.meta.from; KS.save(d); }
   const missing = vis.find((q) => q.required && !KSQ.isAnswered(q, A));
 
   document.getElementById("back").addEventListener("click", () => {
+    // 質問の画面から、ここへすぐ戻れるようにする
+    if (!missing) { d.meta.from = "confirm"; KS.save(d); }
     location.href = "/soudan/step/";
   });
 
@@ -67,7 +74,6 @@
   const show = (id) => (vis.some((q) => q.id === id) ? KSQ.display(KSQ.byId[id], A) : null);
   const unk = (id) => A[id] === "unknown";
   const rows = [
-    { th: "考えたいこと", td: show("fields"), edit: "fields" },
     { th: "あなた", td: [show("age"), show("work"), show("income")].filter(Boolean).join("・"), edit: "age", warn: unk("income") },
     { th: "配偶者・パートナー", td: KSQ.hasSpouse(A) ? [show("spouseAge"), show("spouseWork"), show("spouseIncome")].filter(Boolean).join("・") : "いない", edit: KSQ.hasSpouse(A) ? "spouseAge" : "spouse", warn: KSQ.hasSpouse(A) && unk("spouseIncome") },
     { th: "お子さん", td: A.kids === "yes" ? `${A.kidsCount}人（${show("kidsAges")}）・${show("eduPlan")}` : A.kids === "plan" ? `これから（${show("kidPlanIn")}）` : show("kids"), edit: A.kids === "yes" ? "kidsCount" : "kids", warn: A.kids === "yes" && unk("eduPlan") },

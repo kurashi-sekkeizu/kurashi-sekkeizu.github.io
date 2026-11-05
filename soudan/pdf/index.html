@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://m.media-amazon.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>PDFで保存｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/soudan/pdf/">
-<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
+<link rel="stylesheet" href="/assets/style.css?v=4aca26">
 </head>
 <body class="has-lock">
 <header class="app-header">
@@ -35,7 +36,7 @@
 
         <div class="section">
           <label for="note" style="display:block;font-size:1.25rem;font-weight:700">専門家に聞きたいこと（任意）</label>
-          <p class="q-hint">自動で入る項目に加えて、自由に書き足せます。</p>
+          <p class="q-hint">自動で入る項目に加えて、自由に書き足せます。書いたことは、上で「専門家に聞くこと」を外しても<b>PDFに入ります</b>。</p>
           <div class="card" style="margin-bottom:8px"><b class="small">自動で入る項目</b><ul id="auto-ask" class="small" style="margin:4px 0 0"></ul></div>
           <textarea id="note" class="select" maxlength="400"></textarea>
           <p class="note warn small" style="margin-top:8px">⚠ 名前や連絡先は書かないでください（相談の場で伝えれば十分です）。</p>
@@ -71,24 +72,42 @@
 </footer>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
-<script src="/assets/common.js?v=43fc23"></script>
-<script src="/assets/data.js?v=d1e671"></script>
-<script src="/assets/questions.js?v=edf23b"></script>
-<script src="/assets/calc.js?v=2643b2"></script>
-<script src="/assets/charts.js?v=336170"></script>
-<script src="/assets/summary.js?v=5b9a7a"></script>
-<script src="/assets/memo.js?v=929d5c"></script>
+<script src="/assets/common.js?v=d5329c"></script>
+<script src="/assets/data.js?v=ab854b"></script>
+<script src="/assets/questions.js?v=0e34ea"></script>
+<script src="/assets/model/plan.js?v=dac1e6"></script>
+<script src="/assets/model/yearly.js?v=6019b7"></script>
+<script src="/assets/model/metrics.js?v=e20ef0"></script>
+<script src="/assets/view/marks.js?v=77fe38"></script>
+<script src="/assets/view/explain.js?v=0dc5f3"></script>
+<script src="/assets/calc.js?v=908bac"></script>
+<script src="/assets/charts.js?v=452077"></script>
+<script src="/assets/summary.js?v=7e73bc"></script>
+<script src="/assets/memo.js?v=2c335f"></script>
 <script>
 (function () {
-  const d = KS.load().data;
+  const loaded = KS.loadOrRestart();
+  if (!loaded) return;   // 保存データが壊れていた。開始画面で理由を出す
+  const d = loaded.data;
   const A = d.answers;
   const esc = KS.esc, man = KS.man;
   if (KSQ.visible(A).some((q) => q.required && !KSQ.isAnswered(q, A))) {
     document.getElementById("incomplete").hidden = false;
     return;
   }
+  // 公的データや計算の部品が読めないときは、試算を出さず、PDFの保存も押せないようにする。
+  // 以前は白紙のメモを印刷できた（2026-10-31 検証 D2）
+  const printBtn = document.getElementById("print");
+  function fail(err) {
+    printBtn.disabled = true;
+    document.getElementById("app").hidden = true;
+    document.getElementById("memo").replaceChildren();
+    KS.showCalcFailure(null, err);
+  }
+  if (!KS.calcReady() || !window.KSM || !window.KSR || !window.KSV) { fail(); return; }
+  let r;
+  try { r = KSC.compute(d); } catch (err) { fail(err); return; }
   document.getElementById("app").hidden = false;
-  const r = KSC.compute(d);
 
   const SECS = [
     { id: "todo", label: "まずやること・やることリスト" },
@@ -114,10 +133,12 @@
   }
 
   function renderMemo() {
-    document.getElementById("memo").innerHTML = KSM.memoHTML(r, d, A);
+    try {
+      document.getElementById("memo").innerHTML = KSM.memoHTML(r, d, A);
+    } catch (err) { fail(err); }
   }
 
-  document.getElementById("print").addEventListener("click", () => window.print());
+  printBtn.addEventListener("click", () => { if (!printBtn.disabled) window.print(); });
 
   // 端末ごとの手順。いま見ている端末のものを先頭に出す（判定を外しても全部読める形にする）
   const ua = navigator.userAgent;

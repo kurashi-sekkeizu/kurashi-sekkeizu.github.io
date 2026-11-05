@@ -21,9 +21,8 @@
   const manM = (v) => (Math.round(v * 10) / 10).toLocaleString("ja-JP", { maximumFractionDigits: 1 }) + "万円";
 
   // 雨が多いとき・晴れが続くときの、受け止め方の案内
-  function advice(r, onFix) {
+  function advice(r, onFix, a) {
     const rain = r.forecast.filter((f) => f.weather === "rain").length;
-    const cloud = r.forecast.filter((f) => f.weather === "cloud").length;
     const box = h("div");
     if (rain >= 3 && r.todos.length) {
       const c = h("div", "advice advice-rain");
@@ -38,19 +37,21 @@
       box.appendChild(c);
     } else if (rain === 0) {
       const c = h("div", "advice advice-sun");
-      c.appendChild(h("div", "advice-head", cloud ? "いまのところ、大きな心配は見当たりません" : "いまの前提では、大きな心配は見当たりません"));
-      c.appendChild(h("p", "advice-lead", cloud ? "くもりの項目を埋めると、判定がはっきりします。あわせて前提も確かめておくと、見通しがはっきりします。" : "そのぶん、前提を厳しくしたらどうなるかを見ておくのも手です。"));
+      // 候補と文は説明の層（済んだ項目は出さない・物価は1段高い値。2026-10-31 B3-軽8）
+      const fixes = KSX.adviceFixes(r, a);
+      const L = KSX.adviceLead(r, fixes.length > 0);
+      c.appendChild(h("div", "advice-head", L.head));
+      if (L.lead) c.appendChild(h("p", "advice-lead", L.lead));
       const ul = h("ul", "advice-list");
-      [["年金の見込み額を入れる（ねんきん定期便）", "work"], ["物価の上昇を年2%にして見る", "assumptions"], ["親の介護を見込んでみる", "family"], ["加入中の保険の保障額を入れる", "insurance"]]
-        .forEach(([label, key]) => {
-          const li = h("li");
-          const b = h("button", "linkbtn", label);
-          b.type = "button";
-          b.addEventListener("click", () => onFix(key));
-          li.appendChild(b);
-          ul.appendChild(li);
-        });
-      c.appendChild(ul);
+      fixes.forEach(([label, key]) => {
+        const li = h("li");
+        const b = h("button", "linkbtn", label);
+        b.type = "button";
+        b.addEventListener("click", () => onFix(key));
+        li.appendChild(b);
+        ul.appendChild(li);
+      });
+      if (fixes.length) c.appendChild(ul);
       box.appendChild(c);
     }
     return box;
@@ -113,6 +114,8 @@
   // ── 計算に使っている毎月の支出（一覧は短く、押すと説明） ──
   function costs(r, answers, onFix) {
     const c = r.current;
+    // 表示する値は KSX.costShown（行を足すと表示の合計・差額は表示どおり。第12巡 B12-中3）
+    const shown = KSX.costShown(c);
     const box = h("div", "costs2");
     if (r.loanMismatch) {
       const w = h("div", "note warn small cost-warn");
@@ -120,14 +123,14 @@
       box.appendChild(w);
     }
     const rows = [
-      { fix: "living", label: "生活費", data: c.living, breakdown: true,
+      { key: "living", fix: "living", label: "生活費", data: c.living, breakdown: true,
         note: c.living.source === "answer" ? `回答「${KSQ.display(KSQ.byId.living, answers)}」の真ん中で計算。食費・光熱費・通信費・保険料・おこづかいなどの合計です。` : c.living.source === "detail" ? "くわしく入力した内訳の合計です。" : "「わからない」のため、世帯の人数から仮に置いています。" },
-      { fix: "home", label: "住宅ローンの返済", data: c.homeLoan, note: c.homeLoan.note, skipIfNone: true },
-      { fix: "home", label: "住居費（家賃・税金など）", data: c.housing, note: c.housing.note },
-      { fix: "edu", label: "教育費", data: c.edu, note: c.edu.note },
-      { fix: "car", label: "車", data: c.car, note: c.car.note },
-      { fix: "loans", label: "そのほかの借入れ", data: c.loan, note: c.loan.note },
-      { fix: "spend", label: "その他", data: c.other, note: c.other.note },
+      { key: "homeLoan", fix: "home", label: "住宅ローンの返済", data: c.homeLoan, note: c.homeLoan.note, skipIfNone: true },
+      { key: "housing", fix: "home", label: "住居費（家賃・税金など）", data: c.housing, note: c.housing.note },
+      { key: "edu", fix: "edu", label: "教育費", data: c.edu, note: c.edu.note },
+      { key: "car", fix: "car", label: "車", data: c.car, note: c.car.note },
+      { key: "loan", fix: "loans", label: "そのほかの借入れ", data: c.loan, note: c.loan.note },
+      { key: "other", fix: "spend", label: "その他", data: c.other, note: c.other.note },
     ];
     rows.forEach((row) => {
       if (row.skipIfNone && row.data.source === "none") return;   // 住宅ローンがない人には出さない
@@ -136,16 +139,16 @@
       const sum = h("summary", "cost-sum");
       sum.appendChild(h("span", "cost-label", row.label));
       sum.appendChild(h("span", "src " + src.cls, src.text));
-      sum.appendChild(h("span", "cost-value", manM(row.data.monthly)));
+      sum.appendChild(h("span", "cost-value", manM(shown.rows[row.key])));
       det.appendChild(sum);
       const body = h("div", "cost-body");
       body.appendChild(h("p", "costs-note", `${src.long}。${row.note}`));
       if (row.breakdown) {
         const ul = h("ul", "breakdown-list");
-        c.living.items.forEach((it) => {
+        c.living.items.forEach((it, i) => {
           const li = h("li");
           li.appendChild(h("span", null, it.label));
-          li.appendChild(h("b", null, manM(it.monthly)));
+          li.appendChild(h("b", null, manM(shown.livingItems[i])));
           ul.appendChild(li);
         });
         body.appendChild(ul);
@@ -161,17 +164,17 @@
       det.appendChild(body);
       box.appendChild(det);
     });
-    const diff = c.incomeMonthly - c.total;
+    const diff = shown.diff;
     if (diff < 0) {
       const warn = h("div", "note warn small cost-warn");
-      warn.textContent = `入力した支出の合計（月${manM(c.total)}）が、手取り（月${manM(c.incomeMonthly)}）を上回っています。実際と違う項目がないか確認してください（生活費・住居費・借入れなど）。`;
+      warn.textContent = `入力した支出の合計（月${manM(shown.total)}）が、手取り（月${manM(shown.income)}）を上回っています。実際と違う項目がないか確認してください（生活費・住居費・借入れなど）。`;
       box.appendChild(warn);
     }
     const total = h("div", "cost-total");
     total.appendChild(h("span", "cost-label", "合計（毎月）"));
-    total.appendChild(h("span", "cost-value", manM(c.total)));
+    total.appendChild(h("span", "cost-value", manM(shown.total)));
     box.appendChild(total);
-    box.appendChild(h("div", "cost-income", `手取り 月${manM(c.incomeMonthly)} → 毎月 ${diff >= 0 ? manM(diff) + " 余る" : manM(-diff) + " 不足"}`));
+    box.appendChild(h("div", "cost-income", `手取り 月${manM(shown.income)} → 毎月 ${diff >= 0 ? manM(diff) + " 余る" : manM(-diff) + " 不足"}`));
     return box;
   }
 
@@ -212,7 +215,8 @@
       { key: "other", label: "その他", get: (p) => p.exp.other },
       { key: "total", label: "支出の合計", get: (p) => p.expense, cls: "ct-total" },
       { key: "flow", label: "収支", get: (p) => p.income - p.expense, cls: "ct-flow" },
-      { key: "balance", label: "貯蓄残高", get: (p) => p.balance, cls: "ct-balance", always: "year" },
+      // 残高は丸める前の値でマイナスを見る（丸めると0になるマイナスを「0」と書かない。2026-10-31 B3-軽5）
+      { key: "balance", label: "貯蓄残高", get: (p) => p.balance, cls: "ct-balance", always: "year", text: (p) => KSX.balanceCell(p) },
     ];
 
     function fmt(v, row) {
@@ -249,8 +253,8 @@
         tr.appendChild(th);
         pts.forEach((p) => {
           const v = row.get(p);
-          const td = h("td", (p.year % 5 === 0 ? "lt-five " : "") + (row.key === "flow" && v < 0 ? "lt-neg" : "") + (row.key === "balance" && p.balance < 0 ? "lt-neg" : ""));
-          td.textContent = fmt(v, row);
+          const td = h("td", (p.year % 5 === 0 ? "lt-five " : "") + (row.key === "flow" && v < 0 ? "lt-neg" : "") + (row.key === "balance" && p.raw < 0 ? "lt-neg" : ""));
+          td.textContent = row.text ? row.text(p) : fmt(v, row);
           tr.appendChild(td);
         });
         tbody.appendChild(tr);
@@ -567,84 +571,30 @@
   }
 
   // ── この計算に入れていないこと ──
-  // dir: better＝実際はもっと良くなる可能性／worse＝もっと厳しくなる可能性／both＝どちらにも動く
+  // 項目の定義は view/explain.js が持つ（/about/ の一覧と同じ定義から作る）
   function notIncludedItems(r, a) {
-    const D = r.detail;
-    const hasLoan = a.home === "loan";
-    const willBuy = D.purchase && D.purchase.on === "yes";
-    const list = [];
-    if (hasLoan || willBuy) list.push({ dir: "better", text: "住宅ローン控除（減税）。税金が戻る分は収入に入れていません" });
-    if (hasLoan || willBuy) list.push({ dir: "worse", text: "変動金利の上昇。返済額は、いま入力した額のままで計算しています" });
-    if (hasLoan && D.loan.prepayOn === "yes") list.push({ dir: "better", text: "繰り上げ返済で利息が減る分。期間が短くなる効果だけを見ています" });
-    list.push({ dir: "both", text: "税金・社会保険料の細かい計算。手取りは、年収に応じたおおよその割合で出しています" });
-    if (Number(a.others || 0) > 0 || a.others === "1" || a.others === "2" || a.others === "3") {
-      list.push({ dir: "better", text: "同居している家族を扶養に入れた場合の、税の軽減。生活費の人数には入れていますが、税は計算に入れていません" });
-    }
-    // 「年齢に応じて」を選んでいても、統計の対象外の働き方（自営業など）では横ばいになる。
-    // 実際に使われたかどうかで言い分けないと、画面の中で食い違う
-    const mode = (D.work && D.work.growth) || "flat";
-    if (r.wageApplied) {
-      list.push({ dir: "both", text: "あなた個人の昇給や役職の変化。収入は、統計の年齢別の賃金の形にならって増減させているだけです" });
-    } else if (mode === "stat") {
-      list.push({ dir: "both", text: "年齢による収入の変化。この働き方は賃金の統計の対象外のため、いまの収入がそのまま続く前提で計算しています" });
-    } else if (mode === "up" || mode === "down") {
-      list.push({ dir: "both", text: `あなた個人の事情。収入は毎年1%ずつ${mode === "up" ? "増える" : "減る"}前提にそろえているだけです` });
-    } else {
-      list.push({ dir: "both", text: "年齢による収入の変化。いまの収入がそのまま続く前提で計算しています（くわしく入力で変えられます）" });
-    }
-    // 物価の上昇は費目ごとに選べるので、いまの設定をそのまま伝える（2026-10-03）
-    {
-      const L = { living: "生活費", rent: "家賃", tax: "固定資産税", edu: "教育費", car: "車の維持費", other: "旅行・大きな出費" };
-      const on = (r.inflationOn || []).map((k) => L[k]).filter(Boolean);
-      const off = Object.values(L).filter((x) => !on.includes(x));
-      if (Number(r.inflation) === 0) {
-        list.push({ dir: "worse", text: "物価の上昇を0%にしています。値上がりは見ていません（くわしく入力で変えられます）" });
-      } else if (off.length) {
-        list.push({ dir: "worse", text: `物価の上昇（年${r.inflation}%）を掛けているのは ${on.join("・")} です。${off.join("・")} は、いまの水準のままです` });
-      }
-      // 収入側は物価に合わせて増やしていない。支出だけが増えるので、厳しめの見方になる（2026-10-30）
-      if (Number(r.inflation) !== 0) {
-        list.push({ dir: "worse", text: "給料や年金を、物価の上昇に合わせて増やしてはいません。支出だけが値上がりする、厳しめの見方です" });
-      }
-      // 返済と一時金は、設定にかかわらず据え置きなので必ず伝える
-      list.push({ dir: "worse", text: "修繕や買い替えの一時金は、入力した金額のままで計算しています。工事費や車の価格の値上がりは見ていません" });
-    }
-    list.push({ dir: "both", text: "投資の値動き。利回りは毎年一定として計算し、元本割れは見ていません" });
-    list.push({ dir: "worse", text: "突然の医療費・介護費・失業や休職による収入の減少（くわしく入力で設定した分を除く）" });
-    list.push({ dir: "both", text: "年金・児童手当などの制度が将来変わること。いまの制度が続く前提です" });
-    const babies = (r.kidInfo || []).filter((k) => k.ageNow >= 0 && k.ageNow <= 2).length;
-    if (babies || a.kids === "plan") {
-      list.push({ dir: "worse", text: "0〜2歳の保育料。自治体と世帯の所得で決まるため、入れていません（住民税非課税の世帯は無償とされています）" });
-    }
-    if (a.kids === "yes" || a.kids === "plan") list.push({ dir: "worse", text: "保育園・幼稚園の給食費・行事費・通園送迎費。無償化の対象外とされていますが、計算には入れていません" });
-    if (a.kids === "yes" || a.kids === "plan") list.push({ dir: "better", text: "高校の就学支援金の拡充分。教育費のもとにした調査が、当時の支援を反映した金額のため、重ねて差し引いていません" });
-    if (a.spouse === "partner") {
-      list.push({ dir: "worse", text: "事実婚では、税の配偶者控除と相続の扱いが、届出をしている場合と違うとされています。この違いは金額に反映していません" });
-    }
-    list.push({ dir: "better", text: "相続・贈与・親からの援助" });
-    list.push({ dir: "worse", text: "退職金や年金にかかる税金" });
-    if (D.loans && D.loans.some((l) => l.kind === "shougakukin")) list.push({ dir: "both", text: "奨学金は、万一のときに返還が免除される前提で計算しています（条件は貸与元でご確認ください）" });
-    if (a.work === "self" && a.selfVary === "vary") list.push({ dir: "both", text: "自営業の収入の波。金額には反映せず、急な出費の目安を1年分にすることだけで見ています" });
-    return list;
+    return KSX.notIncluded({ r, a });
   }
 
   function notIncluded(r, a) {
     const box = h("div");
     box.appendChild(h("p", "small", "この計算は、次のものを含んでいません。結果を見るときの目安にしてください。"));
+    box.appendChild(notIncludedList(notIncludedItems(r, a)));
+    const legend = h("p", "small muted");
+    legend.textContent = KSX.NOT_INCLUDED_LEGEND;
+    box.appendChild(legend);
+    return box;
+  }
+  function notIncludedList(items) {
     const ul = h("ul", "ni-list");
-    const MARK = { better: ["＋", "実際はもっと良くなる可能性"], worse: ["−", "実際はもっと厳しくなる可能性"], both: ["±", "どちらにも動く"] };
-    notIncludedItems(r, a).forEach((it) => {
+    items.forEach((it) => {
       const li = h("li", "ni-" + it.dir);
-      const m = h("span", "ni-mark", MARK[it.dir][0]);
-      m.title = MARK[it.dir][1];
+      const m = h("span", "ni-mark", KSX.NOT_INCLUDED_MARKS[it.dir][0]);
+      m.title = KSX.NOT_INCLUDED_MARKS[it.dir][1];
       li.append(m, h("span", null, it.text));
       ul.appendChild(li);
     });
-    box.appendChild(ul);
-    const legend = h("p", "small muted");
-    legend.textContent = "＋＝入れると結果が良くなる方向／−＝厳しくなる方向／±＝どちらにも動く";
-    box.appendChild(legend);
-    return box;
+    return ul;
   }
 
   // ── ライフプラン表（縦＝人、横＝年） ──
@@ -757,10 +707,9 @@
     nb.scope = "row";
     trB.appendChild(nb);
     pts.forEach((p, i) => {
-      const td = h("td", (p.balance < 0 ? "lt-neg" : "") + (p.year % 5 === 0 ? " lt-five" : ""));
+      const td = h("td", (p.raw < 0 ? "lt-neg" : "") + (p.year % 5 === 0 ? " lt-five" : ""));
       td.dataset.col = i;
-      const bal = Math.round(p.balance);
-      td.appendChild(h("span", "lt-bal", bal < 0 ? "−" + Math.abs(bal).toLocaleString("ja-JP") : bal.toLocaleString("ja-JP")));
+      td.appendChild(h("span", "lt-bal", KSX.balanceCell(p)));
       trB.appendChild(td);
     });
     tbody.appendChild(trB);
@@ -801,10 +750,10 @@
         panel.appendChild(h("p", "lt-panel-none", "大きな出来事はありません"));
       }
       const money = h("div", "lt-panel-money");
-      [["収入（手取り）", p.income], ["支出", p.expense], ["貯蓄残高", p.balance]].forEach(([l, v]) => {
+      [["収入（手取り）", p.income, KS.man(p.income)], ["支出", p.expense, KS.man(p.expense)], ["貯蓄残高", p.raw, KSX.balanceText(p)]].forEach(([l, v, t]) => {
         const d = h("div");
         d.appendChild(h("span", null, l));
-        d.appendChild(h("b", v < 0 ? "neg" : null, KS.man(v)));
+        d.appendChild(h("b", v < 0 ? "neg" : null, t));
         money.appendChild(d);
       });
       panel.appendChild(money);
@@ -826,5 +775,5 @@
     return box;
   }
 
-  window.KSR = { forecast, costs, costTable, lifeTable, advice, compare, review, reviewItems, notIncluded, notIncludedItems, WEATHER };
+  window.KSR = { forecast, costs, costTable, lifeTable, advice, compare, review, reviewItems, notIncluded, notIncludedItems, notIncludedList, WEATHER };
 })();

@@ -35,7 +35,11 @@
       // くわしくで始めた直後の進捗が「1／5」（かんたんと同じ数）になり、
       // 答えるたびに 5→6→9→11→16 と分母が増えていた。
       // 節の中身は描くときに作り直すので、ここで先に数えても差し支えない
-      KSD.build(d, { only: g.keys, hideAnswers: true }).sections().forEach((sec) => {
+      // 公的データや計算の部品が読めないときは、詳しい条件の画面を挟めない。
+      // ここで例外を出すと質問の画面まで止まるので、挟まずに続ける（理由は質問の画面に出す。D2）
+      let secs = [];
+      try { secs = KSD.build(d, { only: g.keys, hideAnswers: true }).sections(); } catch (e) { secs = []; }
+      secs.forEach((sec) => {
         out.push({ kind: "detail", id: "detail:" + sec.key, keys: [sec.key], title: sec.title, group: s[0].group });
       });
     });
@@ -46,7 +50,7 @@
   function detailSections(d) {
     const out = [];
     Object.values(DETAIL_OF_GROUP).forEach((g) => {
-      KSD.build(d, { only: g.keys, hideAnswers: true }).sections().forEach((sec) => out.push(sec));
+      try { KSD.build(d, { only: g.keys, hideAnswers: true }).sections().forEach((sec) => out.push(sec)); } catch (e) { /* 公的データが読めない（D2） */ }
     });
     return out;
   }

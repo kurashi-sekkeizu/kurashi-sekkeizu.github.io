@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://m.media-amazon.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>「わからない」と答えたときに使う値｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/assumptions/">
-<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
+<link rel="stylesheet" href="/assets/style.css?v=4aca26">
 </head>
 <body>
 <header class="site-header">
@@ -32,7 +33,7 @@
     <div class="table-wrap">
       <table class="data text">
         <caption class="visually-hidden">生活費の内訳に使っている割合</caption>
-        <thead><tr><th>費目</th><th>生活費に占める割合</th><th>月25万円のときの例</th></tr></thead>
+        <thead><tr><th>費目</th><th>生活費に占める割合</th><th id="living-sample-head">例</th></tr></thead>
         <tbody id="living-rows"></tbody>
       </table>
     </div>
@@ -44,6 +45,7 @@
         <tbody id="household-rows"></tbody>
       </table>
     </div>
+    <p class="small muted" id="household-note"></p>
   </section>
 
   <section class="section">
@@ -93,11 +95,22 @@
   <section class="section">
     <h2 class="section-title">公的な統計が無い前提</h2>
     <p class="small">公的な数字が存在しない、または統計から直接は取れないものです。<b>どう置いたかの根拠を、ひとつずつ書いています。</b>
-      「変えられる」ものは、くわしく入力で自分の数字に直せます。</p>
+      「直し方」に入力欄の名前があるものは、くわしく入力でご自身の数字に直せます。「—」のものは、画面からは変えられません。</p>
     <div class="table-wrap">
       <table class="data text">
-        <thead><tr><th>項目</th><th>置いている値</th><th>根拠</th><th>変えられる</th></tr></thead>
+        <thead><tr><th>項目</th><th>置いている値</th><th>根拠</th><th>直し方</th></tr></thead>
         <tbody id="estimate-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">数え方の決まりと、判定の境目</h2>
+    <p class="small">学校の区切りの年齢や、見通しの天気を分ける境目などです。<b>公的な統計ではなく、計算の決まり</b>として、ここに並べたとおりに使っています。</p>
+    <div class="table-wrap">
+      <table class="data text">
+        <thead><tr><th>項目</th><th>値</th><th>考え方</th></tr></thead>
+        <tbody id="rules-rows"></tbody>
       </table>
     </div>
   </section>
@@ -110,6 +123,18 @@
       <table class="data text">
         <thead><tr><th>項目</th><th>はじめの値</th></tr></thead>
         <tbody id="default-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">はじめの値を決めるときの決まり</h2>
+    <p class="small">上の表の値を置くときに使う決まりと、万一のときの保障額に入れる費目です。<b>この値そのものを直す入力欄はありません。</b>
+      代わりに直せるところがあれば、右の欄に書いています。</p>
+    <div class="table-wrap">
+      <table class="data text">
+        <thead><tr><th>項目</th><th>値</th><th>直すには</th></tr></thead>
+        <tbody id="default-fixed-rows"></tbody>
       </table>
     </div>
   </section>
@@ -127,113 +152,38 @@
   </div>
 </footer>
 
-<script src="/assets/data.js?v=d1e671"></script>
-<script src="/assets/common.js?v=43fc23"></script>
-<script src="/assets/questions.js?v=edf23b"></script>
-<script src="/assets/calc.js?v=2643b2"></script>
+<script src="/assets/data.js?v=ab854b"></script>
+<script src="/assets/common.js?v=d5329c"></script>
+<script src="/assets/questions.js?v=0e34ea"></script>
+<script src="/assets/model/plan.js?v=dac1e6"></script>
+<script src="/assets/model/yearly.js?v=6019b7"></script>
+<script src="/assets/model/metrics.js?v=e20ef0"></script>
+<script src="/assets/view/marks.js?v=77fe38"></script>
+<script src="/assets/view/explain.js?v=0dc5f3"></script>
+<script src="/assets/calc.js?v=908bac"></script>
 <script>
 (function () {
   "use strict";
-  const esc = KS.esc, man = KS.man;
-  const D = KSC.DUMMY;
-  const row = (cells) => `<tr>${cells.map((c, i) => (i === 0 ? `<th scope="row">${c}</th>` : `<td>${c}</td>`)).join("")}</tr>`;
-
-  // 生活費の内訳
-  const sample = KSC.splitLiving(25);
-  document.getElementById("living-rows").innerHTML = KSC.LIVING_ITEMS.map((it) =>
-    row([esc(it.label), Math.round(it.ratio * 100) + "%", man(sample[it.key])])).join("");
-
-  // 世帯の人数から置く金額（calc.js と同じ式）
-  document.getElementById("household-rows").innerHTML = [1, 2, 3, 4, 5].map((n) =>
-    row([n + "人", man(Math.min(40, 10 + n * 3.5))])).join("");
-
-  // 住まい・車・教育費
-  const dflt = KSC.detailDefaults({ age: 40, kids: "no", home: "loan", homeType: "house", cars: "1" }, 0);
-  const E = D.edu;
-  document.getElementById("home-rows").innerHTML = [
-    ["家賃（「わからない」のとき）", "回答の帯の真ん中。帯を選んでいなければ<b>お住まいの都道府県の民営借家の平均</b>（答えていなければ全国の目安）"],
-    // 計算で使う「借りたときの内容」から書く。以前は使っていない「月10万円・65歳完済」を出していた（2026-10-30）
-    (() => {
-      const L = dflt.loan, lv = KSC.loanFromOrigin(L, 40);
-      return ["住宅ローンの返済", "借入 " + man(L.borrowed) + "・" + L.years + "年・金利" + L.rate + "%・返し始めて" + L.startedAgo + "年、として計算（返済 月 約" + man(lv.monthly) + "。完済は残りの" + (L.years - L.startedAgo) + "年後）・団信あり"];
-    })(),
-    ["戸建ての修繕", "外壁・屋根の塗装 " + man(dflt.house.paintCost) + "（" + dflt.house.paintEvery + "年ごと）／水回り・給湯器 " + man(dflt.house.waterCost) + "（" + dflt.house.waterEvery + "年ごと）"],
-    ["固定資産税など", "戸建て 年 " + man(dflt.house.tax) + "／マンションは管理費・修繕積立金 月 " + man(dflt.mansion.monthly) + "（10年ごとに " + dflt.mansion.raise + "% 上がる前提）"],
-    ["車", "維持費 年 " + man(dflt.cars[0] ? dflt.cars[0].upkeep : 35) + "／" + (dflt.cars[0] ? dflt.cars[0].interval : 10) + "年ごとに " + man(dflt.cars[0] ? dflt.cars[0].budget : 250) + " で買い替え"],
-    ["教育費（幼稚園・3〜5歳）", "公立 年 " + man(E.kinder.public) + "／私立 年 " + man(E.kinder.private) + "（習い事などを含む1年分。文部科学省の調査の水準に合わせています）"],
-    ["保育料（0〜2歳）", "計算に入れていません（自治体と世帯の所得で決まるため）"],
-    ["教育費（小学校）", "公立 年 " + man(E.elem.public) + "／私立 年 " + man(E.elem.private)],
-    ["教育費（中学）", "公立 年 " + man(E.junior.public) + "／私立 年 " + man(E.junior.private)],
-    ["教育費（高校）", "公立 年 " + man(E.high.public) + "／私立 年 " + man(E.high.private)],
-    ["教育費（大学）", "国公立 年 " + man(E.univ.national) + "／私立文系 年 " + man(E.univ.privArts) + "／私立理系 年 " + man(E.univ.privSci) + "（入学時に別途 " + man(E.entrance.national) + "〜" + man(E.entrance.privArts) + "）"],
-    ["下宿・一人暮らしの上乗せ", "年 " + man(E.away)],
-  ].map(row).join("");
-
-  // 公的な保障・年金
-  document.getElementById("public-rows").innerHTML = [
-    ["老齢基礎年金（概算）", "年 " + man(D.pensionBase) + "。会社員・公務員は年収に応じて上乗せ"],
-    ["受け取り開始の年齢", D.pensionAge + "歳"],
-    ["遺族年金（子がいる間・概算）", "年 " + man(D.survivorBase) + "。会社員・公務員は年収に応じて上乗せ"],
-    ["休業中の手当（会社員・公務員）", "月収の約 " + Math.round(D.sickRate * 100) + "%"],
-    ["児童手当（概算）", "年 " + man(D.childAllowance) + "（18歳まで）"],
-    ["育休・産休中の収入", "元の年収の約 " + Math.round(D.leaveRate * 100) + "%・" + D.leaveYears + "年間"],
-    ["額面から手取りへ", "年収に応じて 約72〜84%（年収が高いほど手取りの割合は下がります）"],
-    ["葬儀などの費用", man(D.funeral)],
-    ["計算する年齢の上限", D.endAge + "歳まで"],
-  ].map(row).join("");
-
-  // 住んでいる地域
-  const R = window.KSDATA && window.KSDATA.region;
-  if (R && R.regions) {
-    const nat = R.national.total;
-    document.getElementById("region-rows").innerHTML = Object.values(R.regions)
-      .sort((x, y) => y.total - x.total)
-      .map((g) => row([esc(g.label), g.total.toLocaleString("ja-JP") + "円", (g.total / nat).toFixed(2) + "倍"])).join("")
-      + row(["<b>全国</b>", "<b>" + nat.toLocaleString("ja-JP") + "円</b>", "1.00倍"]);
-    document.getElementById("region-note").textContent =
-      (R.caveats || []).map((c) => c.text).join(" ");
-  }
-
-  // 公的な統計が無い前提（estimate）を、根拠つきで並べる。
-  // **defaults（くわしく入力のはじめの値）は別の表にする。**
-  // 同じ表に混ぜていたため、根拠の欄に「仮置き。」の4文字だけが20行並んでいた。
-  // defaults に求められるのは根拠ではなく「ご自身の予定に直せます」という案内（2026-10-03）
-  const AS = (window.KSDATA && window.KSDATA.assumptions) || {};
-  // [年収, 割合] の並び（手取りの割合）は「年収◯万円で◯%」と1行ずつ出す
-  const estVal = (v) => (Array.isArray(v.value) && v.value.every(Array.isArray)
-    ? v.value.map(([x, r]) => `<span style="white-space:nowrap">${x}万円：${Math.round(r * 100)}%</span>`).join("<br>")
-    : `${v.value}${esc(v.unit || "")}`);
-  document.getElementById("estimate-rows").innerHTML =
-    Object.entries(AS.estimate || {}).map(([k, v]) => row([
-      esc(v.label || k),
-      estVal(v),
-      `<span class="small">${esc(v.basis || "")}</span>`,
-      v.editable ? "変えられる" : "—",
-    ])).join("");
-
-  const fmtVal = (v) => (Array.isArray(v.value) ? v.value.length + "項目" : `${v.value}${esc(v.unit || "")}`);
-  document.getElementById("default-rows").innerHTML =
-    Object.entries(AS.defaults || {}).map(([k, v]) => row([esc(v.label || k), fmtVal(v)])).join("");
-
-  // 計算の前提
-  const empty = KS.empty();
-  const INF_LABELS = [
-    { v: "living", label: "生活費" }, { v: "rent", label: "家賃" }, { v: "tax", label: "固定資産税" },
-    { v: "edu", label: "教育費" }, { v: "car", label: "車の維持費" }, { v: "other", label: "旅行・大きな出費" },
-  ];
-  // 既定は正本（data/assumptions.json）から読む。KS.empty() から読むと、
-  // data.js を読み込まない画面で作られた値に引きずられる
-  const INF_DEFAULT = ((AS.defaults || {}).inflationTargets || {}).value || [];
-  document.getElementById("assume-rows").innerHTML = [
-    ["物価の上昇", "年 " + empty.assumptions.inflation + "%", "変えられます（結果の「前提を変える」）"],
-    ["物価の上昇を掛ける費目", INF_LABELS.filter((x) => INF_DEFAULT.includes(x.v)).map((x) => x.label).join("・") || "なし",
-      "変えられます。<b>住宅ローンとその他の借入れの返済には掛けません</b>（契約した額のまま変わらないため）"],
-    ["運用の利回り", "年 " + empty.assumptions.ret + "%（＝運用しない）", "変えられます。天気の判定は<b>常に運用しない場合</b>で行います"],
-    ["万一のときの遺族の生活費", "いまの " + empty.assumptions.ratioLow + "〜" + empty.assumptions.ratioHigh + "%", "変えられます"],
-    ["老後の生活費", "現役のときの " + dflt.retire.ratio + "%", "変えられます（くわしく入力）"],
-    ["収入の見込み", "年齢に応じて増減（厚生労働省の統計の形）", "変えられます（くわしく入力）"],
-    ["定年・退職金", dflt.work.retireAge + "歳・退職金なし", "変えられます（くわしく入力）"],
-  ].map(row).join("");
+  // 表の中身は、すべて説明の層（view/explain.js）がデータと計算の層から作る。ここには文も数字も書かない
+  const esc = KS.esc;
+  const T = KSX.assumptionTables();
+  const cell = (c) => (Array.isArray(c) ? c.map((x) => `<span style="white-space:nowrap">${esc(x)}</span>`).join("<br>") : esc(c));
+  const rows = (list, opt) => list.map((cells) => `<tr>${cells.map((c, i) => (i === 0 ? `<th scope="row">${cell(c)}</th>`
+    : `<td>${opt && opt.small === i ? `<span class="small">${cell(c)}</span>` : cell(c)}</td>`)).join("")}</tr>`).join("");
+  const put = (id, html) => { document.getElementById(id).innerHTML = html; };
+  document.getElementById("living-sample-head").textContent = T.livingSampleHead;
+  put("living-rows", rows(T.living));
+  put("household-rows", rows(T.household));
+  document.getElementById("household-note").textContent = T.householdNote;
+  put("home-rows", rows(T.home));
+  put("public-rows", rows(T.public));
+  put("region-rows", rows(T.region));
+  document.getElementById("region-note").textContent = T.regionNote;
+  put("estimate-rows", rows(T.estimate, { small: 2 }));
+  put("rules-rows", rows(T.rules, { small: 2 }));
+  put("default-rows", rows(T.defaults));
+  put("default-fixed-rows", rows(T.defaultsFixed, { small: 2 }));
+  put("assume-rows", rows(T.assume));
 })();
 </script>
 </body>

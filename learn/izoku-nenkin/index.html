@@ -2,12 +2,13 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://m.media-amazon.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>遺された家族は、年金をいくら受け取れる？｜くらしの設計図</title>
 <meta name="description" content="万一のときに家族が受け取れるお金｜公的な統計から計算した目安と、出典・確認日つきの数字で解説します。">
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/learn/izoku-nenkin/">
-<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
+<link rel="stylesheet" href="/assets/style.css?v=4aca26">
 </head>
 <body>
 <header class="site-header">
@@ -92,7 +93,11 @@
 
     <section class="section" id="s6">
       <h2><span class="no" aria-hidden="true">6</span>このサイトの計算では、どう使っているか</h2>
-      <p>「万一のとき」の見通しで、ご家族の今後の支出から<em>遺族年金を差し引いて</em>、不足額を出しています。働き方（会社員・公務員／自営業）と、お子さんの年齢で金額が変わります。下のお子さんが18歳になる年度の終わりに子の加算がなくなり、受け取る額が下がります。</p>
+      <p>「万一のとき」の見通しで、ご家族の今後の支出から<em>遺族年金を差し引いて</em>、不足額を出しています。差し引くのは、<em>いちばん下のお子さんが18歳になる年度の終わりまで</em>の分です。</p>
+      <p>内訳は、遺族基礎年金と子の加算、会社員・公務員だった場合は遺族厚生年金のおおよその額です。子の加算は、その年に18歳未満のお子さんの人数で数え、<em>1人目・2人目は<span data-fig="izoku.kasan"></span>、3人目からは<span data-fig="izoku.kasan3"></span></em>として足しています。</p>
+      <p><em>配偶者がいない場合（ひとり親で、お子さんが受け取る場合）は、1人目のお子さんには加算が付きません。</em>遺族基礎年金の本体に、<em>2人目からの子の加算</em>（額は上と同じ）を足しています。</p>
+      <p>配偶者が<span data-asm="estimate.pensionAge">65歳</span>以上の年は、<em>遺族年金と、配偶者自身の老齢年金の多いほうだけ</em>を見込んでいます。年金は1人1つが原則で、両方を足しては受け取れないためです（老齢厚生年金と遺族厚生年金は、多いほうに合わせて考えます）。</p>
+      <p><em>その後も続く遺族厚生年金と、中高齢寡婦加算は入れていません。</em>お子さんがいない場合も、遺族年金は差し引いていません。条件を満たせば実際には受け取れるため、そのぶん不足額は多めに出ます。計算の結果にも、入れていないこととして表示しています。</p>
       <p><a href="/soudan/">自分の場合を計算してみる →</a></p>
     </section>
 
@@ -140,7 +145,7 @@
     <p><a href="/about/">このサイトについて</a>　<a href="/sources/">もっと知る</a></p>
   </div>
 </footer>
-<script src="/assets/data.js?v=d1e671"></script>
+<script src="/assets/data.js?v=ab854b"></script>
 <script src="/assets/figures.js?v=034b9e"></script>
 </body>
 </html>

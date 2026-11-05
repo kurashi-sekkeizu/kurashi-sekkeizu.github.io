@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://m.media-amazon.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>くわしく入力｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/soudan/detail/">
-<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
+<link rel="stylesheet" href="/assets/style.css?v=4aca26">
 </head>
 <body class="has-lock">
 <header class="app-header">
@@ -35,7 +36,14 @@
 
     <div id="sections" class="section"></div>
 
-    <div class="section"><a class="btn" href="/soudan/result/">結果に反映して見る</a></div>
+    <div class="section">
+      <!-- 答えを変えて必須の質問が未回答になったとき、結果へ進む前にそれと分かるようにする（2026-10-31 検証 C3-1） -->
+      <div id="unanswered" class="note warn" role="status" hidden>
+        <p id="unanswered-text"></p>
+        <button type="button" class="btn secondary inline">答えていない欄へ</button>
+      </div>
+      <a class="btn" id="to-result" href="/soudan/result/">結果に反映して見る</a>
+    </div>
   </div>
 </main>
 <footer class="app-footer no-print">
@@ -50,20 +58,41 @@
 </footer>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
-<script src="/assets/common.js?v=43fc23"></script>
-<script src="/assets/data.js?v=d1e671"></script>
-<script src="/assets/questions.js?v=edf23b"></script>
-<script src="/assets/calc.js?v=2643b2"></script>
-<script src="/assets/detail.js?v=8b3fcb"></script>
+<script src="/assets/common.js?v=d5329c"></script>
+<script src="/assets/data.js?v=ab854b"></script>
+<script src="/assets/questions.js?v=0e34ea"></script>
+<script src="/assets/model/plan.js?v=dac1e6"></script>
+<script src="/assets/model/yearly.js?v=6019b7"></script>
+<script src="/assets/model/metrics.js?v=e20ef0"></script>
+<script src="/assets/view/marks.js?v=77fe38"></script>
+<script src="/assets/view/explain.js?v=0dc5f3"></script>
+<script src="/assets/calc.js?v=908bac"></script>
+<script src="/assets/detail.js?v=e2fa21"></script>
 <script>
 (function () {
   "use strict";
-  const d = KS.load().data;
+  // 削除したあとにブラウザの「戻る」で、前の内容を持ったままの画面が戻ってくる（bfcache）ことがある。
+  // そのまま操作すると消した内容を書き戻すので、読み直す（2026-10-31 検証 C2-N4）
+  window.addEventListener("pageshow", (ev) => { if (ev.persisted) location.reload(); });
+  const loaded = KS.loadOrRestart();
+  if (!loaded) return;   // 保存データが壊れていた。開始画面で理由を出す
+  const d = loaded.data;
   const A = d.answers;
-  if (KSQ.visible(A).some((q) => q.required && !KSQ.isAnswered(q, A))) {
+  // まだ答えていない質問のうち、この画面に答える欄が無いもの（都道府県など）があれば、質問の画面へ案内する。
+  // 欄があるもの（家賃・年収など。KSD.ASKABLE）だけなら、この画面で答えてもらう（2026-10-31 検証 C3-1）
+  const askable = typeof KSD !== "undefined" && Array.isArray(KSD.ASKABLE) ? KSD.ASKABLE : [];
+  if (KSQ.visible(A).some((q) => q.required && !KSQ.isAnswered(q, A) && !askable.includes(q.id))) {
     document.getElementById("incomplete").hidden = false;
     return;
   }
+  // 公的データや計算の部品が読めないときは、欄も見通しも出さずに理由を出す。
+  // 以前は途中で止まり、見出しだけの画面になっていた（2026-10-31 検証 D2）
+  const fail = (err) => {
+    document.getElementById("app").hidden = true;
+    document.getElementById("sections").replaceChildren();
+    KS.showCalcFailure(null, err);
+  };
+  if (!KS.calcReady() || typeof KSD === "undefined") { fail(); return; }
   document.getElementById("app").hidden = false;
 
   let jumpTo = null;
@@ -74,16 +103,38 @@
 
   const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
+  let api = null;
+  // まだ答えていない欄があれば、「結果に反映して見る」の代わりにそれを出す。見通しも出さない（答えていない所を目安で埋めて見せない）
+  function status() {
+    const miss = api ? api.unanswered() : [];
+    const box = document.getElementById("unanswered");
+    box.hidden = miss.length === 0;
+    document.getElementById("to-result").hidden = miss.length > 0;
+    if (miss.length) {
+      document.getElementById("unanswered-text").textContent =
+        `まだ答えていない欄があります（${miss.map((m) => m.name).join("・")}）。答えると、結果に反映できます。`;
+    }
+    return miss;
+  }
+  document.querySelector("#unanswered button").addEventListener("click", () => {
+    const miss = status();
+    if (miss.length && api) api.focusAsk(miss[0].id);
+  });
   // いまの設定での見通し（数字を変えるたびに更新する）
   function preview() {
+    if (status().length) {
+      const box = document.getElementById("preview");
+      box.replaceChildren(h("p", "small detail-preview-msg", "まだ答えていない欄があるため、見通しはまだ出していません。"));
+      return;
+    }
     const r = KSC.compute(d);
     const p = r.sim0.points;
-    const at65 = p.find((x) => x.age === 65) || p[p.length - 1];
+    const at65 = p.find((x) => x.age === KSC.DUMMY.pensionAge) || p[p.length - 1];
     const counts = { sun: 0, cloud: 0, rain: 0 };
     r.forecast.forEach((f) => { counts[f.weather] += 1; });
     const items = [
       [`${at65.age}歳時点の貯蓄`, KS.man(at65.balance)],
-      ["貯蓄が底をつく時期", r.sim0.shortageAge !== null ? `⚠ ${r.sim0.shortageAge}歳ごろ` : "90歳までプラス"],
+      ["貯蓄が底をつく時期", r.sim0.shortageAge !== null ? `⚠ ${r.sim0.shortageAge}歳ごろ` : `${KSC.DUMMY.endAge}歳までプラス`],
       ["天気", `☔${counts.rain} ⛅${counts.cloud} ☀️${counts.sun}`],
     ];
     const box = document.getElementById("preview");
@@ -91,8 +142,11 @@
     items.forEach(([l, v]) => { const c = h("div", "detail-preview-item"); c.append(h("div", "small muted", l), h("b", null, v)); box.appendChild(c); });
   }
 
-  KSD.build(d, { jumpTo: jumpTo, onChange: preview }).mount(document.getElementById("sections"));
-  preview();
+  try {
+    api = KSD.build(d, { jumpTo: jumpTo, onChange: () => { try { preview(); } catch (err) { fail(err); } } });
+    api.mount(document.getElementById("sections"));
+    preview();
+  } catch (err) { fail(err); }
 })();
 </script>
 </body>

@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://m.media-amazon.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>質問｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/soudan/step/">
-<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
+<link rel="stylesheet" href="/assets/style.css?v=4aca26">
 </head>
 <body class="has-lock">
 <header class="app-header">
@@ -16,6 +17,9 @@
     <button type="button" class="linkbtn danger" data-delete>削除</button>
   </div>
   <div class="progress" aria-hidden="true"><div id="bar" style="width:0"></div></div>
+  <!-- 答えに合わせて画面の数が変わったときの知らせ。分母のすぐ下に出す（画面の先頭に置くと、
+       下の質問に答えている人からは見えない） -->
+  <p id="flow-note" class="small flow-note" role="status" hidden></p>
 </header>
 
 <main class="wrap">
@@ -26,6 +30,8 @@
     <p id="err" class="error" role="alert" hidden></p>
     <div class="section stack">
       <button type="submit" class="btn">次へ</button>
+      <!-- 確認画面の「修正」から来たときだけ出す。直したら、残りの画面を通らずに確認画面へ戻れる（2026-10-31 検証 C4） -->
+      <button type="button" class="btn secondary" id="to-confirm" hidden>確認画面に戻る</button>
     </div>
   </form>
 </main>
@@ -41,15 +47,22 @@
 </footer>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
-<script src="/assets/common.js?v=43fc23"></script>
-<script src="/assets/data.js?v=d1e671"></script>
-<script src="/assets/questions.js?v=edf23b"></script>
-<script src="/assets/calc.js?v=2643b2"></script>
-<script src="/assets/detail.js?v=8b3fcb"></script>
-<script src="/assets/flow.js?v=6a9f3e"></script>
+<script src="/assets/common.js?v=d5329c"></script>
+<script src="/assets/data.js?v=ab854b"></script>
+<script src="/assets/questions.js?v=0e34ea"></script>
+<script src="/assets/model/plan.js?v=dac1e6"></script>
+<script src="/assets/model/yearly.js?v=6019b7"></script>
+<script src="/assets/model/metrics.js?v=e20ef0"></script>
+<script src="/assets/view/marks.js?v=77fe38"></script>
+<script src="/assets/view/explain.js?v=0dc5f3"></script>
+<script src="/assets/calc.js?v=908bac"></script>
+<script src="/assets/detail.js?v=e2fa21"></script>
+<script src="/assets/flow.js?v=ae5064"></script>
 <script>
 (function () {
-  const d = KS.load().data;
+  const loaded = KS.loadOrRestart();
+  if (!loaded) return;   // 保存データが壊れていた。開始画面で理由を出す
+  const d = loaded.data;
   d.meta.mode = "step";
   const A = d.answers;
   // 「くわしく」で始めた人には、詳しい条件も**質問の画面**として出す
@@ -101,9 +114,32 @@
   const DETAIL_OF_GROUP = KSF.DETAIL_OF_GROUP;
   const buildFlow = () => KSF.build(d);
 
+  // その質問（または詳しい条件の画面）がある画面の番号。
+  // 確認画面の「修正」は質問のIDを渡すが、画面の先頭の質問とは限らない
+  // （「配偶者の年齢」は「ご家族のこと」の画面の途中にある）。以前は先頭のIDとしか比べず、
+  // 見つからないと最後の画面に落ちていた（2026-10-31 検証 C3）
+  function indexOfId(id) {
+    if (!id) return -1;
+    const i = flow.findIndex((e) => e.id === id);
+    if (i >= 0) return i;
+    return flow.findIndex((e) => e.kind === "q" && e.qs.some((q) => q.id === id));
+  }
+
+  // 答えが1つも無いか（削除したあと・別のタブで消したあと）
+  const noAnswers = () => !KSQ.QUESTIONS.some((q) => KSQ.isAnswered(q, A));
+
   function startIndex() {
+    // 答えが空なら、履歴や前回の位置が指す途中の画面ではなく1枚目から。
+    // 以前は削除したあとにブラウザの「戻る」で、答えの無い4枚目（住まいと車）が開いていた（2026-10-31 検証 C2-N4）
+    if (noAnswers()) return 0;
+    // ブラウザの戻る・進むで来たときは、その履歴が指す画面（入力値ではなく画面の場所だけを持つ）
+    const st = history.state;
+    if (st && st.ksStep) {
+      const i = indexOfId(st.ksStep);
+      if (i >= 0) return i;
+    }
     if (d.meta.pos) {
-      const i = flow.findIndex((e) => e.id === d.meta.pos);
+      const i = indexOfId(d.meta.pos);
       if (i >= 0) return i;
     }
     const i = flow.findIndex((e) => e.kind === "q" && e.qs.some((q) => q.required && !KSQ.isAnswered(q, A)));
@@ -124,7 +160,10 @@
     const slot = document.getElementById("more");
     slot.replaceChildren();
     const g = DETAIL_OF_GROUP[groupKey];
-    if (!g || DETAIL_MODE || typeof KSD === "undefined") return;
+    if (!g) return;
+    // 公的データや計算の部品が読めないときは、詳しい条件を組み立てられない。黙って消さずに理由を出す（D2）
+    if (!KS.calcReady() || typeof KSD === "undefined") { KS.showCalcFailure(slot); return; }
+    if (DETAIL_MODE) return;
     // 必須が埋まるまでは中身を組み立てられない。ただし**何も出さないと気配が消える**ので、
     // 「このあと何を入れられるか」だけは先に見せる
     if (!detailReady()) {
@@ -150,7 +189,12 @@
     det.addEventListener("toggle", () => { if (det.open) moreOpen.add(groupKey); else moreOpen.delete(groupKey); });
     det.open = moreOpen.has(groupKey);
     slot.appendChild(det);
-    KSD.build(d, { only: g.keys, onChange: () => { /* 保存は KSD 側で行う */ } }).mount(body);
+    try {
+      KSD.build(d, { only: g.keys, onChange: () => { /* 保存は KSD 側で行う */ } }).mount(body);
+    } catch (err) {
+      slot.replaceChildren();
+      KS.showCalcFailure(slot, err);
+    }
   }
   const moreOpen = new Set();
 
@@ -162,17 +206,22 @@
       screenEl.innerHTML = `<h1 style="font-size:1.1rem;color:var(--muted)">${KS.esc(e.title)}</h1>`;
       const box = document.createElement("div");
       screenEl.appendChild(box);
-      KSD.build(d, { only: e.keys, flat: true, hideAnswers: true, onChange: onDetailChange }).mount(box);
+      try {
+        KSD.build(d, { only: e.keys, flat: true, hideAnswers: true, onChange: onDetailChange }).mount(box);
+      } catch (err) {
+        box.replaceChildren();
+        KS.showCalcFailure(box, err);
+      }
       document.getElementById("more").replaceChildren();
     } else {
       const title = e.title ? `<h1 style="font-size:1.1rem;color:var(--muted)">${KS.esc(e.title)}</h1>` : "";
       screenEl.innerHTML = title + e.qs.map(control).join("");
       renderDetail(e.group);
     }
-    document.getElementById("count").textContent = `${idx + 1}／${flow.length}`;
-    document.getElementById("bar").style.width = `${Math.round((idx / flow.length) * 100)}%`;
+    showCount();
     document.getElementById("err").hidden = true;
     document.getElementById("back").textContent = idx === 0 ? "← 戻る" : "← 前の質問";
+    document.getElementById("to-confirm").hidden = d.meta.from !== "confirm";
     d.meta.pos = e.id;
     KS.save(d);
     if (focus) {
@@ -181,22 +230,84 @@
     }
   }
 
+  function showCount() {
+    document.getElementById("count").textContent = `${idx + 1}／${flow.length}`;
+    document.getElementById("bar").style.width = `${Math.round((idx / flow.length) * 100)}%`;
+  }
+
+  // ── 画面の移動と、ブラウザの履歴 ──
+  // 画面を移るたびに履歴を1つ積む。積むのは**画面の場所（ID）と何番目に積んだか**だけで、
+  // URL は変えない（入力値をURLに出さない。CLAUDE.md §3）。
+  // 以前は履歴を積まず、ブラウザの「戻る」で質問の画面ごと抜けて開始画面に出ていた（2026-10-31 検証 C5）
+  const depthNow = () => (history.state && Number(history.state.n)) || 0;
+  // いま表示している履歴の番号。戻る・進むのどちら向きに動いたかを知るために持つ
+  let shownN = 0;
+  function go(i, how) {
+    idx = Math.max(0, Math.min(i, flow.length - 1));
+    document.getElementById("flow-note").hidden = true;
+    render(true);
+    const st = { ksStep: flow[idx].id, n: how === "push" ? depthNow() + 1 : depthNow() };
+    if (how === "push") history.pushState(st, "");
+    else if (how === "replace") history.replaceState(st, "");
+    shownN = depthNow();
+    window.scrollTo(0, 0);
+  }
+  // 答えを変えて画面が減ったあと、履歴には消えた画面が残っている。
+  // 以前はそこへ「進む」と、いまの画面のまま何も起きず（空振り）、2回・3回押してやっと進んでいた（2026-10-31 検証 C2-N5）。
+  // 消えた画面の履歴に来たら、同じ向きにもう1つ動いて飛ばす。その先に履歴が無ければ、並びの次（前）の画面を出す
+  let skipTimer = null;
+  window.addEventListener("popstate", (ev) => {
+    const st = ev.state;
+    if (!st || !st.ksStep) return;
+    clearTimeout(skipTimer);
+    const dir = Number(st.n) >= shownN ? 1 : -1;
+    shownN = Number(st.n) || 0;
+    flow = buildFlow();
+    const i = indexOfId(st.ksStep);
+    if (i >= 0) { go(i, "none"); return; }
+    history.go(dir);
+    // 履歴の端で動けなかったとき（popstate が来ない）は、いまの画面の隣を出して、この履歴をその画面に書き換える
+    skipTimer = setTimeout(() => go(idx + dir, "replace"), 300);
+  });
+  // 削除したあとにブラウザの「戻る」で、前の内容を持ったままの画面が戻ってくる（bfcache）ことがある。
+  // そのまま操作すると消した答えを書き戻すので、読み直して保存データから組み立て直す（C2-N4）
+  window.addEventListener("pageshow", (ev) => { if (ev.persisted) location.reload(); });
+
+  // 答えによって画面の数が変わったら、黙って分母を変えずに理由を出す（2026-10-31 検証 C9）。
+  // 詳しい条件の画面は、答え（配偶者がいる・車がある・保険に入っている…）で出たり消えたりする
+  function noteFlowChange(prevIds) {
+    const note = document.getElementById("flow-note");
+    const now = flow.map((x) => x.id);
+    const added = flow.filter((x) => !prevIds.includes(x.id));
+    const removed = prevIds.filter((id) => !now.includes(id));
+    if (!added.length && !removed.length) return;
+    const titles = (list) => [...new Set(list.map((x) => x.title).filter(Boolean))].join("・");
+    const parts = [];
+    if (added.length) parts.push(`画面が${added.length}つ増えました${titles(added) ? `（${titles(added)}）` : ""}`);
+    if (removed.length) parts.push(`画面が${removed.length}つ減りました`);
+    note.textContent = `答えに合わせて、${parts.join("、")}。いまの進み具合は ${idx + 1}／${flow.length} です。`;
+    note.hidden = false;
+  }
+
   // 詳しい条件の画面で値が変わったとき。
   // 「お住まい」をローンあり→賃貸に変えると出す節が変わるので、画面の並びを作り直す。
   // 画面そのものは KSD が描き直すので、ここでは並びと進捗だけを合わせる
   function onDetailChange() {
     const curId = d.meta.pos;
+    const prevIds = flow.map((x) => x.id);
     flow = buildFlow();
     const i = flow.findIndex((x) => x.id === curId);
     if (i < 0) {
       // いまの節が出なくなった（住まいを変えた等）。手前のいちばん近い画面へ下がる
       idx = Math.max(0, Math.min(idx, flow.length - 1));
       render(false);
+      history.replaceState({ ksStep: flow[idx].id, n: depthNow() }, "");
+      noteFlowChange(prevIds);
       return;
     }
     idx = i;
-    document.getElementById("count").textContent = `${idx + 1}／${flow.length}`;
-    document.getElementById("bar").style.width = `${Math.round((idx / flow.length) * 100)}%`;
+    showCount();
+    noteFlowChange(prevIds);
   }
 
   // 入力のたびに回答を保存（画面は勝手に進めない）
@@ -214,7 +325,9 @@
       const q = KSQ.byId[t.name];
       if (!q) return;
       if (q.type === "multi") {
-        A[q.id] = [...document.querySelectorAll(`input[name="${q.id}"]:checked`)].map((i) => i.value);
+        // 「入っていない」「わからない」はほかと同時に選べない（くわしく入力と同じ KSQ.toggleMulti。2026-10-31 K6）
+        A[q.id] = KSQ.toggleMulti(q, A[q.id], t.value, t.checked);
+        document.querySelectorAll(`input[name="${q.id}"]`).forEach((i) => { i.checked = A[q.id].includes(i.value); });
       } else if (q.type === "select") {
         A[q.id] = t.value === "" ? null : (q.text ? t.value : Number(t.value));
       } else {
@@ -235,6 +348,7 @@
       // 回答によって同じ画面の質問が増減する場合（子の人数→年齢欄、持ち家→戸建て/マンション）は描き直す
       const cur = flow[idx];
       const before = cur.qs.map((x) => x.id).join(",");
+      const prevIds = flow.map((x) => x.id);
       flow = buildFlow();
       const now = flow.find((x) => x.kind === "q" && x.id === cur.id);
       const hintChanged = cur.qs.some((x) => typeof x.hint === "function");
@@ -245,6 +359,8 @@
       } else if (now) {
         idx = Math.max(0, flow.indexOf(now));
       }
+      showCount();
+      noteFlowChange(prevIds);
     }
     KS.save(d);
     // かんたんのとき、その画面の質問に答え終わった時点で「詳しい条件」を開ける
@@ -252,20 +368,26 @@
     if (g && !DETAIL_MODE && !!document.querySelector("#more details") !== detailReady()) renderDetail(flow[idx].group);
   });
 
+  const missingText = (q) => (q.type === "multi" ? "1つ以上選んでください。" : q.type === "ages" ? "お子さん全員の年齢を選んでください。" : `「${q.label}」を選んでください。`);
+  function showMissing(q, text) {
+    const err = document.getElementById("err");
+    err.textContent = text || missingText(q);
+    err.hidden = false;
+    const target = document.querySelector(`[data-q="${q.id}"] input, [data-q="${q.id}"] select`);
+    target?.focus();
+  }
+  // いまの画面の必須が埋まっているか。埋まっていれば「答えた」に記録して true
+  function finishScreen() {
+    if (flow[idx].kind !== "q") return true;
+    const missing = flow[idx].qs.find((q) => q.required && !KSQ.isAnswered(q, A));
+    if (missing) { showMissing(missing); return false; }
+    flow[idx].qs.forEach((q) => { if (!KSQ.isAnswered(q, A)) A[q.id] = []; if (!d.meta.done.includes(q.id)) d.meta.done.push(q.id); });
+    return true;
+  }
+
   document.getElementById("form").addEventListener("submit", (e) => {
     e.preventDefault();
-    const err = document.getElementById("err");
-    if (flow[idx].kind === "q") {
-      const missing = flow[idx].qs.find((q) => q.required && !KSQ.isAnswered(q, A));
-      if (missing) {
-        err.textContent = missing.type === "multi" ? "1つ以上選んでください。" : missing.type === "ages" ? "お子さん全員の年齢を選んでください。" : `「${missing.label}」を選んでください。`;
-        err.hidden = false;
-        const target = document.querySelector(`[data-q="${missing.id}"] input, [data-q="${missing.id}"] select`);
-        target?.focus();
-        return;
-      }
-      flow[idx].qs.forEach((q) => { if (!KSQ.isAnswered(q, A)) A[q.id] = []; if (!d.meta.done.includes(q.id)) d.meta.done.push(q.id); });
-    }
+    if (!finishScreen()) return;
     flow = buildFlow();
     const curId = d.meta.pos;
     const cur = flow.findIndex((x) => x.id === curId);
@@ -275,21 +397,38 @@
       location.href = "/soudan/confirm/";
       return;
     }
-    idx = cur + 1;
-    render(true);
-    window.scrollTo(0, 0);
+    go(cur + 1, "push");
   });
 
+  // 確認画面へ戻る。直したことで新しく必須の質問が出ていたら、先にその画面を出す
+  document.getElementById("to-confirm").addEventListener("click", () => {
+    if (!finishScreen()) return;
+    flow = buildFlow();
+    const miss = KSQ.visible(A).find((q) => q.required && !KSQ.isAnswered(q, A));
+    if (miss) {
+      const i = indexOfId(miss.id);
+      if (i !== idx) go(i, "push");
+      showMissing(miss, `まだ答えていない質問があります。${missingText(miss)}`);
+      return;
+    }
+    d.meta.pos = null;
+    KS.save(d);
+    location.href = "/soudan/confirm/";
+  });
+
+  // 画面の「← 前の質問」とブラウザの「戻る」は同じ動きにする。
+  // この画面で積んだ履歴があれば、それを1つ戻す（ブラウザの戻ると食い違わないように）
   document.getElementById("back").addEventListener("click", () => {
+    if (depthNow() > 0) { history.back(); return; }
     if (idx === 0) { location.href = "/soudan/"; return; }
-    idx -= 1;
-    render(true);
-    window.scrollTo(0, 0);
+    go(idx - 1, "replace");
   });
 
   flow = buildFlow();
   idx = startIndex();
   render(false);
+  history.replaceState({ ksStep: flow[idx].id, n: depthNow() }, "");
+  shownN = depthNow();
 })();
 </script>
 </body>

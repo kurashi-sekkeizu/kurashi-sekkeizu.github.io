@@ -2,11 +2,12 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://m.media-amazon.com; connect-src 'self'; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>相談スタート｜くらしの設計図</title>
 <meta name="google-site-verification" content="jntYeujTZa7djhCeI4bXONFyIVFQTXFFajI_V447P28">
 <link rel="canonical" href="https://kurashi-sekkeizu.github.io/soudan/">
-<link rel="stylesheet" href="/assets/style.css?v=1fb69f">
+<link rel="stylesheet" href="/assets/style.css?v=4aca26">
 </head>
 <body class="has-lock">
 <header class="app-header">
@@ -27,6 +28,8 @@
       <button type="button" class="btn secondary" id="resume-no">最初から（前回の内容を削除）</button>
     </div>
   </div>
+  <!-- 別のタブで削除されたとき（2026-10-31 検証 C5-軽2） -->
+  <p id="resume-gone" hidden class="note warn" role="status">前回の内容は削除されました。下の「はじめる」から、新しく始められます。</p>
   <p id="broken" hidden class="note warn">前回の内容を読み込めませんでした。お手数ですが、最初からお答えください。</p>
 
   <form id="start" class="section" style="margin-top:20px">
@@ -40,7 +43,7 @@
       <div class="mode-grid" style="margin-top:8px">
         <div class="mode-col">
           <label class="mode-card"><input type="radio" name="depth" value="simple" checked><span class="face"><b>かんたん（約5分）</b></span></label>
-          <p class="mode-desc">家族・収入・住まいについて、<b>5つの画面</b>でお聞きします。答えなかったところは、公的な統計の目安で計算します。</p>
+          <p class="mode-desc">家族・収入・住まいについて、<b>4つの画面</b>でお聞きします。答えなかったところは、公的な統計の目安で計算します。</p>
         </div>
         <div class="mode-col">
           <label class="mode-card"><input type="radio" name="depth" value="detail"><span class="face"><b>くわしく（約15分）</b></span></label>
@@ -63,6 +66,15 @@
 
     <p class="note info section">答えられないところは「わからない」で大丈夫です。入力内容は<b>このタブを閉じると消えます</b>。</p>
     <button type="submit" class="btn" id="start-btn">はじめる</button>
+    <!-- 答えが残っているのに「はじめる」を押したとき、消す前に選んでもらう（ブラウザのダイアログは使わない）。
+         以前は警告なしに最初からになり、質問の途中でブラウザの「戻る」を押した人の答えが消えていた（2026-10-31 検証 C5） -->
+    <div id="restart-panel" class="choice-panel" role="alertdialog" aria-labelledby="restart-title" hidden>
+      <p id="restart-title"><b>答えている途中の内容があります。</b><br>続きから答えるか、消して最初から答えるかを選んでください。</p>
+      <div class="stack">
+        <button type="button" class="btn" id="restart-continue">続きから答える</button>
+        <button type="button" class="btn secondary" id="restart-fresh">最初から（いまの内容を消す）</button>
+      </div>
+    </div>
   </form>
 
   <!-- 送信しないことの説明は、画面の先頭ではなく下に置く（2026-10-03 利用者の指示）。
@@ -85,11 +97,17 @@
 </footer>
 <div class="lock-bar">🔒 入力内容は送信されません</div>
 
-<script src="/assets/common.js?v=43fc23"></script>
+<script src="/assets/common.js?v=d5329c"></script>
+<!-- 保存データの検査を、ほかの相談の画面と同じにするため（選択肢に無い答えも壊れた扱いにする）。
+     以前は common.js だけで、ここでは「続きから」に出し、確認画面のあと「計算する」で全部消えていた（2026-10-31 検証 D2-L5） -->
+<script src="/assets/data.js?v=ab854b"></script>
+<script src="/assets/questions.js?v=0e34ea"></script>
 <script>
 (function () {
   const loaded = KS.load();
-  if (loaded.broken) document.getElementById("broken").hidden = false;
+  // 壊れた保存データは、ほかの画面で見つかって消されていることもある（そのときは印だけが残る）
+  const wasBroken = KS.takeBrokenFlag();
+  if (loaded.broken || wasBroken) document.getElementById("broken").hidden = false;
 
   if (!KS.hasLocal) {
     const l = document.getElementById("persist-local");
@@ -98,28 +116,61 @@
     document.getElementById("no-local").hidden = false;
   }
 
+  // 新しく始める相談の保存先は、いつも「このタブだけ」から。
+  // 端末に保存するのは、利用者がその場で選んだときだけ（CLAUDE.md §3）。前回の相談を続けるときは「前回の続きから」が端末保存を引き継ぐ。
+  // 以前は前回の設定（端末保存）を初期値に写していたため、選択欄が隠れたまま、削除のあと・「最初から」・
+  // 「最初からはじめる（前回の内容は使いません）」で始めた新しい相談まで端末に保存され、
+  // 画面の「このタブを閉じると消えます」と食い違っていた（2026-10-31 検証 C6-中1）
+  const saved = KS.load().data;
+  let persistChosen = false;   // 利用者が保存先を自分で選んだか（画面からの操作だけを数える）
+  document.querySelectorAll('input[name="persist"]').forEach((r) => {
+    r.addEventListener("change", (e) => { if (e.isTrusted) persistChosen = true; });
+  });
+  const persistTabOnly = () => {
+    persistChosen = false;
+    document.querySelector('input[name="persist"][value="session"]').checked = true;
+  };
+  persistTabOnly();   // 戻る・進むでブラウザが前の選択を戻しても、選び直していなければ使わない
+  window.addEventListener("pageshow", () => { if (!persistChosen) persistTabOnly(); });
+
+  // 「前回の続きから」は、端末に保存した内容があるあいだだけ出す。
+  // 別のタブで削除されたら（削除の印・storage イベント）表示を戻し、押した時点でも端末に無ければ始めない。
+  // 以前は開いたままの開始画面に「前回の続きから」が残り、押すと空の相談が「端末に保存」で始まっていた（2026-10-31 検証 C5-軽2）
+  const box = document.getElementById("resume");
+  const startBtn = document.getElementById("start-btn");
+  const START_TEXT = startBtn.textContent;
+  function resumeGone() {
+    if (box.hidden) return;
+    box.hidden = true;
+    startBtn.textContent = START_TEXT;
+    persistTabOnly();   // 前回の内容は消えた。新しい相談は、このタブだけ（C6-中1）
+    document.getElementById("resume-gone").hidden = false;
+  }
+  const recheckResume = () => { if (!box.hidden && !KS.hasSavedLocal()) resumeGone(); };
+  window.addEventListener("storage", recheckResume);
+  window.addEventListener("pageshow", recheckResume);   // 戻る・進むで、止めていた画面に戻ったとき
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) recheckResume(); });
   if (KS.hasSavedLocal()) {
-    const box = document.getElementById("resume");
     box.hidden = false;
-    document.getElementById("start-btn").textContent = "最初からはじめる（前回の内容は使いません）";
+    startBtn.textContent = "最初からはじめる（前回の内容は使いません）";
     document.getElementById("resume-yes").addEventListener("click", () => {
-      const d = KS.loadLocal() || KS.load().data;
+      // 端末に無ければ、このタブの写しや空の相談で代わりに始めない
+      const d = KS.loadLocal();
+      if (!d) { resumeGone(); startBtn.focus(); return; }
       d.meta.persist = "local";
       KS.save(d);
       location.href = "/soudan/step/";
     });
     document.getElementById("resume-no").addEventListener("click", () => {
-      KS.clearAll();
+      // 「前回の内容を削除」は削除。ほかのタブにも知らせる（2026-10-31 検証 C3-5）
+      KS.deleteAll();
       box.hidden = true;
+      startBtn.textContent = START_TEXT;
+      persistTabOnly();   // C6-中1
       document.querySelector("legend").scrollIntoView();
     });
   }
 
-  // 保存済みの設定を、画面の初期値に反映する（勝手に解除しないため）
-  const saved = KS.load().data;
-  if (saved.meta && saved.meta.persist === "local" && KS.hasLocal) {
-    document.querySelector('input[name="persist"][value="local"]').checked = true;
-  }
   // トップからの指定（?d=simple / ?d=detail）を初期選択にする。
   // これは「どこまで答えるか」の進め方であって、入力内容ではない（CLAUDE.md §3）
   const want = new URLSearchParams(location.search).get("d");
@@ -128,19 +179,44 @@
   const dEl = document.querySelector(`input[name="depth"][value="${depth}"]`);
   if (dEl) dEl.checked = true;
 
-  document.getElementById("start").addEventListener("submit", (e) => {
-    e.preventDefault();
-    const f = new FormData(e.target);
-    // 「はじめる」は常に最初から。前回の続きは、上の「前回の続きから」を使う
+  // いま答えている途中か（このタブの中の答え）。端末に保存した前回分は、上の「前回の続きから」で選ぶ
+  const inProgress = () => {
+    if (!document.getElementById("resume").hidden) return false;
+    const w = KS.load();
+    return w.existed && Object.keys(w.data.answers || {}).length > 0;
+  };
+  const panel = document.getElementById("restart-panel");
+  function begin(f) {
+    // 「はじめる」は最初から。前回の続きは、上の「前回の続きから」か、下の「続きから答える」を使う
     const d = KS.empty();
     // 答え方は「1問ずつ」だけにした（2026-10-03 利用者判断）。チャット形式はやめた
     d.meta.mode = "step";
     // くわしく＝質問画面の「詳しい条件」を開いた状態で始める
     d.meta.depth = f.get("depth") || "simple";
-    d.meta.persist = f.get("persist") || "session";
+    // 端末への保存は、利用者が選んだときだけ（C6-中1）
+    d.meta.persist = persistChosen && KS.hasLocal && f.get("persist") === "local" ? "local" : "session";
+    KS.clearAll();
+    KS.save(d);
+    location.href = "/soudan/step/";
+  }
+  document.getElementById("start").addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (inProgress()) {
+      panel.hidden = false;
+      document.getElementById("restart-continue").focus();
+      return;
+    }
+    begin(new FormData(e.target));
+  });
+  document.getElementById("restart-continue").addEventListener("click", () => {
+    const d = KS.load().data;
+    // 選び直した「どこまで答えるか」は使う（答えは消さない）
+    const f = new FormData(document.getElementById("start"));
+    d.meta.depth = f.get("depth") || d.meta.depth;
     KS.save(d);
     location.href = "/soudan/step/";
   });
+  document.getElementById("restart-fresh").addEventListener("click", () => begin(new FormData(document.getElementById("start"))));
 })();
 </script>
 </body>
